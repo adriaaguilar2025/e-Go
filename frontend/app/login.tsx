@@ -58,16 +58,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#dadce0',
   },
-  googleButtonDark: {
-    backgroundColor: '#3c4043',
-    borderColor: '#5f6368',
-  },
   googleButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#3c4043',
-  },
-  googleButtonTextDark: {
-    color: '#e8eaed',
   },
 });
