@@ -1,23 +1,21 @@
-require('dotenv').config();
+// Punto de entrada: monta rutas y arranca el servidor. Auth en routes/auth.js, BD en lib/db.js
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
+const { pool } = require('./lib/db');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración de la conexión a PostgreSQL
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'ego',
-});
-
 app.use(cors());
 app.use(express.json());
 
+app.use('/auth', authRoutes);
+
+// Comprueba que API y BD responden
 app.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() as now');
@@ -34,4 +32,3 @@ app.get('/', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
-

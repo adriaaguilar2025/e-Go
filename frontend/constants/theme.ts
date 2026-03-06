@@ -5,17 +5,19 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+// Verde de marca e-Go (mockups)
+const brandGreen = '#22c55e';
+const tintColorLight = brandGreen;
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: '#1f2937',
+    background: '#f9fafb',
+    tint: brandGreen,
+    icon: '#6b7280',
+    tabIconDefault: '#6b7280',
+    tabIconSelected: brandGreen,
   },
   dark: {
     text: '#ECEDEE',
