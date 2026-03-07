@@ -6,6 +6,8 @@ const express = require('express');
 const cors = require('cors');
 const { pool } = require('./lib/db');
 const authRoutes = require('./routes/auth');
+const stationRoutes = require('./routes/stations');
+const { startScheduler } = require('./lib/scheduler'); // Importamos el planificador
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/auth', authRoutes);
+app.use('/stations', stationRoutes);
 
 // Comprueba que API y BD responden
 app.get('/', async (req, res) => {
@@ -29,6 +32,10 @@ app.get('/', async (req, res) => {
   }
 });
 
+// Iniciamos el servidor
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
+
+  // Iniciamos la actualización automática de estaciones cada 5 minutos
+  startScheduler(5 * 60 * 1000);
 });
