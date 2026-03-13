@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const { pool } = require('./lib/db');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const stationRoutes = require('./routes/stations');
 const { startScheduler } = require('./lib/scheduler'); // Importamos el planificador
 
@@ -16,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
 app.use('/stations', stationRoutes);
 
 // Comprueba que API y BD responden
