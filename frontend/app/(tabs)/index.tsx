@@ -58,7 +58,7 @@ export default function InicioScreen() {
 
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      if (status !== 'granted') { //alerta para informar el proque de la necesidad de ubi
         Alert.alert(
           'Permiso necesario',
           'Para mostrarte los puntos de carga más cercanos, necesitamos acceso a tu ubicación.'
@@ -71,6 +71,7 @@ export default function InicioScreen() {
 
       // Animar mapa a la ubicación del usuario comprobando compatibilidad
       if (location && mapRef.current) {
+        //comprobamos que la funcion existe (en android/ios si pero en web no y petaria)
         if (typeof mapRef.current.animateToRegion === 'function') {
           mapRef.current.animateToRegion(
             { ...location.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
@@ -164,28 +165,26 @@ export default function InicioScreen() {
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
-          initialRegion={{
-            latitude: 41.3879,
-            longitude: 2.16992,
+          initialRegion={{ //en caso de disponer de la ubi, se inicia ahi el mapa
+            latitude: userLocation?.coords.latitude || 41.3879,
+            longitude: userLocation?.coords.longitude || 2.16992,
             latitudeDelta: 0.5,
             longitudeDelta: 0.5,
           }}
-          showsUserLocation // Se activará en iOS/Android
+          showsUserLocation //muestra ubi en movil 
           onPress={() => setSelectedStation(null)}
         >
-          {/* MARCADOR DE UBICACIÓN MANUAL (Para Web) */}
-          {userLocation && (
+          {userLocation && ( //marcamos la ubi del user manualmente en la web (showsUserLocation no sirve aqui)
             <Marker
               coordinate={{
                 latitude: userLocation.coords.latitude,
                 longitude: userLocation.coords.longitude,
               }}
               title="Tu ubicación"
-              // Esto le dice a la Web que use el pin azul de Google
               options={{
                 icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
               }}
-              // Esto le dice al móvil que use un pin azul (por si acaso el showsUserLocation falla)
+              //(por si acaso el showsUserLocation falla)
               pinColor="blue"
             />
           )}
