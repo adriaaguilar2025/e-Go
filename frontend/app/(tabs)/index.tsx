@@ -55,7 +55,7 @@ export default function InicioScreen() {
   // Pedir permiso y obtener ubicación del usuario (Seguro para Web y Móvil)
   useEffect(() => {
     if (!user) return;
-
+    //metida dentro pq solo se usa una vez
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { //alerta para informar el proque de la necesidad de ubi
