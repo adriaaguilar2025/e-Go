@@ -121,6 +121,17 @@ export default function InicioScreen() {
     }
   };
 
+  // --- LÒGICA PEL TEXT DELS FILTRES ---
+  let filterText = '';
+  if (minKw && maxKw) {
+    filterText = `${minKw} - ${maxKw} kW`;
+  } else if (minKw) {
+    filterText = `≥ ${minKw} kW`;
+  } else if (maxKw) {
+    filterText = `≤ ${maxKw} kW`;
+  }
+  const hasFilters = !!minKw || !!maxKw;
+
   if (authLoading) {
     return (
       <View style={[styles.screen, styles.centered]}>
@@ -172,6 +183,23 @@ export default function InicioScreen() {
         <View style={styles.menuBar} />
         <View style={styles.menuBar} />
       </TouchableOpacity>
+
+      {/* --- CAIXETA DE FILTRES ACTIUS --- */}
+      {hasFilters && (
+        <View style={styles.activeFiltersBadge}>
+          <MaterialIcons name="bolt" size={18} color="#10b981" />
+          <Text style={styles.activeFiltersText}>{filterText}</Text>
+
+          {/* Botó per netejar els filtres ràpidament des del mapa */}
+          <TouchableOpacity
+            onPress={() => router.setParams({ minKw: '', maxKw: '' })}
+            hitSlop={8}
+            style={{ marginLeft: 4 }}
+          >
+            <MaterialIcons name="close" size={18} color="#94a3b8" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.mapContainer}>
         <MapView
@@ -612,5 +640,32 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+  },
+  // --- ESTILS DE LA CAIXETA DE FILTRES ---
+  activeFiltersBadge: {
+    position: 'absolute',
+    top: 48,
+    right: 16, // A dalt a la dreta!
+    zIndex: 10,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 24, // Forma de píndola (pill)
+    gap: 6,
+    // Ombra perquè floti
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  activeFiltersText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1f2937',
   },
 });
