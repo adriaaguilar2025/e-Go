@@ -42,6 +42,7 @@ export default function InicioScreen() {
   const minKw = params.minKw as string | undefined;
   const maxKw = params.maxKw as string | undefined;
   const connectorType = params.connectorType as string | undefined;
+  const ac_dc = params.ac_dc as string | undefined;
 
   const { user, logout, isLoading: authLoading } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,7 +57,7 @@ export default function InicioScreen() {
     if (user) {
       fetchEstaciones();
     }
-  }, [user, minKw, maxKw, connectorType]);
+  }, [user, minKw, maxKw, connectorType, ac_dc]);
 
   // Pedir permiso y obtener ubicación del usuario (Seguro para Web y Móvil)
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function InicioScreen() {
       if (minKw) queryParams.push(`minKw=${minKw}`);
       if (maxKw) queryParams.push(`maxKw=${maxKw}`);
       if (connectorType) queryParams.push(`connectorType=${encodeURIComponent(connectorType)}`);
+      if (ac_dc) queryParams.push(`ac_dc=${ac_dc}`);
 
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
       const url = `${API_URL}/stations${queryString}`;
@@ -134,7 +136,7 @@ export default function InicioScreen() {
     powerText = `≤ ${maxKw} kW`;
   }
 
-  const hasFilters = !!minKw || !!maxKw || !!connectorType;
+  const hasFilters = !!minKw || !!maxKw || !!connectorType || !!ac_dc;
 
   if (authLoading) {
     return (
@@ -203,10 +205,20 @@ export default function InicioScreen() {
               </View>
             )}
 
+            {/* Fila de AC/DC (només es mostra si n'hi ha) */}
+            {!!ac_dc && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="ev-station" size={18} color="#10b981" />
+                <Text style={styles.activeFiltersText}>
+                  {ac_dc === 'AC' ? 'AC' : ac_dc === 'DC' ? 'DC' : ac_dc}
+                </Text>
+              </View>
+            )}
+
             {/* Fila de Connector (només es mostra si n'hi ha) */}
             {!!connectorType && (
               <View style={styles.filterRow}>
-                <MaterialIcons name="ev-station" size={18} color="#10b981" />
+                <MaterialIcons name="electrical-services" size={18} color="#10b981" />
                 <Text style={styles.activeFiltersText}>{connectorType}</Text>
               </View>
             )}
@@ -215,7 +227,7 @@ export default function InicioScreen() {
 
           {/* Columna dreta: Botó de tancar */}
           <TouchableOpacity
-            onPress={() => router.setParams({ minKw: '', maxKw: '', connectorType: '' })}
+            onPress={() => router.setParams({ minKw: '', maxKw: '', connectorType: '', ac_dc: '' })}
             hitSlop={8}
             style={styles.clearFilterButton}
           >
@@ -366,6 +378,7 @@ export default function InicioScreen() {
                     minKw: minKw || '',
                     maxKw: maxKw || '',
                     connectorType: connectorType || '',
+                    ac_dc: ac_dc || '',
                   }
                 });
               }}

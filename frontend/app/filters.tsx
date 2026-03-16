@@ -11,6 +11,7 @@ export default function FiltersScreen() {
   const [minKw, setMinKw] = useState((params.minKw as string) || '');
   const [maxKw, setMaxKw] = useState((params.maxKw as string) || '');
   const [connectorType, setConnectorType] = useState((params.connectorType as string) || '');
+  const [acDc, setAcDc] = useState((params.ac_dc as string) || '');
 
   // Llista de connectors més habituals
   const CONNECTOR_TYPES = ['CCS Combo2', 'CHAdeMO', 'Schuko', 'MENNEKES', 'TESLA'];
@@ -21,18 +22,15 @@ export default function FiltersScreen() {
     // Naveguem de tornada a l'Inici ('/') i li passem els paràmetres
     router.navigate({
       pathname: '/',
-      params: { minKw, maxKw, connectorType }
+      params: { minKw, maxKw, connectorType, ac_dc: acDc }
     });
   };
 
   const handleClear = () => {
     setMinKw('');
     setMaxKw('');
-    // Naveguem de tornada enviant els paràmetres buits
-    router.navigate({
-      pathname: '/',
-      params: { minKw: '', maxKw: '', connectorType: '' }
-    });
+    if (setAcDc) setAcDc('');
+    if (setConnectorType) setConnectorType('');
   };
 
   return (
@@ -87,6 +85,32 @@ export default function FiltersScreen() {
             onFocus={() => setFocusedInput('max')}
             onBlur={() => setFocusedInput(null)}
           />
+        </View>
+
+        {/*Secció Tipo de corrient*/}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Tipo de corrient</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            {['AC', 'DC'].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.typeBtn,
+                  acDc === type && styles.typeBtnActive
+                ]}
+                // Si ja estava seleccionat i hi tornem a clicar, el desmarquem
+                onPress={() => setAcDc(acDc === type ? '' : type)}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.typeBtnText,
+                  acDc === type && styles.typeBtnTextActive
+                ]}>
+                  {type === 'AC' ? 'AC' : 'DC'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Secció Tipus de Connector */}
@@ -252,5 +276,27 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: '#10b981',
     fontWeight: '700',
+  },
+  // --- Estils per els botons de les corrents ---
+  typeBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  typeBtnActive: {
+    borderColor: '#10b981',
+    backgroundColor: '#ecfdf5',
+  },
+  typeBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  typeBtnTextActive: {
+    color: '#10b981',
   },
 });
