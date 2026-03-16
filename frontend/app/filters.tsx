@@ -9,7 +9,8 @@ import {
   Platform,
   ScrollView,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Alert
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -30,10 +31,27 @@ export default function FiltersScreen() {
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const handleApply = () => {
-    // Naveguem de tornada a l'Inici ('/') i li passem els paràmetres
+    // 1. Comprovem que cap dels dos estigui buit abans de comparar-los
+    if (minKw !== '' && maxKw !== '') {
+      const min = parseFloat(minKw);
+      const max = parseFloat(maxKw);
+
+      // Si el mínim és estrictament major que el màxim, llancem error i no avancem
+      if (min > max) {
+        Alert.alert('La potencia mínima no puede ser mayor que la máxima');
+        return; // Això atura l'execució i no canvia de pantalla
+      }
+    }
+
+    // 2. Si tot és correcte (o si falta algun dels dos camps), apliquem els filtres
     router.navigate({
       pathname: '/',
-      params: { minKw, maxKw, connectorType, ac_dc: acDc }
+      params: {
+        minKw,
+        maxKw,
+        ac_dc: acDc,
+        connectorType
+      }
     });
   };
 
@@ -69,7 +87,7 @@ export default function FiltersScreen() {
 
             {/* Input Mínim */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Potencia mínima (kW)</Text>
+              <Text style={styles.label}>Potencia Mínima (kW)</Text>
               <TextInput
                 style={[
                   styles.input, focusedInput === 'min' && styles.inputFocused,
@@ -89,7 +107,7 @@ export default function FiltersScreen() {
 
             {/* Input Màxim */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Potencia máxima (kW)</Text>
+              <Text style={styles.label}>Potencia Máxima (kW)</Text>
               <TextInput
                 style={[
                   styles.input, focusedInput === 'max' && styles.inputFocused,
@@ -109,7 +127,7 @@ export default function FiltersScreen() {
 
             {/*Secció Tipo de corrient*/}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tipo de corrient</Text>
+              <Text style={styles.label}>Tipo de Corrient</Text>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {['AC', 'DC'].map((type) => (
                   <TouchableOpacity
