@@ -323,7 +323,7 @@ export default function InicioScreen() {
                   <MaterialIcons name="bolt" size={14} color="#10b981" />
                   <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.kw} kW</Text>
                 </View>
-                {selectedStation.tipus_velocitat && (
+                {!!selectedStation.tipus_velocitat && (
                   <View style={[styles.badge, { backgroundColor: '#eff6ff' }]}>
                     <Text style={[styles.badgeText, { color: '#1d4ed8' }]}>{selectedStation.tipus_velocitat}</Text>
                   </View>
@@ -434,10 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)', // width, height, blur, color amb opacitat
     elevation: 4,
   },
   logo: {
@@ -494,10 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 3,
   },
   centerMapButton: {
@@ -511,10 +505,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 3,
   },
   menuBar: {
@@ -534,10 +525,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
   },
   infoPanel: {
     position: 'absolute',
@@ -547,10 +535,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 24,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    boxShadow: '0px -4px 12px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 10,
   },
   infoHandle: {
@@ -674,10 +659,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 3,
     borderColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    boxShadow: '0px 2px 3px rgba(0, 0, 0, 0.3)', // width, height, blur, color amb opacitat
   },
   // --- ESTILS DE LA CAIXETA DE FILTRES ---
   activeFiltersBadge: {
@@ -691,10 +673,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 4,
     borderWidth: 1,
     borderColor: '#e2e8f0',
