@@ -308,8 +308,9 @@ export default function InicioScreen() {
           <View style={styles.infoPanel}>
             <View style={styles.infoHandle} />
             <View style={styles.infoTitleRow}>
+            <MaterialIcons name="location-on" size={18} color="#10b981" />
               <Text style={styles.infoTitle} numberOfLines={2}>
-                {selectedStation.nom || 'Punto de carga'}
+                {selectedStation.adreca}, {selectedStation.municipi}
               </Text>
               <TouchableOpacity
                 onPress={() => setSelectedStation(null)}
@@ -320,21 +321,21 @@ export default function InicioScreen() {
             </View>
 
             <View style={styles.infoContent}>
-              <View style={styles.infoItem}>
-                <MaterialIcons name="location-on" size={18} color="#10b981" />
-                <Text style={styles.infoText}>{selectedStation.adreca}, {selectedStation.municipi}</Text>
-              </View>
 
               <View style={styles.infoBadgeRow}>
                 <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
                   <MaterialIcons name="bolt" size={14} color="#10b981" />
-                  <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.kw} kW</Text>
+                  <Text style={[styles.badgeText, { color: '#047857' }]}>{(selectedStation.kw != 0)? selectedStation.kw : 'n/a'} kW</Text>
                 </View>
-                {!!selectedStation.tipus_velocitat && (
-                  <View style={[styles.badge, { backgroundColor: '#eff6ff' }]}>
-                    <Text style={[styles.badgeText, { color: '#1d4ed8' }]}>{selectedStation.tipus_velocitat}</Text>
-                  </View>
-                )}
+              <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+                <MaterialIcons name="ev-station" size={14} color="#10b981" />
+                <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.ac_dc}</Text>
+              </View>
+              <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+                <MaterialIcons name="electrical-services" size={14} color="#10b981" />
+                <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.tipus_connexio}</Text>
+              </View>
+
               </View>
 
               {selectedStation.promotor && (
