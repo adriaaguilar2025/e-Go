@@ -22,6 +22,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/constants/api';
 
 const LOGO = require('../_assets/favicon.png');
+//Importamos el boton de favoritos
+import { FavoriteButton } from '../../components/FavoriteButton';
 
 interface Estacion {
   id: number;
@@ -49,10 +51,12 @@ export default function InicioScreen() {
   const [selectedStation, setSelectedStation] = useState<Estacion | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const mapRef = useRef<any>(null);
+  const [favoritos, setFavoritos] = useState<number[]>([]); //Guardará los IDs de las estaciones favoritas del usuario
 
   // Cargar estaciones de la base de datos
   useEffect(() => {
     if (user) {
+      fetchFavorites();
       fetchEstaciones();
     }
   }, [user, minKw, maxKw]);
@@ -107,6 +111,22 @@ export default function InicioScreen() {
       setLoadingEstaciones(false);
     }
   };
+
+const fetchFavorites = async () => {
+  if (!user?.id) return; // Si no hay usuario, no pedimos favoritos
+  try {
+    //Hacemos la consulta al backend
+    const res = await fetch(`${API_URL}/favorites?usuari_id=${user.id}`);
+    const data = await res.json();
+
+    // Asumiendo que el backend devuelve un array de objetos o IDs,
+    // mapeamos para obtener solo los números de ID
+    const favIds = data.map((item: any) => item.estacio_id);
+    setFavoritos(favIds);
+  } catch (err) {
+    console.error('Error al cargar favoritos:', err);
+  }
+};
 
   const centerMapOnUser = () => {
     if (userLocation && mapRef.current) {
@@ -269,12 +289,24 @@ export default function InicioScreen() {
               <Text style={styles.infoTitle} numberOfLines={2}>
                 {selectedStation.nom || 'Punto de carga'}
               </Text>
+
+
+              {/* --- Boton de favorito --- */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <FavoriteButton
+                          estacio_id={selectedStation.id}
+                          isInitiallyFavorite={favoritos.includes(selectedStation.id)}
+                        />
+              {/* --- Fin boton de favorito --- */}
+
+
               <TouchableOpacity
                 onPress={() => setSelectedStation(null)}
                 style={styles.infoCloseBtn}
               >
                 <MaterialIcons name="close" size={20} color="#94a3b8" />
               </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.infoContent}>

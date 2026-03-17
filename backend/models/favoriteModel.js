@@ -2,13 +2,14 @@ const { pool } = require('../lib/db');
 
 //Añadir una estacion de carga a favoritos de un usuario en la BD (tabla favorits)
 async function addFavorite(usuariId, estacioId) {
+ //Comentarios: 1) //Son placeholders (marcadores de posición), $1 recibirá el primer valor del array con el que
+                    //se llama a la funcion pool.query (usuariId) y $2 el segundo (estacioId).
+              //2)  RETURNING *;  Esto hace que retorne la fila insertada (un insert por defecto no lo hace)
   const query = `
     INSERT INTO ego.favorits (usuari_id, estacio_id)
-    //Son placeholders (marcadores de posición), $1 recibirá el primer valor del array con el que
-    //se llama a la funcion pool.query (usuariId) y $2 el segundo (estacioId).
     VALUES ($1, $2)
     ON CONFLICT (usuari_id, estacio_id) DO NOTHING
-    RETURNING *;//Hace que retorne la fila insertada (un insert por defecto no lo hace)
+    RETURNING *;
   `;
   const result = await pool.query(query, [usuariId, estacioId]);
   return result.rows[0];//Solo devolvemos una fila
