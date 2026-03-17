@@ -2,7 +2,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -26,13 +26,12 @@ const LOGO = require('./_assets/favicon.png');
 export default function LoginScreen() {
   const { setUser } = useAuth();
   const router = useRouter();
-  const { openGoogle } = useLocalSearchParams<{ openGoogle?: string }>();
+  useLocalSearchParams<{ openGoogle?: string }>(); // openGoogle ya no auto-abre el popup (el navegador lo bloqueaba)
   const [step, setStep] = useState<'google' | 'username'>('google');
   const [pendingAuth, setPendingAuth] = useState<{ pending_token: string } | null>(null);
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const openedGoogleRef = useRef(false);
 
   const discovery = useAutoDiscovery('https://accounts.google.com');
   const redirectUri = makeRedirectUri({ scheme: 'frontend' });
@@ -58,13 +57,8 @@ export default function LoginScreen() {
     loginWithCode(code, redirectUri, verifier);
   }, [response]);
 
-  // Si vienes desde Home con openGoogle, abre Google al entrar (sin tener que pulsar otra vez)
-  useEffect(() => {
-    if (openGoogle === '1' && request && !openedGoogleRef.current) {
-      openedGoogleRef.current = true;
-      promptAsync();
-    }
-  }, [openGoogle, request]);
+  // No abrimos el popup en useEffect: el navegador lo bloquea (debe ser un gesto directo del usuario).
+  // El usuario pulsa "Continuar con Google" en esta pantalla para que el popup se abra correctamente.
 
   async function loginWithCode(code: string, redirectUri: string, codeVerifier?: string) {
     setLoading(true);
@@ -187,11 +181,6 @@ export default function LoginScreen() {
           <Text style={styles.errorText}>
             Configura EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID en el .env del frontend
           </Text>
-        ) : openGoogle === '1' ? (
-          <View style={styles.openingGoogle}>
-            <ActivityIndicator size="large" color={BRAND_GREEN} />
-            <Text style={styles.openingGoogleText}>Iniciando sesión…</Text>
-          </View>
         ) : (
           <>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}

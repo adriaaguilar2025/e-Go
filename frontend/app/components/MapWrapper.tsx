@@ -20,3 +20,8 @@ if (Platform.OS === 'web') {
 
 export const MapView = MapComponent;
 export const Marker = MarkerComponent;
+
+// Default export para que Expo Router no trate este archivo como ruta inválida
+export default function MapWrapper() {
+  return null;
+}

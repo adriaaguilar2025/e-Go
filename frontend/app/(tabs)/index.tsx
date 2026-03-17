@@ -53,9 +53,10 @@ export default function InicioScreen() {
     try {
       const response = await fetch(`${API_URL}/stations`);
       const data = await response.json();
-      setEstaciones(data);
+      setEstaciones(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error cargando estaciones:', error);
+      setEstaciones([]);
     } finally {
       setLoadingEstaciones(false);
     }
