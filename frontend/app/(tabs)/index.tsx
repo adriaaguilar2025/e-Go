@@ -294,10 +294,11 @@ export default function InicioScreen() {
               }}
               //(por si acaso el showsUserLocation falla)
               pinColor="blue"
+              isUserLocation={true}
             />
           )}
 
-          {estaciones.slice(0,50).map((est) => (
+          {estaciones.map((est) => (
             <Marker
               key={est.id}
               coordinate={{
