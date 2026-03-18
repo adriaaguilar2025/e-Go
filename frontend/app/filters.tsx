@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Switch} from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
@@ -12,11 +12,19 @@ export default function FiltersScreen() {
   const [maxKw, setMaxKw] = useState((params.maxKw as string) || '');
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
+ //Estado para el filtro de favoritos (leemos si ya venía activado)
+  const [showFavorites, setShowFavorites] = useState(params.showFatvories === 'true');
+
+
   const handleApply = () => {
     // Naveguem de tornada a l'Inici ('/') i li passem els paràmetres
     router.navigate({
       pathname: '/',
-      params: { minKw, maxKw }
+      params: {//Enviamos los parametros de vuelta al index
+          minKw,
+          maxKw,
+          showFavorites: showFavorites ? 'true' : '' //Si es true mandamos 'true', si no, vacío
+      }
     });
   };
 
@@ -42,7 +50,26 @@ export default function FiltersScreen() {
         <View style={{ width: 24 }} /* Espai buit per centrar el títol */ />
       </View>
 
-      <View style={styles.content}>
+      {/*---CONTENIDO--- */}
+            <View style={styles.content}>
+              <Text style={styles.description}>
+                Ajusta los parámetros para encontrar el punto de carga ideal.
+              </Text>
+
+              {/*   INTERRUPTOR DE FAVORITOS*/}
+              <View style={styles.switchGroup}>
+                <Text style={styles.label}>Mis Estaciones</Text>
+                <View style={styles.switchRow}>
+                  <MaterialIcons name={showFavorites ? "favorite" : "favorite-border"} size={22} color={showFavorites ? "#ef4444" : "#64748b"} />
+                  <Text style={styles.switchDescription}>Mostrar solo mis favoritos</Text>
+                  <Switch
+                    value={showFavorites}
+                    onValueChange={setShowFavorites}
+                    trackColor={{ false: '#cbd5e1', true: '#10b981' }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              </View>
 
         {/* Input Mínim */}
         <View style={styles.inputGroup}>
@@ -100,6 +127,26 @@ export default function FiltersScreen() {
 }
 
 const styles = StyleSheet.create({
+  //Estilos interruptor favoritos
+  switchGroup: {
+      marginBottom: 24,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f8fafc',
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    switchDescription: {
+      flex: 1,
+      fontSize: 16,
+      color: '#334155',
+      marginLeft: 8,
+    },
+    //Fin estilos interruptor favoritos
   container: {
     flex: 1,
     backgroundColor: '#f8fafc', // Fons clar

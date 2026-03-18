@@ -44,6 +44,7 @@ export default function InicioScreen() {
   const params = useLocalSearchParams();
   const minKw = params.minKw as string | undefined;
   const maxKw = params.maxKw as string | undefined;
+  const showFavoritesFilter = params.showFavorites === 'true'; //Leemos si el filtro de favoritos esta activo
   const { user, logout, isLoading: authLoading } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [estaciones, setEstaciones] = useState<Estacion[]>([]);
@@ -165,7 +166,10 @@ useEffect(() => {
       </View>
     );
   }
-
+  // FILTRO LOCAL: Si el filtro de favoritos está activo, nos quedamos solo con las
+   // estaciones cuyo ID está dentro de nuestro array favoriteIds.
+   const displayedStations = showFavoritesFilter
+       ? estaciones.filter(est => favoriteIds.includes(est.id)) : estaciones;
   if (!user) {
     return (
       <View style={styles.screen}>
@@ -254,7 +258,7 @@ useEffect(() => {
             />
           )}
 
-          {estaciones.slice(0, 50).map((est) => (
+          {displayedStations.slice(0, 2500).map((est) => (
             <Marker
               key={est.id}
               coordinate={{
@@ -387,7 +391,8 @@ useEffect(() => {
                   pathname: '/filters',
                   params: {
                     minKw: minKw || '',
-                    maxKw: maxKw || ''
+                    maxKw: maxKw || '',
+                    showFavorites: showFavoritesFilter ? 'true' : ''
                   }
                 });
               }}
