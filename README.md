@@ -32,8 +32,9 @@ El repositorio está dividido en dos microservicios principales:
 La base de datos se inicializa mediante scripts numerados en `backend/sql/`. **Deben ejecutarse en orden cronológico:**
 
 1.  `001_create_users.sql`: Estructura de la tabla de usuarios y esquemas base.
-2.  `002_create_stations.sql`: Definición de estaciones de carga y servicios.
-3.  *(Siguientes scripts se añadirán siguiendo esta nomenclatura: 00X_nombre.sql)*
+2.  `002_create_admins.sql`: Estructura de la tabla de admins.
+3.  `003_create_stations.sql`: Definición de estaciones de carga y servicios.
+4.  *(Siguientes scripts se añadirán siguiendo esta nomenclatura: 00X_nombre.sql)*
 
 ---
 

@@ -3,8 +3,9 @@ const { pool } = require('../lib/db');
 const upsertQuery = `
 INSERT INTO ego.estaciones (
   external_id, promotor, acces, tipus_velocitat, tipus_connexio,
-  latitud, longitud, nom, kw, ac_dc, adreca, municipi, provincia
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+  latitud, longitud, nom, kw, ac_dc, adreca, municipi, provincia,
+  is_manual
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,false)
 ON CONFLICT (external_id) DO UPDATE SET
   promotor = EXCLUDED.promotor,
   acces = EXCLUDED.acces,
@@ -18,7 +19,8 @@ ON CONFLICT (external_id) DO UPDATE SET
   adreca = EXCLUDED.adreca,
   municipi = EXCLUDED.municipi,
   provincia = EXCLUDED.provincia,
-  updated_at = NOW();
+  updated_at = NOW()
+WHERE ego.estaciones.is_manual = false;
 `;
 
 // inserta estaciones nuevas y update de las que han cambiado
@@ -94,5 +96,69 @@ async function getAllStations(filters = {}) {
 
 module.exports = {
   upsertStation,
-  getAllStations
+  getAllStations,
+  createManualStation,
+  updateManualStation,
+  deleteManualStation
 };
+
+async function createManualStation(data) {
+  const query = `
+    INSERT INTO ego.estaciones (
+      external_id, promotor, acces, tipus_velocitat, tipus_connexio,
+      latitud, longitud, nom, kw, ac_dc, adreca, municipi, provincia,
+      is_manual, created_by_admin_id
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,$14)
+    RETURNING *;
+  `;
+  const values = [
+    data.external_id || null,
+    data.promotor || null,
+    data.acces || null,
+    data.tipus_velocitat || null,
+    data.tipus_connexio || null,
+    data.latitud,
+    data.longitud,
+    data.nom,
+    data.kw || 0,
+    data.ac_dc || null,
+    data.adreca || null,
+    data.municipi || null,
+    data.provincia || null,
+    data.created_by_admin_id,
+  ];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
+
+async function updateManualStation(id, patch) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  for (const [key, value] of Object.entries(patch)) {
+    fields.push(`${key} = $${idx}`);
+    values.push(value);
+    idx++;
+  }
+
+  if (fields.length === 0) return null;
+
+  const query = `
+    UPDATE ego.estaciones
+    SET ${fields.join(', ')}, updated_at = NOW()
+    WHERE id = $${idx} AND is_manual = true
+    RETURNING *;
+  `;
+  values.push(id);
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
+
+async function deleteManualStation(id) {
+  const result = await pool.query(
+    'DELETE FROM ego.estaciones WHERE id = $1 AND is_manual = true RETURNING id',
+    [id]
+  );
+  return result.rows[0];
+}
