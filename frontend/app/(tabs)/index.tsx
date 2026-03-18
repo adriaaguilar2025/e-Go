@@ -214,21 +214,36 @@ useEffect(() => {
       </TouchableOpacity>
 
       {/* --- CAIXETA DE FILTRES ACTIUS --- */}
-      {hasFilters && (
-        <View style={styles.activeFiltersBadge}>
-          <MaterialIcons name="bolt" size={18} color="#10b981" />
-          <Text style={styles.activeFiltersText}>{filterText}</Text>
-
-          {/* Botó per netejar els filtres ràpidament des del mapa */}
-          <TouchableOpacity
-            onPress={() => router.setParams({ minKw: '', maxKw: '' })}
-            hitSlop={8}
-            style={{ marginLeft: 4 }}
-          >
-            <MaterialIcons name="close" size={18} color="#94a3b8" />
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.activeFiltersContainer}>
+        {/*Etiqueta de Potencia (kW) */}
+        {hasFilters && (
+          <View style={styles.activeFiltersBadge}>
+            <MaterialIcons name="bolt" size={18} color="#10b981" />
+            <Text style={styles.activeFiltersText}>{filterText}</Text>
+            <TouchableOpacity
+              onPress={() => router.setParams({ minKw: '', maxKw: '', showFavorites: showFavoritesFilter ? 'true' : '' })}
+              hitSlop={8}
+              style={{ marginLeft: 4 }}
+            >
+              <MaterialIcons name="close" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+        )}
+        {/*Etiqueta de Favoritos */}
+        {showFavoritesFilter && (
+          <View style={styles.activeFiltersBadge}>
+            <MaterialIcons name="favorite" size={16} color="#ef4444" />
+            <Text style={styles.activeFiltersText}>Favoritos</Text>
+            <TouchableOpacity
+              onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', showFavorites: '' })}
+              hitSlop={8}
+              style={{ marginLeft: 4 }}
+            >
+              <MaterialIcons name="close" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       <View style={styles.mapContainer}>
         <MapView
@@ -693,31 +708,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
   },
-  // --- ESTILS DE LA CAIXETA DE FILTRES ---
-  activeFiltersBadge: {
-    position: 'absolute',
-    top: 100,
-    right: 16, // A dalt a la dreta!
-    zIndex: 10,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 24, // Forma de píndola (pill)
-    gap: 6,
-    // Ombra perquè floti
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  activeFiltersText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1f2937',
-  },
+  //--- ESTILS DE LA CAIXETA DE FILTRES ---
+    //El contenedor(El que flota sobre el mapa de forma absoluta), dentro tendra las dos etiquetas de filtros
+    activeFiltersContainer: {
+      position: 'absolute',
+      top: 100,
+      right: 16, // A dalt a la dreta!
+      zIndex: 10,
+      gap: 8, // Esto hace que si hay 2 etiquetas, haya 8 píxeles de separación entre ellas hacia abajo
+    },
+    //Las etiquetas de filtros
+    activeFiltersBadge: {
+      backgroundColor: '#fff',
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 24, // Forma de píndola (pill)
+      gap: 6,
+      //Ombra perquè floti
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      alignSelf: 'flex-end', //Esto asegura que ambas se alineen a la derecha
+    },
+
+    activeFiltersText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#1f2937',
+    },
 });
