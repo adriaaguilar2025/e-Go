@@ -1,6 +1,7 @@
 // Inicio (primera pestaña). Sin sesión: bienvenida + Google. Con sesión: menú 3 barras + PANTALLA PRINCIPAL.
 import { useState, useEffect, useRef } from 'react';
 import { MapView, Marker } from '../../components/MapWrapper';
+import TopBar from '../../components/TopBar';
 import {
   Image,
   Modal,
@@ -187,18 +188,10 @@ export default function InicioScreen() {
 
   return (
     <View style={styles.screen}>
-      <TouchableOpacity
-        style={styles.menuButton}
-        onPress={() => setMenuOpen(true)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.menuBar} />
-        <View style={styles.menuBar} />
-        <View style={styles.menuBar} />
-      </TouchableOpacity>
+      <TopBar onPressMenu={() => setMenuOpen(true)} />
 
       {/* --- CAIXETA DE FILTRES ACTIUS APILATS --- */}
-      {hasFilters && (
+      {(hasFilters && selectedStation === null ) ? (
         <View style={styles.activeFiltersBadge}>
 
           {/* Columna esquerra: Llista de filtres */}
@@ -242,7 +235,7 @@ export default function InicioScreen() {
           </TouchableOpacity>
 
         </View>
-      )}
+      ) : null}
 
       <View style={styles.mapContainer}>
         <MapView
@@ -494,24 +487,9 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '600',
   },
-  menuButton: {
-    position: 'absolute',
-    top: 48,
-    left: 16,
-    zIndex: 10,
-    width: 48,
-    height: 48,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
-    elevation: 3,
-  },
   centerMapButton: {
     position: 'absolute',
-    top: 48,
+    top: 16,
     right: 16,
     zIndex: 10,
     width: 48,
@@ -523,19 +501,13 @@ const styles = StyleSheet.create({
     boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 3,
   },
-  menuBar: {
-    width: 22,
-    height: 2.5,
-    backgroundColor: '#1f2937',
-    borderRadius: 2,
-  },
   mapContainer: {
     flex: 1,
   },
   mapLoading: {
     position: 'absolute',
-    top: 60,
-    right: 24,
+    top: 24,
+    left: 24,
     backgroundColor: '#fff',
     padding: 8,
     borderRadius: 20,
@@ -679,14 +651,14 @@ const styles = StyleSheet.create({
   // --- ESTILS DE LA CAIXETA DE FILTRES ---
   activeFiltersBadge: {
     position: 'absolute',
-    top: 110,
-    right: 16,
+    bottom: 20,
+    right: 12,
     zIndex: 10,
     backgroundColor: '#fff',
     flexDirection: 'row', // La columna de text a l'esquerra, la X a la dreta
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderRadius: 16,
     boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 4,
