@@ -449,9 +449,9 @@ useEffect(() => {
                   params: {
                     minKw: minKw || '',
                     maxKw: maxKw || '',
-                    showFavorites: showFavoritesFilter ? 'true' : ''
+                    showFavorites: showFavoritesFilter ? 'true' : '',
                     connectorType: connectorType || '',
-                    ac_dc: ac_dc || '',
+                    ac_dc: ac_dc || ''
                   }
                 });
               }}
