@@ -21,6 +21,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/constants/api';
 
 const LOGO = require('../_assets/favicon.png');
+//Importamos el boton de favoritos
+import { FavoriteButton } from '../../components/FavoriteButton';
 
 interface Estacion {
   id: number;
@@ -41,6 +43,7 @@ export default function InicioScreen() {
   const params = useLocalSearchParams();
   const minKw = params.minKw as string | undefined;
   const maxKw = params.maxKw as string | undefined;
+  const showFavoritesFilter = params.showFavorites === 'true'; //Leemos si el filtro de favoritos esta activo
   const connectorType = params.connectorType as string | undefined;
   const ac_dc = params.ac_dc as string | undefined;
 
@@ -51,10 +54,11 @@ export default function InicioScreen() {
   const [selectedStation, setSelectedStation] = useState<Estacion | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const mapRef = useRef<any>(null);
-
+  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   // Cargar estaciones de la base de datos
   useEffect(() => {
     if (user) {
+      fetchUserFavorites();
       fetchEstaciones();
     }
   }, [user, minKw, maxKw, connectorType, ac_dc]);
@@ -112,6 +116,27 @@ export default function InicioScreen() {
     }
   };
 
+const fetchUserFavorites = async () => {
+  if (!user?.id) return;
+  try {
+    const response = await fetch(`${API_URL}/favorites?usuari_id=${user.id}`); // Ajustado a tu ruta GET
+    const data = await response.json();
+    const ids = data.map((fav: any) => fav.id);
+
+    console.log("IDs favoritos cargados:", ids); // Para que verifiques en consola
+    setFavoriteIds(ids);
+  } catch (error) {
+    console.error("Error cargando favoritos:", error);
+  }
+};
+
+// Ejecutarlo cuando el componente carga o cuando el usuario cambia
+useEffect(() => {
+  fetchUserFavorites();
+}, [user]);
+
+
+
   const centerMapOnUser = () => {
     if (userLocation && mapRef.current) {
       // Comprobación de seguridad multiplataforma
@@ -146,7 +171,10 @@ export default function InicioScreen() {
       </View>
     );
   }
-
+  // FILTRO LOCAL: Si el filtro de favoritos está activo, nos quedamos solo con las
+   // estaciones cuyo ID está dentro de nuestro array favoriteIds.
+   const displayedStations = showFavoritesFilter
+       ? estaciones.filter(est => favoriteIds.includes(est.id)) : estaciones;
   if (!user) {
     return (
       <View style={styles.screen}>
@@ -229,6 +257,21 @@ export default function InicioScreen() {
                 <Text style={styles.activeFiltersText}>{connectorType}</Text>
               </View>
             )}
+            
+            {/*Etiqueta de Favoritos */}
+            {showFavoritesFilter && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="favorite" size={16} color="#ef4444" />
+                <Text style={styles.activeFiltersText}>Favoritos</Text>
+                <TouchableOpacity
+                  onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', showFavorites: '' })}
+                  hitSlop={8}
+                  style={{ marginLeft: 4 }}
+                >
+                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            )}
 
           </View>
 
@@ -272,7 +315,7 @@ export default function InicioScreen() {
             />
           )}
 
-          {estaciones.slice(0, 50).map((est) => (
+          {displayedStations.slice(0, 2500).map((est) => (
             <Marker
               key={est.id}
               coordinate={{
@@ -307,10 +350,29 @@ export default function InicioScreen() {
         {selectedStation && (
           <View style={styles.infoPanel}>
             <View style={styles.infoHandle} />
+
             <View style={styles.infoTitleRow}>
+              {/* 1. Nombre de la estación */}
               <Text style={styles.infoTitle} numberOfLines={2}>
                 {selectedStation.nom || 'Punto de carga'}
               </Text>
+
+              {/* 2. Botón de favoritos (solo si hay usuario) */}
+              {user && (
+                <FavoriteButton
+                  estacio_id={selectedStation.id}
+                  isInitiallyFavorite={favoriteIds.includes(selectedStation.id)}
+                  onToggle={(isFav) => {
+                    if (isFav) {
+                      setFavoriteIds([...favoriteIds, selectedStation.id]);
+                    } else {
+                      setFavoriteIds(favoriteIds.filter(id => id !== selectedStation.id));
+                    }
+                  }}
+                />
+              )}
+
+              {/* 3. Botón de cerrar */}
               <TouchableOpacity
                 onPress={() => setSelectedStation(null)}
                 style={styles.infoCloseBtn}
@@ -319,6 +381,9 @@ export default function InicioScreen() {
               </TouchableOpacity>
             </View>
 
+
+
+            {/* CONTENIDO DEL PANEL: Dirección, kW, etc. */}
             <View style={styles.infoContent}>
               <View style={styles.infoItem}>
                 <MaterialIcons name="location-on" size={18} color="#10b981" />
@@ -384,8 +449,9 @@ export default function InicioScreen() {
                   params: {
                     minKw: minKw || '',
                     maxKw: maxKw || '',
+                    showFavorites: showFavoritesFilter ? 'true' : '',
                     connectorType: connectorType || '',
-                    ac_dc: ac_dc || '',
+                    ac_dc: ac_dc || ''
                   }
                 });
               }}
