@@ -1,6 +1,6 @@
 // Inicio (primera pestaña). Sin sesión: bienvenida + Google. Con sesión: menú 3 barras + PANTALLA PRINCIPAL.
 import { useState, useEffect } from 'react';
-import { MapView, Marker } from '../components/MapWrapper';
+import { MapView, Marker } from '../_components/MapWrapper';
 import {
   Image,
   Modal,
@@ -133,7 +133,6 @@ export default function InicioScreen() {
                 longitude: parseFloat(est.longitud),
               }}
               onPress={(e: any) => {
-                e.stopPropagation(); // Evitar que el clic llegue al mapa y lo cierre
                 setSelectedStation(est);
               }}
             />
