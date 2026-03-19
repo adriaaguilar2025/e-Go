@@ -1,6 +1,5 @@
 // Inicio (primera pestaña). Sin sesión: bienvenida + Google. Con sesión: menú 3 barras + PANTALLA PRINCIPAL.
 import { useState, useEffect, useRef } from 'react';
-{/*import { MapView, Marker } from '../components/MapWrapper';*/}
 import { MapView, Marker } from '../../components/MapWrapper';
 import {
   Image,
@@ -45,6 +44,9 @@ export default function InicioScreen() {
   const minKw = params.minKw as string | undefined;
   const maxKw = params.maxKw as string | undefined;
   const showFavoritesFilter = params.showFavorites === 'true'; //Leemos si el filtro de favoritos esta activo
+  const connectorType = params.connectorType as string | undefined;
+  const ac_dc = params.ac_dc as string | undefined;
+
   const { user, logout, isLoading: authLoading } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [estaciones, setEstaciones] = useState<Estacion[]>([]);
@@ -59,7 +61,7 @@ export default function InicioScreen() {
       fetchUserFavorites();
       fetchEstaciones();
     }
-  }, [user, minKw, maxKw]);
+  }, [user, minKw, maxKw, connectorType, ac_dc]);
 
   // Pedir permiso y obtener ubicación del usuario (Seguro para Web y Móvil)
   useEffect(() => {
@@ -98,6 +100,8 @@ export default function InicioScreen() {
       let queryParams = [];
       if (minKw) queryParams.push(`minKw=${minKw}`);
       if (maxKw) queryParams.push(`maxKw=${maxKw}`);
+      if (connectorType) queryParams.push(`connectorType=${encodeURIComponent(connectorType)}`);
+      if (ac_dc) queryParams.push(`ac_dc=${ac_dc}`);
 
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
       const url = `${API_URL}/stations${queryString}`;
@@ -148,15 +152,16 @@ useEffect(() => {
   };
 
   // --- LÒGICA PEL TEXT DELS FILTRES ---
-  let filterText = '';
+  let powerText = '';
   if (minKw && maxKw) {
-    filterText = `${minKw} - ${maxKw} kW`;
+    powerText = `${minKw} - ${maxKw} kW`;
   } else if (minKw) {
-    filterText = `≥ ${minKw} kW`;
+    powerText = `≥ ${minKw} kW`;
   } else if (maxKw) {
-    filterText = `≤ ${maxKw} kW`;
+    powerText = `≤ ${maxKw} kW`;
   }
-  const hasFilters = !!minKw || !!maxKw;
+
+  const hasFilters = !!minKw || !!maxKw || !!connectorType || !!ac_dc;
 
   if (authLoading) {
     return (
@@ -183,6 +188,13 @@ useEffect(() => {
             <Text style={styles.subtitle}>
               Tu navegador de estaciones de carga en Catalunya
             </Text>
+            <TouchableOpacity
+              style={styles.adminLink}
+              onPress={() => router.push('/admin-login')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.adminLinkText}>Acceso Admin</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.loginButton}
               onPress={() => router.push({ pathname: '/login', params: { openGoogle: '1' } })}
@@ -213,37 +225,67 @@ useEffect(() => {
         <View style={styles.menuBar} />
       </TouchableOpacity>
 
-      {/* --- CAIXETA DE FILTRES ACTIUS --- */}
-      <View style={styles.activeFiltersContainer}>
-        {/*Etiqueta de Potencia (kW) */}
-        {hasFilters && (
-          <View style={styles.activeFiltersBadge}>
-            <MaterialIcons name="bolt" size={18} color="#10b981" />
-            <Text style={styles.activeFiltersText}>{filterText}</Text>
-            <TouchableOpacity
-              onPress={() => router.setParams({ minKw: '', maxKw: '', showFavorites: showFavoritesFilter ? 'true' : '' })}
-              hitSlop={8}
-              style={{ marginLeft: 4 }}
-            >
-              <MaterialIcons name="close" size={18} color="#94a3b8" />
-            </TouchableOpacity>
+      {/* --- CAIXETA DE FILTRES ACTIUS APILATS --- */}
+      {hasFilters && (
+        <View style={styles.activeFiltersBadge}>
+
+          {/* Columna esquerra: Llista de filtres */}
+          <View style={styles.filtersColumn}>
+
+            {/* Fila de Potència (només es mostra si n'hi ha) */}
+            {!!powerText && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="bolt" size={18} color="#10b981" />
+                <Text style={styles.activeFiltersText}>{powerText}</Text>
+              </View>
+            )}
+
+            {/* Fila de AC/DC (només es mostra si n'hi ha) */}
+            {!!ac_dc && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="ev-station" size={18} color="#10b981" />
+                <Text style={styles.activeFiltersText}>
+                  {ac_dc === 'AC' ? 'AC' : ac_dc === 'DC' ? 'DC' : ac_dc}
+                </Text>
+              </View>
+            )}
+
+            {/* Fila de Connector (només es mostra si n'hi ha) */}
+            {!!connectorType && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="electrical-services" size={18} color="#10b981" />
+                <Text style={styles.activeFiltersText}>{connectorType}</Text>
+              </View>
+            )}
+            
+            {/*Etiqueta de Favoritos */}
+            {showFavoritesFilter && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="favorite" size={16} color="#ef4444" />
+                <Text style={styles.activeFiltersText}>Favoritos</Text>
+                <TouchableOpacity
+                  onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', showFavorites: '' })}
+                  hitSlop={8}
+                  style={{ marginLeft: 4 }}
+                >
+                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            )}
+
           </View>
-        )}
-        {/*Etiqueta de Favoritos */}
-        {showFavoritesFilter && (
-          <View style={styles.activeFiltersBadge}>
-            <MaterialIcons name="favorite" size={16} color="#ef4444" />
-            <Text style={styles.activeFiltersText}>Favoritos</Text>
-            <TouchableOpacity
-              onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', showFavorites: '' })}
-              hitSlop={8}
-              style={{ marginLeft: 4 }}
-            >
-              <MaterialIcons name="close" size={18} color="#94a3b8" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+
+          {/* Columna dreta: Botó de tancar */}
+          <TouchableOpacity
+            onPress={() => router.setParams({ minKw: '', maxKw: '', connectorType: '', ac_dc: '' })}
+            hitSlop={8}
+            style={styles.clearFilterButton}
+          >
+            <MaterialIcons name="close" size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
+        </View>
+      )}
 
       <View style={styles.mapContainer}>
         <MapView
@@ -353,7 +395,7 @@ useEffect(() => {
                   <MaterialIcons name="bolt" size={14} color="#10b981" />
                   <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.kw} kW</Text>
                 </View>
-                {selectedStation.tipus_velocitat && (
+                {!!selectedStation.tipus_velocitat && (
                   <View style={[styles.badge, { backgroundColor: '#eff6ff' }]}>
                     <Text style={[styles.badgeText, { color: '#1d4ed8' }]}>{selectedStation.tipus_velocitat}</Text>
                   </View>
@@ -408,6 +450,8 @@ useEffect(() => {
                     minKw: minKw || '',
                     maxKw: maxKw || '',
                     showFavorites: showFavoritesFilter ? 'true' : ''
+                    connectorType: connectorType || '',
+                    ac_dc: ac_dc || '',
                   }
                 });
               }}
@@ -463,10 +507,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)', // width, height, blur, color amb opacitat
     elevation: 4,
   },
   logo: {
@@ -511,6 +552,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
+  adminLink: {
+    marginBottom: 16,
+  },
+  adminLinkText: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '600',
+  },
   menuButton: {
     position: 'absolute',
     top: 48,
@@ -523,10 +572,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 3,
   },
   centerMapButton: {
@@ -540,10 +586,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 3,
   },
   menuBar: {
@@ -563,10 +606,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
   },
   infoPanel: {
     position: 'absolute',
@@ -576,10 +616,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 24,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    boxShadow: '0px -4px 12px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 10,
   },
   infoHandle: {
@@ -703,43 +740,43 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 3,
     borderColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    boxShadow: '0px 2px 3px rgba(0, 0, 0, 0.3)', // width, height, blur, color amb opacitat
   },
-  //--- ESTILS DE LA CAIXETA DE FILTRES ---
-    //El contenedor(El que flota sobre el mapa de forma absoluta), dentro tendra las dos etiquetas de filtros
-    activeFiltersContainer: {
-      position: 'absolute',
-      top: 100,
-      right: 16, // A dalt a la dreta!
-      zIndex: 10,
-      gap: 8, // Esto hace que si hay 2 etiquetas, haya 8 píxeles de separación entre ellas hacia abajo
-    },
-    //Las etiquetas de filtros
-    activeFiltersBadge: {
-      backgroundColor: '#fff',
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: 24, // Forma de píndola (pill)
-      gap: 6,
-      //Ombra perquè floti
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 6,
-      elevation: 4,
-      borderWidth: 1,
-      borderColor: '#e2e8f0',
-      alignSelf: 'flex-end', //Esto asegura que ambas se alineen a la derecha
-    },
-
-    activeFiltersText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: '#1f2937',
-    },
+  // --- ESTILS DE LA CAIXETA DE FILTRES ---
+  activeFiltersBadge: {
+    position: 'absolute',
+    top: 110,
+    right: 16,
+    zIndex: 10,
+    backgroundColor: '#fff',
+    flexDirection: 'row', // La columna de text a l'esquerra, la X a la dreta
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  filtersColumn: {
+    flexDirection: 'column',
+    gap: 6, // Espai vertical entre el llamp i el connector
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6, // Espai horitzontal entre la icona i el text
+  },
+  activeFiltersText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  clearFilterButton: {
+    marginLeft: 12,
+    paddingLeft: 12,
+    borderLeftWidth: 1, // Posa una línia fineta que separa els filtres de la X
+    borderLeftColor: '#e2e8f0',
+  },
 });
