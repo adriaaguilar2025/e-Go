@@ -339,7 +339,7 @@ useEffect(() => {
               title="Tu ubicación"
               //(por si acaso el showsUserLocation falla)
               pinColor="blue"
-              isUserLocation={true}
+              //isUserLocation={true}
             />
           )}
 
