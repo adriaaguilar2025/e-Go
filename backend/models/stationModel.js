@@ -24,7 +24,7 @@ ON CONFLICT (external_id) DO UPDATE SET
 // inserta estaciones nuevas y update de las que han cambiado
 async function upsertStation(est) {
   await pool.query(upsertQuery, [
-    est[':id'] || est.id,
+    est.id,
     est.promotor_gestor,
     est.acces,
     est.tipus_velocitat,
@@ -41,13 +41,32 @@ async function upsertStation(est) {
 }
 
 async function getAllStations(filters = {}) {
-  const {minKw, maxKw, connectorType, ac_dc} = filters;
+  const {minKw, maxKw, connectorType, ac_dc, north, south, east, west} = filters;
 
   // Base de la consulta.
   let query = 'SELECT * FROM ego.estaciones';
   const conditions = [];
   const values = [];
   let paramIndex = 1;
+
+  // Filtre per Viewport (Caja de coordenadas)
+  if (north && south && east && west) {
+    conditions.push(`latitud <= $${paramIndex}`);
+    values.push(parseFloat(north));
+    paramIndex++;
+
+    conditions.push(`latitud >= $${paramIndex}`);
+    values.push(parseFloat(south));
+    paramIndex++;
+
+    conditions.push(`longitud <= $${paramIndex}`);
+    values.push(parseFloat(east));
+    paramIndex++;
+
+    conditions.push(`longitud >= $${paramIndex}`);
+    values.push(parseFloat(west));
+    paramIndex++;
+  }
 
   // Filtre: Potència mínima
   if (minKw) {

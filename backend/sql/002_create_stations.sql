@@ -3,7 +3,7 @@ CREATE SCHEMA IF NOT EXISTS ego;
 
 CREATE TABLE IF NOT EXISTS estaciones (
   id                     SERIAL PRIMARY KEY,
-  external_id            VARCHAR(100) UNIQUE, -- El ":id" de la API (ej: "row-ktat-bcq8.qbut")
+  external_id            VARCHAR(100) UNIQUE,
   promotor               VARCHAR(255),
   acces                  VARCHAR(100),
   tipus_velocitat        VARCHAR(100),
@@ -26,3 +26,5 @@ CREATE TRIGGER estaciones_updated_at
   BEFORE UPDATE ON estaciones
   FOR EACH ROW
   EXECUTE PROCEDURE set_updated_at();
+
+

@@ -35,6 +35,8 @@ interface Estacion {
   promotor?: string;
   acces?: string;
   tipus_velocitat?: string;
+  tipus_connexio?: string;
+  ac_dc?: string;
 }
 
 export default function InicioScreen() {
@@ -53,6 +55,15 @@ export default function InicioScreen() {
   const [loadingEstaciones, setLoadingEstaciones] = useState(false);
   const [selectedStation, setSelectedStation] = useState<Estacion | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+
+  // Estado para controlar la región visible del mapa
+  const [region] = useState({
+    latitude: 41.3879,
+    longitude: 2.16992,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+
   const mapRef = useRef<any>(null);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   // Cargar estaciones de la base de datos
@@ -82,7 +93,6 @@ export default function InicioScreen() {
 
       // Animar mapa a la ubicación del usuario comprobando compatibilidad
       if (location && mapRef.current) {
-        //comprobamos que la funcion existe (en android/ios si pero en web no y petaria)
         if (typeof mapRef.current.animateToRegion === 'function') {
           mapRef.current.animateToRegion(
             { ...location.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
@@ -96,8 +106,8 @@ export default function InicioScreen() {
   const fetchEstaciones = async () => {
     setLoadingEstaciones(true);
     try {
-      // Construïm els paràmetres de la URL del backend
       let queryParams = [];
+
       if (minKw) queryParams.push(`minKw=${minKw}`);
       if (maxKw) queryParams.push(`maxKw=${maxKw}`);
       if (connectorType) queryParams.push(`connectorType=${encodeURIComponent(connectorType)}`);
@@ -108,11 +118,15 @@ export default function InicioScreen() {
 
       const response = await fetch(url);
       const data = await response.json();
-      setEstaciones(data);
+
+      setEstaciones(Array.isArray(data) ? data : []);
+
     } catch (error) {
       console.error('Error cargando estaciones:', error);
+      setEstaciones([]); // Si falla la red, vaciamos para evitar errores de .map()
     } finally {
-      setLoadingEstaciones(false);
+        setLoadingEstaciones(false);
+
     }
   };
 
@@ -312,13 +326,8 @@ useEffect(() => {
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
-          initialRegion={{ //en caso de disponer de la ubi, se inicia ahi el mapa
-            latitude: userLocation?.coords.latitude || 41.3879,
-            longitude: userLocation?.coords.longitude || 2.16992,
-            latitudeDelta: 0.5,
-            longitudeDelta: 0.5,
-          }}
-          showsUserLocation //muestra ubi en movil 
+          initialRegion={region}
+          showsUserLocation
           onPress={() => setSelectedStation(null)}
         >
           {userLocation && ( //marcamos la ubi del user manualmente en la web (showsUserLocation no sirve aqui)
@@ -328,15 +337,13 @@ useEffect(() => {
                 longitude: userLocation.coords.longitude,
               }}
               title="Tu ubicación"
-              options={{
-                icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-              }}
               //(por si acaso el showsUserLocation falla)
               pinColor="blue"
+              //isUserLocation={true}
             />
           )}
 
-          {displayedStations.slice(0, 2500).map((est) => (
+          {displayedStations.map((est) => (
             <Marker
               key={est.id}
               coordinate={{
@@ -373,9 +380,10 @@ useEffect(() => {
             <View style={styles.infoHandle} />
 
             <View style={styles.infoTitleRow}>
+            <MaterialIcons name="location-on" size={18} color="#10b981" />
               {/* 1. Nombre de la estación */}
               <Text style={styles.infoTitle} numberOfLines={2}>
-                {selectedStation.nom || 'Punto de carga'}
+                {selectedStation.adreca}, {selectedStation.municipi}
               </Text>
 
               {/* 2. Botón de favoritos (solo si hay usuario) */}
@@ -406,21 +414,21 @@ useEffect(() => {
 
             {/* CONTENIDO DEL PANEL: Dirección, kW, etc. */}
             <View style={styles.infoContent}>
-              <View style={styles.infoItem}>
-                <MaterialIcons name="location-on" size={18} color="#10b981" />
-                <Text style={styles.infoText}>{selectedStation.adreca}, {selectedStation.municipi}</Text>
-              </View>
 
               <View style={styles.infoBadgeRow}>
                 <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
                   <MaterialIcons name="bolt" size={14} color="#10b981" />
-                  <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.kw} kW</Text>
+                  <Text style={[styles.badgeText, { color: '#047857' }]}>{(parseFloat(selectedStation.kw) != 0)? selectedStation.kw : 'n/a'} kW</Text>
                 </View>
-                {!!selectedStation.tipus_velocitat && (
-                  <View style={[styles.badge, { backgroundColor: '#eff6ff' }]}>
-                    <Text style={[styles.badgeText, { color: '#1d4ed8' }]}>{selectedStation.tipus_velocitat}</Text>
-                  </View>
-                )}
+              <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+                <MaterialIcons name="ev-station" size={14} color="#10b981" />
+                <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.ac_dc}</Text>
+              </View>
+              <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+                <MaterialIcons name="electrical-services" size={14} color="#10b981" />
+                <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.tipus_connexio}</Text>
+              </View>
+
               </View>
 
               {selectedStation.promotor && (
