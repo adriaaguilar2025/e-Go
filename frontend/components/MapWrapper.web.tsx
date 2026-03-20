@@ -17,15 +17,17 @@ const defaultOptions = {
   disableDefaultUI: true,
 };
 
-export const MapView = forwardRef(({
-  children,
-  initialRegion,
-  style,
-  onPress,
-  onRegionChangeComplete,
-  options,
-  ...props
-}: any, ref) => {
+export const MapView = forwardRef((props: any, ref) => {
+  const {
+    children,
+    initialRegion,
+    style,
+    onPress,
+    onRegionChangeComplete,
+    options,
+    ...otherProps
+  } = props;
+
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -67,21 +69,21 @@ export const MapView = forwardRef(({
     }
   };
 
-  // Mejora de zoom: calcula el área exacta del cluster y se mueve a ella
   const handleClusterClick = (cluster: any) => {
     if (map) {
       const center = cluster.getCenter();
-
       map.panTo(center);
       map.setZoom((map.getZoom() || 12) + 2);
     }
   };
 
-  if (!isLoaded) return (
-    <View style={[{ flex: 1, justifyContent: 'center', alignItems: 'center' }, style]}>
-      <Text>Cargando Mapa...</Text>
-    </View>
-  );
+  if (!isLoaded) {
+    return (
+      <View style={[{ flex: 1, justifyContent: 'center', alignItems: 'center' }, style]}>
+        <Text>Cargando Mapa...</Text>
+      </View>
+    );
+  }
 
   const clusterableMarkers: any[] = [];
   const otherChildren: any[] = [];
@@ -102,7 +104,7 @@ export const MapView = forwardRef(({
         mapContainerStyle={containerStyle}
         center={map ? undefined : initialCenter}
         zoom={map ? undefined : 12}
-        onLoad={setMap}
+        onLoad={(m) => setMap(m)}
         onIdle={handleIdle}
         onZoomChanged={handleIdle}
         onClick={(e) => {
@@ -111,7 +113,7 @@ export const MapView = forwardRef(({
           }
         }}
         options={{ ...defaultOptions, ...options }}
-        {...props}
+        {...otherProps}
       >
         <MarkerClusterer
           key={clusterableMarkers.length}
@@ -121,7 +123,7 @@ export const MapView = forwardRef(({
             gridSize: 50,
             minimumClusterSize: 2,
             maxZoom: 15,
-            zoomOnClick: false, // Usamos nuestra función manual
+            zoomOnClick: false,
           }}
         >
           {(clusterer) => (
@@ -146,7 +148,11 @@ export const Marker = ({ coordinate, position, onPress, clusterer, ...props }: a
     <GoogleMarker
       position={pos}
       clusterer={clusterer}
-      onClick={() => onPress && onPress({ stopPropagation: () => {}, nativeEvent: { coordinate: pos } })}
+      onClick={() => {
+        if (onPress) {
+          onPress({ stopPropagation: () => {}, nativeEvent: { coordinate: pos } });
+        }
+      }}
       {...props}
     />
   );

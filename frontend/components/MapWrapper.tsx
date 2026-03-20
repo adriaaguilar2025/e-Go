@@ -1,13 +1,37 @@
-import MapView from 'react-native-maps';
-import SuperCluster from 'react-native-maps-super-cluster';
-import { Marker } from 'react-native-maps';
+import MapViewCluster from 'react-native-map-clustering';
+import MapView, { Marker } from 'react-native-maps';
 import { View, Text } from 'react-native';
 
 export { Marker };
 
-export function ClusteredMapView({ stations, userLocation, ...props }: any) {
+interface ClusteredMapViewProps {
+  stations: any[];
+  userLocation?: { latitude: number; longitude: number };
+  onMarkerPress?: (item: any) => void;
+  [key: string]: any;
+}
+
+export function ClusteredMapView({ stations, userLocation, onMarkerPress, ...props }: ClusteredMapViewProps) {
   return (
-    <MapView {...props}>
+    <MapViewCluster
+      {...props}
+      radius={50} // Distance in pixels to cluster markers
+      renderCluster={(cluster, onPress) => (
+        <Marker coordinate={cluster.coordinate} onPress={onPress}>
+          <View style={{
+            backgroundColor: '#10b981',
+            borderRadius: 20,
+            padding: 8,
+            borderWidth: 2,
+            borderColor: '#fff',
+          }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>
+              {cluster.pointCount}
+            </Text>
+          </View>
+        </Marker>
+      )}
+    >
       {userLocation && (
         <Marker
           coordinate={{
@@ -18,41 +42,17 @@ export function ClusteredMapView({ stations, userLocation, ...props }: any) {
           pinColor="blue"
         />
       )}
-      <SuperCluster
-        data={stations.map((s) => ({
-          ...s,
-          location: {
+
+      {stations.map((s) => (
+        <Marker
+          key={s.id}
+          coordinate={{
             latitude: parseFloat(s.latitud),
             longitude: parseFloat(s.longitud),
-          },
-        }))}
-        renderMarker={(item) => (
-          <Marker
-            key={item.id}
-            coordinate={item.location}
-            onPress={() => props.onMarkerPress?.(item)}
-          />
-        )}
-        renderCluster={(cluster) => (
-          <Marker
-            key={`cluster-${cluster.clusterId}`}
-            coordinate={cluster.coordinate}
-            onPress={() => cluster.onPress()}
-          >
-            <View style={{
-              backgroundColor: '#10b981',
-              borderRadius: 20,
-              padding: 8,
-              borderWidth: 2,
-              borderColor: '#fff',
-            }}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>
-                {cluster.pointCount}
-              </Text>
-            </View>
-          </Marker>
-        )}
-      />
-    </MapView>
+          }}
+          onPress={() => onMarkerPress?.(s)}
+        />
+      ))}
+    </MapViewCluster>
   );
 }
