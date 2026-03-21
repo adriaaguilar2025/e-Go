@@ -13,9 +13,11 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }, // necesario para RDS desde Lambda
 });
 
-// Tabla de usuarios (ej. schema ego, tabla Usuari)
+// Tabla de usuarios y admins (ej. schema ego, tabla Usuari)
 const DB_SCHEMA = process.env.DB_SCHEMA || 'public';
 const DB_TABLE_USUARIOS = process.env.DB_TABLE_USUARIOS || 'usuarios';
+const DB_TABLE_ADMINS = process.env.DB_TABLE_ADMINS || 'admins';
 const USUARIOS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_USUARIOS}"`;
+const ADMINS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_ADMINS}"`;
 
-module.exports = { pool, USUARIOS_TABLE };
+module.exports = { pool, USUARIOS_TABLE, ADMINS_TABLE };

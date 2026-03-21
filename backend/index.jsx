@@ -8,8 +8,12 @@ const serverless = require('serverless-http');
 
 // --- IMPORTACIÓN DE RUTAS ---
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const stationRoutes = require('./routes/stations');
+const favoriteRoutes = require('./routes/favorits'); // Importamos la ruta de favoritos
+
 const { pool } = require('./lib/db');
+const { startScheduler } = require('./lib/scheduler'); // Importamos el planificador
 
 const app = express();
 
@@ -18,6 +22,11 @@ app.use(cors());
 app.use(express.json());
 
 // --- RUTAS ---
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+app.use('/stations', stationRoutes);
+// Cualquier petición que empiece con la URL /favorites debe ser gestionada por las reglas de favoriteRoutes
+app.use('/favorites', favoriteRoutes);
 
 // 1. Root / Health Check
 app.get('/', async (req, res) => {
@@ -34,11 +43,7 @@ app.get('/', async (req, res) => {
   }
 });
 
-// 2. Registro de Módulos
-app.use('/auth', authRoutes);
-app.use('/stations', stationRoutes);
-
-// 3. Manejador 404
+// 2. Manejador 404
 app.use((req, res) => {
   res.status(404).json({
     error: "Not Found",
@@ -46,15 +51,20 @@ app.use((req, res) => {
   });
 });
 
-// --- EXPORT PARA AWS LAMBDA ---
+// --- EXPORTS ---
+// Exportamos la app para que los tests (Jest/Supertest) funcionen correctamente
+module.exports = app;
+// Exportamos el handler para AWS Lambda
 module.exports.handler = serverless(app);
 
-// En local, arrancar servidor y sincronizar estaciones (en Lambda no se ejecuta)
-if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+// --- ARRANQUE LOCAL ---
+// Solo iniciamos el servidor local si NO estamos en AWS Lambda Y NO estamos en entorno de tests
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME && process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3000;
-  const { startScheduler } = require('./lib/scheduler');
+  
   app.listen(PORT, () => {
-    console.log(`Servidor en http://localhost:${PORT}`);
-    startScheduler(5 * 60 * 1000); // sync al arrancar y cada 5 min (necesita APP_TOKEN en .env para la API Generalitat)
+    console.log(`Servidor escuchando en el puerto ${PORT}`);
+    // Iniciamos la actualización automática de estaciones cada 5 minutos
+    startScheduler(5 * 60 * 1000); 
   });
 }

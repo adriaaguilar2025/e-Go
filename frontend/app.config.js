@@ -1,13 +1,24 @@
-export default ({ config }) => {
+module.exports = ({ config }) => {
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
   return {
-    ...config, // Carga todo tu app.json original
+    ...config,
+    ios: {
+      ...config.ios,
+      config: {
+        ...config.ios?.config,
+        googleMapsApiKey,
+      },
+    },
     android: {
       ...config.android,
       config: {
+        ...config.android?.config,
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY // Inyecta la llave secreta
-        }
-      }
-    }
+          ...config.android?.config?.googleMaps,
+          apiKey: googleMapsApiKey,
+        },
+      },
+    },
   };
 };

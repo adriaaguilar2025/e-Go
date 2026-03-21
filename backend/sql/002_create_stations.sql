@@ -4,7 +4,7 @@ CREATE SCHEMA IF NOT EXISTS ego;
 -- La tabla va en el schema ego (el backend usa ego.estaciones)
 CREATE TABLE IF NOT EXISTS ego.estaciones (
   id                     SERIAL PRIMARY KEY,
-  external_id            VARCHAR(100) UNIQUE, -- El ":id" de la API (ej: "row-ktat-bcq8.qbut")
+  external_id            VARCHAR(100) UNIQUE,
   promotor               VARCHAR(255),
   acces                  VARCHAR(100),
   tipus_velocitat        VARCHAR(100),
@@ -21,9 +21,11 @@ CREATE TABLE IF NOT EXISTS ego.estaciones (
   updated_at             TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Trigger para updated_at (set_updated_at está en 001_create_users.sql)
+-- Trigger para updated_at (opcional, reutilizando el del login si existe)
 DROP TRIGGER IF EXISTS estaciones_updated_at ON ego.estaciones;
 CREATE TRIGGER estaciones_updated_at
   BEFORE UPDATE ON ego.estaciones
   FOR EACH ROW
   EXECUTE PROCEDURE set_updated_at();
+
+
