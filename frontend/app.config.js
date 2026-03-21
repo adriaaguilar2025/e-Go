@@ -1,25 +1,21 @@
-const appJson = require('./app.json');
-
-const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
 module.exports = ({ config }) => {
-  const expo = appJson.expo || {};
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
   return {
     ...config,
-    ...expo,
     ios: {
-      ...(expo.ios || {}),
+      ...config.ios,
       config: {
-        ...(expo.ios?.config || {}),
+        ...config.ios?.config,
         googleMapsApiKey,
       },
     },
     android: {
-      ...(expo.android || {}),
+      ...config.android,
       config: {
-        ...(expo.android?.config || {}),
+        ...config.android?.config,
         googleMaps: {
-          ...(expo.android?.config?.googleMaps || {}),
+          ...config.android?.config?.googleMaps,
           apiKey: googleMapsApiKey,
         },
       },

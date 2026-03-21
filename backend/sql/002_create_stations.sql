@@ -1,6 +1,7 @@
 -- Tabla para los puntos de carga (estaciones) de la Generalitat
 CREATE SCHEMA IF NOT EXISTS ego;
 
+-- La tabla va en el schema ego (el backend usa ego.estaciones)
 CREATE TABLE IF NOT EXISTS ego.estaciones (
   id                     SERIAL PRIMARY KEY,
   external_id            VARCHAR(100) UNIQUE,

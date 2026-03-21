@@ -24,7 +24,7 @@ ON CONFLICT (external_id) DO UPDATE SET
 // inserta estaciones nuevas y update de las que han cambiado
 async function upsertStation(est) {
   await pool.query(upsertQuery, [
-    est.id,
+    est[':id'] || est.id, // Mantenemos tu parche de la rama Bugs para la API de Socrata
     est.promotor_gestor,
     est.acces,
     est.tipus_velocitat,
@@ -40,6 +40,7 @@ async function upsertStation(est) {
   ]);
 }
 
+// Obtenemos la lógica avanzada de filtros de development
 async function getAllStations(filters = {}) {
   const {minKw, maxKw, connectorType, ac_dc, north, south, east, west} = filters;
 
@@ -84,8 +85,6 @@ async function getAllStations(filters = {}) {
 
   // Filtre per Tipus de Connector
   if (connectorType) {
-    // Utilitzem ILIKE per fer una cerca flexible (ignora majúscules/minúscules)
-    // i % als extrems perquè ho trobi encara que el text sigui "Schuko i MENNEKES"
     conditions.push(`tipus_connexio ILIKE $${paramIndex}`);
     values.push(`%${connectorType}%`);
     paramIndex++;
@@ -111,6 +110,7 @@ async function getAllStations(filters = {}) {
   return result.rows;
 }
 
+// Obtenemos el buscador de development
 async function searchStations(q, filters = {}) {
   const { minKw, maxKw, connectorType, ac_dc } = filters;
 

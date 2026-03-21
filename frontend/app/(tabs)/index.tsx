@@ -1,7 +1,8 @@
 // Inicio (primera pestaña). Sin sesión: bienvenida + Google. Con sesión: menú 3 barras + PANTALLA PRINCIPAL.
 import { useState, useEffect, useRef } from 'react';
-import { MapView, Marker } from '../../components/MapWrapper';
+import { MapView, Marker } from '../_components/MapWrapper';
 import TopBar from '../../components/TopBar';
+
 import {
   Image,
   Modal,
@@ -139,11 +140,20 @@ export default function InicioScreen() {
 const fetchUserFavorites = async () => {
   if (!user?.id) return;
   try {
-    const response = await fetch(`${API_URL}/favorites?usuari_id=${user.id}`); // Ajustado a tu ruta GET
+    const response = await fetch(`${API_URL}/favorites?usuari_id=${user.id}`);
     const data = await response.json();
-    const ids = data.map((fav: any) => fav.id);
 
-    console.log("IDs favoritos cargados:", ids); // Para que verifiques en consola
+    // Verificamos si data existe y es un array antes de hacer el map
+    let ids = [];
+    if (Array.isArray(data)) {
+      ids = data.map((fav: any) => fav.id);
+    } else if (data && Array.isArray(data.favorites)) {
+      // Por si el backend lo devuelve dentro de una propiedad 'favorites'
+      ids = data.favorites.map((fav: any) => fav.id);
+    } else {
+      console.warn("El backend no devolvió un array de favoritos:", data);
+    }
+    console.log("IDs favoritos cargados:", ids);
     setFavoriteIds(ids);
   } catch (error) {
     console.error("Error cargando favoritos:", error);
