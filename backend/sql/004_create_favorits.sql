@@ -2,9 +2,9 @@
 --Como ejecutar: psql -U postgres -d nombre_de_tu_bd (postgres) -f 003_create_favorites.sql
 -- psql -U postgres -d postgres -f .\backend\sql\003_create_favorits.sql desde el inicio.
 --Aseguramos que trabajamos sobre el esquema ego y no el public
-SET search_path TO ego, public;
+CREATE SCHEMA IF NOT EXISTS ego;
 
-CREATE TABLE IF NOT EXISTS favorits (
+CREATE TABLE IF NOT EXISTS ego.favorits (
   usuari_id   INTEGER NOT NULL,
   estacio_id  INTEGER NOT NULL,
   created_at   TIMESTAMPTZ DEFAULT NOW(),
@@ -14,11 +14,11 @@ CREATE TABLE IF NOT EXISTS favorits (
   --Si se borra un usuario o una estación, se eliminan sus instancias de favoritos con el CASCADE
   CONSTRAINT fk_usuari
     FOREIGN KEY(usuari_id)
-    REFERENCES Usuari(id)
+    REFERENCES ego.usuari(id)
     ON DELETE CASCADE,
 
   CONSTRAINT fk_estacio
     FOREIGN KEY(estacio_id)
-    REFERENCES estaciones(id)
+    REFERENCES ego.estaciones(id)
     ON DELETE CASCADE
 );
