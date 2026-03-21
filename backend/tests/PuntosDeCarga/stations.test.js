@@ -127,9 +127,9 @@ describe('Tests de estaciones completos', () => {
 
   });
 
-  // ==========================================
+  // -----------------------------------------
   // TESTS DELS FILTRES (AC/DC i Connector)
-  // ==========================================
+  // -----------------------------------------
   describe('Filtres de cerca: ac_dc i connectorType', () => {
     beforeEach(async () => {
       // 1. Netegem la taula per tenir un entorn controlat
