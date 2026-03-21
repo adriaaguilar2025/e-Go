@@ -22,6 +22,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/constants/api';
 
 const LOGO = require('../_assets/favicon.png');
+//Importamos el boton de favoritos
+import { FavoriteButton } from '../../components/FavoriteButton';
 
 interface Estacion {
   id: number;
@@ -34,6 +36,8 @@ interface Estacion {
   promotor?: string;
   acces?: string;
   tipus_velocitat?: string;
+  tipus_connexio?: string;
+  ac_dc?: string;
 }
 
 export default function InicioScreen() {
@@ -42,6 +46,7 @@ export default function InicioScreen() {
   const params = useLocalSearchParams();
   const minKw = params.minKw as string | undefined;
   const maxKw = params.maxKw as string | undefined;
+  const showFavoritesFilter = params.showFavorites === 'true'; //Leemos si el filtro de favoritos esta activo
   const connectorType = params.connectorType as string | undefined;
   const ac_dc = params.ac_dc as string | undefined;
 
@@ -51,16 +56,26 @@ export default function InicioScreen() {
   const [loadingEstaciones, setLoadingEstaciones] = useState(false);
   const [selectedStation, setSelectedStation] = useState<Estacion | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
-  const mapRef = useRef<any>(null);
 
   // --- NOUS ESTATS PEL BUSCADOR ---
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Estacion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Estado para controlar la región visible del mapa
+  const [region] = useState({
+    latitude: 41.3879,
+    longitude: 2.16992,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+
+  const mapRef = useRef<any>(null);
+  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   // Cargar estaciones de la base de datos
   useEffect(() => {
     if (user) {
+      fetchUserFavorites();
       fetchEstaciones();
     }
   }, [user, minKw, maxKw, connectorType, ac_dc]);
@@ -84,7 +99,6 @@ export default function InicioScreen() {
 
       // Animar mapa a la ubicación del usuario comprobando compatibilidad
       if (location && mapRef.current) {
-        //comprobamos que la funcion existe (en android/ios si pero en web no y petaria)
         if (typeof mapRef.current.animateToRegion === 'function') {
           mapRef.current.animateToRegion(
             { ...location.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
@@ -98,8 +112,8 @@ export default function InicioScreen() {
   const fetchEstaciones = async () => {
     setLoadingEstaciones(true);
     try {
-      // Construïm els paràmetres de la URL del backend
       let queryParams = [];
+
       if (minKw) queryParams.push(`minKw=${minKw}`);
       if (maxKw) queryParams.push(`maxKw=${maxKw}`);
       if (connectorType) queryParams.push(`connectorType=${encodeURIComponent(connectorType)}`);
@@ -110,13 +124,38 @@ export default function InicioScreen() {
 
       const response = await fetch(url);
       const data = await response.json();
-      setEstaciones(data);
+
+      setEstaciones(Array.isArray(data) ? data : []);
+
     } catch (error) {
       console.error('Error cargando estaciones:', error);
+      setEstaciones([]); // Si falla la red, vaciamos para evitar errores de .map()
     } finally {
-      setLoadingEstaciones(false);
+        setLoadingEstaciones(false);
+
     }
   };
+
+const fetchUserFavorites = async () => {
+  if (!user?.id) return;
+  try {
+    const response = await fetch(`${API_URL}/favorites?usuari_id=${user.id}`); // Ajustado a tu ruta GET
+    const data = await response.json();
+    const ids = data.map((fav: any) => fav.id);
+
+    console.log("IDs favoritos cargados:", ids); // Para que verifiques en consola
+    setFavoriteIds(ids);
+  } catch (error) {
+    console.error("Error cargando favoritos:", error);
+  }
+};
+
+// Ejecutarlo cuando el componente carga o cuando el usuario cambia
+useEffect(() => {
+  fetchUserFavorites();
+}, [user]);
+
+
 
   const centerMapOnUser = () => {
     if (userLocation && mapRef.current) {
@@ -198,7 +237,7 @@ export default function InicioScreen() {
     powerText = `≤ ${maxKw} kW`;
   }
 
-  const hasFilters = !!minKw || !!maxKw || !!connectorType || !!ac_dc;
+  const hasFilters = !!minKw || !!maxKw || !!connectorType || !!ac_dc || !!showFavoritesFilter;
 
   if (authLoading) {
     return (
@@ -208,7 +247,10 @@ export default function InicioScreen() {
       </View>
     );
   }
-
+  // FILTRO LOCAL: Si el filtro de favoritos está activo, nos quedamos solo con las
+   // estaciones cuyo ID está dentro de nuestro array favoriteIds.
+   const displayedStations = showFavoritesFilter
+       ? estaciones.filter(est => favoriteIds.includes(est.id)) : estaciones;
   if (!user) {
     return (
       <View style={styles.screen}>
@@ -270,6 +312,13 @@ export default function InicioScreen() {
               <View style={styles.filterRow}>
                 <MaterialIcons name="bolt" size={18} color="#10b981" />
                 <Text style={styles.activeFiltersText}>{powerText}</Text>
+                <TouchableOpacity
+                  onPress={() => router.setParams({ minKw: '', maxKw: '', connectorType: connectorType || '', ac_dc: ac_dc || '', showFavorites: showFavoritesFilter ? 'true' : ''})}
+                  hitSlop={8}
+                  style={{ marginLeft: 4 }}
+                >
+                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -280,6 +329,13 @@ export default function InicioScreen() {
                 <Text style={styles.activeFiltersText}>
                   {ac_dc === 'AC' ? 'AC' : ac_dc === 'DC' ? 'DC' : ac_dc}
                 </Text>
+                <TouchableOpacity
+                  onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', connectorType: connectorType || '', ac_dc: '', showFavorites: showFavoritesFilter ? 'true' : ''})}
+                  hitSlop={8}
+                  style={{ marginLeft: 4 }}
+                >
+                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -288,6 +344,28 @@ export default function InicioScreen() {
               <View style={styles.filterRow}>
                 <MaterialIcons name="electrical-services" size={18} color="#10b981" />
                 <Text style={styles.activeFiltersText}>{connectorType}</Text>
+                <TouchableOpacity
+                  onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', connectorType: '', ac_dc: ac_dc || '', showFavorites: showFavoritesFilter ? 'true' : ''})}
+                  hitSlop={8}
+                  style={{ marginLeft: 4 }}
+                >
+                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            {/*Etiqueta de Favoritos */}
+            {showFavoritesFilter && (
+              <View style={styles.filterRow}>
+                <MaterialIcons name="favorite" size={16} color="#ef4444" />
+                <Text style={styles.activeFiltersText}>Favoritos</Text>
+                <TouchableOpacity
+                  onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', connectorType: connectorType || '', ac_dc: ac_dc || '', showFavorites: '' })}
+                  hitSlop={8}
+                  style={{ marginLeft: 4 }}
+                >
+                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -295,7 +373,7 @@ export default function InicioScreen() {
 
           {/* Columna dreta: Botó de tancar */}
           <TouchableOpacity
-            onPress={() => router.setParams({ minKw: '', maxKw: '', connectorType: '', ac_dc: '' })}
+            onPress={() => router.setParams({ minKw: '', maxKw: '', connectorType: '', ac_dc: '', showFavorites: '' })}
             hitSlop={8}
             style={styles.clearFilterButton}
           >
@@ -309,13 +387,8 @@ export default function InicioScreen() {
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
-          initialRegion={{ //en caso de disponer de la ubi, se inicia ahi el mapa
-            latitude: userLocation?.coords.latitude || 41.3879,
-            longitude: userLocation?.coords.longitude || 2.16992,
-            latitudeDelta: 0.5,
-            longitudeDelta: 0.5,
-          }}
-          showsUserLocation //muestra ubi en movil 
+          initialRegion={region}
+          showsUserLocation
           onPress={() => setSelectedStation(null)}
         >
           {userLocation && ( //marcamos la ubi del user manualmente en la web (showsUserLocation no sirve aqui)
@@ -325,15 +398,13 @@ export default function InicioScreen() {
                 longitude: userLocation.coords.longitude,
               }}
               title="Tu ubicación"
-              options={{
-                icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-              }}
               //(por si acaso el showsUserLocation falla)
               pinColor="blue"
+              //isUserLocation={true}
             />
           )}
 
-          {estaciones.slice(0, 50).map((est) => (
+          {displayedStations.map((est) => (
             <Marker
               key={est.id}
               coordinate={{
@@ -368,10 +439,30 @@ export default function InicioScreen() {
         {selectedStation && (
           <View style={styles.infoPanel}>
             <View style={styles.infoHandle} />
+
             <View style={styles.infoTitleRow}>
+            <MaterialIcons name="location-on" size={18} color="#10b981" />
+              {/* 1. Nombre de la estación */}
               <Text style={styles.infoTitle} numberOfLines={2}>
-                {selectedStation.nom || 'Punto de carga'}
+                {selectedStation.adreca}, {selectedStation.municipi}
               </Text>
+
+              {/* 2. Botón de favoritos (solo si hay usuario) */}
+              {user && (
+                <FavoriteButton
+                  estacio_id={selectedStation.id}
+                  isInitiallyFavorite={favoriteIds.includes(selectedStation.id)}
+                  onToggle={(isFav) => {
+                    if (isFav) {
+                      setFavoriteIds([...favoriteIds, selectedStation.id]);
+                    } else {
+                      setFavoriteIds(favoriteIds.filter(id => id !== selectedStation.id));
+                    }
+                  }}
+                />
+              )}
+
+              {/* 3. Botón de cerrar */}
               <TouchableOpacity
                 onPress={() => setSelectedStation(null)}
                 style={styles.infoCloseBtn}
@@ -380,22 +471,25 @@ export default function InicioScreen() {
               </TouchableOpacity>
             </View>
 
+
+
+            {/* CONTENIDO DEL PANEL: Dirección, kW, etc. */}
             <View style={styles.infoContent}>
-              <View style={styles.infoItem}>
-                <MaterialIcons name="location-on" size={18} color="#10b981" />
-                <Text style={styles.infoText}>{selectedStation.adreca}, {selectedStation.municipi}</Text>
-              </View>
 
               <View style={styles.infoBadgeRow}>
                 <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
                   <MaterialIcons name="bolt" size={14} color="#10b981" />
-                  <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.kw} kW</Text>
+                  <Text style={[styles.badgeText, { color: '#047857' }]}>{(parseFloat(selectedStation.kw) != 0)? selectedStation.kw : 'n/a'} kW</Text>
                 </View>
-                {!!selectedStation.tipus_velocitat && (
-                  <View style={[styles.badge, { backgroundColor: '#eff6ff' }]}>
-                    <Text style={[styles.badgeText, { color: '#1d4ed8' }]}>{selectedStation.tipus_velocitat}</Text>
-                  </View>
-                )}
+              <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+                <MaterialIcons name="ev-station" size={14} color="#10b981" />
+                <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.ac_dc}</Text>
+              </View>
+              <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+                <MaterialIcons name="electrical-services" size={14} color="#10b981" />
+                <Text style={[styles.badgeText, { color: '#047857' }]}>{selectedStation.tipus_connexio}</Text>
+              </View>
+
               </View>
 
               {selectedStation.promotor && (
@@ -445,8 +539,9 @@ export default function InicioScreen() {
                   params: {
                     minKw: minKw || '',
                     maxKw: maxKw || '',
+                    showFavorites: showFavoritesFilter ? 'true' : '',
                     connectorType: connectorType || '',
-                    ac_dc: ac_dc || '',
+                    ac_dc: ac_dc || ''
                   }
                 });
               }}
