@@ -199,7 +199,7 @@ useEffect(() => {
         // --- APLIQUEM EL FILTRE DE FAVORITS LOCALMENT ---
         let resultatsFinals = data;
         if (showFavoritesFilter) {
-          resultatsFinals = data.filter((est) => favoriteIds.includes(est.id));
+          resultatsFinals = data.filter((est: Estacion) => favoriteIds.includes(est.id));
         }
         setSearchResults(resultatsFinals);
       } catch (error) {
