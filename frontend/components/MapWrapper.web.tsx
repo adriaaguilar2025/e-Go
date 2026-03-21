@@ -37,10 +37,12 @@ export const MapView = forwardRef((props: any, ref) => {
 
   useImperativeHandle(ref, () => ({
     animateToRegion: (region: any) => {
-      if (map) {
+      if (map && region.latitude && region.longitude) {
         map.panTo({ lat: region.latitude, lng: region.longitude });
-        const zoom = Math.round(Math.log2(360 / region.latitudeDelta));
-        map.setZoom(zoom);
+        if (region.latitudeDelta) {
+            const zoom = Math.round(Math.log2(360 / region.latitudeDelta));
+            map.setZoom(zoom);
+        }
       }
     }
   }));
@@ -48,7 +50,7 @@ export const MapView = forwardRef((props: any, ref) => {
   const initialCenter = useMemo(() => ({
     lat: initialRegion?.latitude || 41.3879,
     lng: initialRegion?.longitude || 2.16992
-  }), []);
+  }), [initialRegion]);
 
   const handleIdle = () => {
     if (map && onRegionChangeComplete) {
@@ -88,9 +90,10 @@ export const MapView = forwardRef((props: any, ref) => {
   const clusterableMarkers: any[] = [];
   const otherChildren: any[] = [];
 
+  // CORRECCIÓ CLAU: Filtrar els "nulls" i "false" que envia React abans de processar-los
   Children.forEach(children, (child) => {
     if (isValidElement(child)) {
-      if ((child.props as any).isUserLocation) {
+      if ((child.props as any).isUserLocation || (child.props as any).pinColor === 'blue') {
         otherChildren.push(child);
       } else {
         clusterableMarkers.push(child);
@@ -102,11 +105,11 @@ export const MapView = forwardRef((props: any, ref) => {
     <div style={{ width: '100%', height: '100%' }}>
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={map ? undefined : initialCenter}
-        zoom={map ? undefined : 12}
+        // CORRECCIÓ CLAU 2: Sempre passar un centre inicial vàlid, mai undefined
+        center={initialCenter}
+        zoom={12}
         onLoad={(m) => setMap(m)}
         onIdle={handleIdle}
-        onZoomChanged={handleIdle}
         onClick={(e) => {
           if (e.latLng && onPress) {
             onPress({ nativeEvent: { coordinate: { latitude: e.latLng.lat(), longitude: e.latLng.lng() } } });
@@ -116,7 +119,7 @@ export const MapView = forwardRef((props: any, ref) => {
         {...otherProps}
       >
         <MarkerClusterer
-          key={clusterableMarkers.length}
+          key={`clusters-${clusterableMarkers.length}`}
           onClick={handleClusterClick}
           options={{
             imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
@@ -142,15 +145,28 @@ export const MapView = forwardRef((props: any, ref) => {
 
 MapView.displayName = "MapView";
 
-export const Marker = ({ coordinate, position, onPress, clusterer, ...props }: any) => {
+export const Marker = ({ coordinate, position, onPress, clusterer, pinColor, ...props }: any) => {
   const pos = position || (coordinate ? { lat: coordinate.latitude, lng: coordinate.longitude } : null);
-  if (!pos) return null;
+
+  if (!pos || isNaN(pos.lat) || isNaN(pos.lng)) return null;
+
+  // --- TRADUCTOR DE COLORS PER A LA WEB ---
+  let iconUrl = undefined;
+  if (pinColor === 'blue') {
+    iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+  } else if (pinColor === 'green' || pinColor === '#10b981') {
+    iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
+  } else if (pinColor === 'red' || pinColor === '#ef4444') {
+    iconUrl = 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
+  }
 
   return (
     <GoogleMarker
       position={pos}
       clusterer={clusterer}
-      onClick={() => {
+      // Si hem trobat un color, li passem la icona a Google Maps
+      icon={iconUrl ? { url: iconUrl } : undefined}
+      onClick={(e) => {
         if (onPress) {
           onPress({ stopPropagation: () => {}, nativeEvent: { coordinate: pos } });
         }

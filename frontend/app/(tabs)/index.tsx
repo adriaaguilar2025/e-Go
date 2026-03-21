@@ -195,7 +195,13 @@ useEffect(() => {
         // CANVIA AQUESTA URL PER LA TEVA RUTA DE CERCA DEL BACKEND!
         const response = await fetch(`${API_URL}/stations/search?${queryString}`);
         const data = await response.json();
-        setSearchResults(data);
+
+        // --- APLIQUEM EL FILTRE DE FAVORITS LOCALMENT ---
+        let resultatsFinals = data;
+        if (showFavoritesFilter) {
+          resultatsFinals = data.filter((est) => favoriteIds.includes(est.id));
+        }
+        setSearchResults(resultatsFinals);
       } catch (error) {
         console.error('Error cercant estacions:', error);
       } finally {
@@ -204,7 +210,7 @@ useEffect(() => {
     }, 500); // Espera mig segon després de parar d'escriure
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, minKw, maxKw, connectorType, ac_dc]);
+  }, [searchQuery, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]);
 
 
   // Funció que s'executa quan toquem un resultat del desplegable
@@ -317,7 +323,7 @@ useEffect(() => {
                   hitSlop={8}
                   style={{ marginLeft: 4 }}
                 >
-                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                  <MaterialIcons name="filter-alt-off" size={16} color="#94a3b8" />
                 </TouchableOpacity>
               </View>
             )}
@@ -334,7 +340,7 @@ useEffect(() => {
                   hitSlop={8}
                   style={{ marginLeft: 4 }}
                 >
-                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                  <MaterialIcons name="filter-alt-off" size={16} color="#94a3b8" />
                 </TouchableOpacity>
               </View>
             )}
@@ -349,7 +355,7 @@ useEffect(() => {
                   hitSlop={8}
                   style={{ marginLeft: 4 }}
                 >
-                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                  <MaterialIcons name="filter-alt-off" size={16} color="#94a3b8" />
                 </TouchableOpacity>
               </View>
             )}
@@ -357,14 +363,14 @@ useEffect(() => {
             {/*Etiqueta de Favoritos */}
             {showFavoritesFilter && (
               <View style={styles.filterRow}>
-                <MaterialIcons name="favorite" size={16} color="#ef4444" />
+                <MaterialIcons name="favorite" size={18} color="#ef4444" />
                 <Text style={styles.activeFiltersText}>Favoritos</Text>
                 <TouchableOpacity
                   onPress={() => router.setParams({ minKw: minKw || '', maxKw: maxKw || '', connectorType: connectorType || '', ac_dc: ac_dc || '', showFavorites: '' })}
                   hitSlop={8}
                   style={{ marginLeft: 4 }}
                 >
-                  <MaterialIcons name="close" size={18} color="#94a3b8" />
+                  <MaterialIcons name="filter-alt-off" size={16} color="#94a3b8" />
                 </TouchableOpacity>
               </View>
             )}
@@ -377,7 +383,7 @@ useEffect(() => {
             hitSlop={8}
             style={styles.clearFilterButton}
           >
-            <MaterialIcons name="close" size={20} color="#94a3b8" />
+            <MaterialIcons name="delete-outline" size={20} color="#94a3b8" />
           </TouchableOpacity>
 
         </View>
@@ -411,6 +417,7 @@ useEffect(() => {
                 latitude: parseFloat(est.latitud),
                 longitude: parseFloat(est.longitud),
               }}
+              pinColor = {favoriteIds.includes(est.id) ? 'red' : 'green'}
               onPress={(e: any) => {
                 e.stopPropagation();
                 setSelectedStation(est);
