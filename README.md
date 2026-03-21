@@ -51,6 +51,13 @@ npm install
 npx nodemon index.jsx
 ```
 
+### 3. Configuración del Frontend
+```bash
+cd frontend
+npm install
+npx expo start
+```
+
 # **Guía de Setup: e-Go Nativo** 
 
 ## Preparación de Android Studio
@@ -101,11 +108,3 @@ cd android
 (puede que en Windows sea .\gradlew signingReport)
 - Copia el código SHA-1 que sale bajo la variante debug.
 - Pásale ese código a la persona que administre Google Cloud para que lo añada a las credenciales de la app.
-
-
-### 3. Configuración del Frontend
-```bash
-cd frontend
-npm install
-npx expo start
-```
