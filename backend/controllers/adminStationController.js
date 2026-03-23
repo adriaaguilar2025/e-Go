@@ -7,6 +7,14 @@ function parseNumber(value) {
   return num;
 }
 
+function isValidLatitude(value) {
+  return value !== null && value >= -90 && value <= 90;
+}
+
+function isValidLongitude(value) {
+  return value !== null && value >= -180 && value <= 180;
+}
+
 async function createManualStation(req, res) {
   try {
     const {
@@ -32,8 +40,8 @@ async function createManualStation(req, res) {
     if (!nom || typeof nom !== 'string') {
       return res.status(400).json({ error: 'Falta el nombre de la estacion' });
     }
-    if (lat === null || lng === null) {
-      return res.status(400).json({ error: 'Latitud y longitud son obligatorias y numericas' });
+    if (!isValidLatitude(lat) || !isValidLongitude(lng)) {
+      return res.status(400).json({ error: 'Latitud debe estar entre -90 y 90 y longitud entre -180 y 180' });
     }
 
     const station = await stationModel.createManualStation({
@@ -86,12 +94,12 @@ async function updateManualStation(req, res) {
 
     if (body.latitud !== undefined) {
       const lat = parseNumber(body.latitud);
-      if (lat === null) return res.status(400).json({ error: 'Latitud invalida' });
+      if (!isValidLatitude(lat)) return res.status(400).json({ error: 'Latitud invalida: debe estar entre -90 y 90' });
       patch.latitud = lat;
     }
     if (body.longitud !== undefined) {
       const lng = parseNumber(body.longitud);
-      if (lng === null) return res.status(400).json({ error: 'Longitud invalida' });
+      if (!isValidLongitude(lng)) return res.status(400).json({ error: 'Longitud invalida: debe estar entre -180 y 180' });
       patch.longitud = lng;
     }
     if (body.kw !== undefined) {

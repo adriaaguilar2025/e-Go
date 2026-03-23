@@ -51,6 +51,15 @@ describe('Admin stations', () => {
     expect(res.status).toBe(400);
   });
 
+  test('POST /admin/stations -> 400 si latitud o longitud estan fuera de rango', async () => {
+    const res = await request(app).post('/admin/stations').set(authHeader()).send({
+      nom: 'Manual',
+      latitud: 91,
+      longitud: 181,
+    });
+    expect(res.status).toBe(400);
+  });
+
   test('POST /admin/stations -> 201 crea manual', async () => {
     stationModel.createManualStation.mockResolvedValue({
       id: 10,
@@ -91,6 +100,16 @@ describe('Admin stations', () => {
     const res = await request(app).patch('/admin/stations/12').set(authHeader()).send({ nom: 'Nuevo' });
     expect(res.status).toBe(200);
     expect(res.body.nom).toBe('Nuevo');
+  });
+
+  test('PATCH /admin/stations/:id -> 400 si latitud esta fuera de rango', async () => {
+    const res = await request(app).patch('/admin/stations/12').set(authHeader()).send({ latitud: -91 });
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH /admin/stations/:id -> 400 si longitud esta fuera de rango', async () => {
+    const res = await request(app).patch('/admin/stations/12').set(authHeader()).send({ longitud: 181 });
+    expect(res.status).toBe(400);
   });
 
   test('DELETE /admin/stations/:id -> 400 si id invalido', async () => {

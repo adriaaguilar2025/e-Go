@@ -16,6 +16,11 @@ import { API_URL } from '@/constants/api';
 import { MapView, Marker } from '@/components/MapWrapper';
 
 const ADMIN_TOKEN_KEY = '@ego_admin_token';
+const CATALUNYA_MUNICIPALITIES_BY_PROVINCE = require('@/constants/catalunyaMunicipalities.json') as Record<
+  string,
+  string[]
+>;
+const CATALUNYA_PROVINCES = Object.keys(CATALUNYA_MUNICIPALITIES_BY_PROVINCE);
 
 type FormState = {
   nom: string;
@@ -30,7 +35,6 @@ type FormState = {
   provincia: string;
   promotor: string;
   acces: string;
-  external_id: string;
 };
 
 const initialState: FormState = {
@@ -46,7 +50,6 @@ const initialState: FormState = {
   provincia: '',
   promotor: '',
   acces: '',
-  external_id: '',
 };
 
 export default function AdminStationNewScreen() {
@@ -64,7 +67,19 @@ export default function AdminStationNewScreen() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [mapOpen, setMapOpen] = useState(false);
+  const [provincePickerOpen, setProvincePickerOpen] = useState(false);
+  const [municipalityPickerOpen, setMunicipalityPickerOpen] = useState(false);
+  const [municipalityQuery, setMunicipalityQuery] = useState('');
   const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null);
+  const municipalityOptions = form.provincia
+    ? CATALUNYA_MUNICIPALITIES_BY_PROVINCE[form.provincia] ?? []
+    : [];
+  const filteredMunicipalityOptions =
+    !municipalityQuery.trim()
+      ? municipalityOptions
+      : municipalityOptions.filter((municipality) =>
+          municipality.toLowerCase().includes(municipalityQuery.trim().toLowerCase())
+        );
 
   useEffect(() => {
     if (!isEdit) return;
@@ -81,7 +96,6 @@ export default function AdminStationNewScreen() {
       provincia: getParam('provincia') || '',
       promotor: getParam('promotor') || '',
       acces: getParam('acces') || '',
-      external_id: getParam('external_id') || '',
     });
     const lat = getParam('latitud') ? Number(getParam('latitud')) : null;
     const lng = getParam('longitud') ? Number(getParam('longitud')) : null;
@@ -94,6 +108,24 @@ export default function AdminStationNewScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError('');
     setSuccess('');
+  }
+
+  function selectProvince(value: string) {
+    setForm((prev) => ({
+      ...prev,
+      provincia: value,
+      municipi: prev.provincia === value ? prev.municipi : '',
+    }));
+    setError('');
+    setSuccess('');
+    setMunicipalityQuery('');
+    setProvincePickerOpen(false);
+  }
+
+  function selectMunicipality(value: string) {
+    updateField('municipi', value);
+    setMunicipalityQuery('');
+    setMunicipalityPickerOpen(false);
   }
 
   async function submit() {
@@ -238,20 +270,35 @@ export default function AdminStationNewScreen() {
             onChangeText={(v) => updateField('adreca', v)}
           />
           <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.half]}
-              placeholder="Municipio"
-              placeholderTextColor="#9ca3af"
-              value={form.municipi}
-              onChangeText={(v) => updateField('municipi', v)}
-            />
-            <TextInput
-              style={[styles.input, styles.half]}
-              placeholder="Provincia"
-              placeholderTextColor="#9ca3af"
-              value={form.provincia}
-              onChangeText={(v) => updateField('provincia', v)}
-            />
+            <TouchableOpacity
+              style={[styles.input, styles.half, styles.selectInput]}
+              onPress={() => setProvincePickerOpen(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={form.provincia ? styles.selectText : styles.placeholderText}>
+                {form.provincia || 'Provincia'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.half,
+                styles.selectInput,
+                !form.provincia && styles.disabledInput,
+              ]}
+              onPress={() => {
+                if (form.provincia) {
+                  setMunicipalityQuery('');
+                  setMunicipalityPickerOpen(true);
+                }
+              }}
+              activeOpacity={0.8}
+              disabled={!form.provincia}
+            >
+              <Text style={form.municipi ? styles.selectText : styles.placeholderText}>
+                {form.municipi || (form.provincia ? 'Municipio' : 'Selecciona provincia antes')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -270,13 +317,6 @@ export default function AdminStationNewScreen() {
             placeholderTextColor="#9ca3af"
             value={form.acces}
             onChangeText={(v) => updateField('acces', v)}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="External ID (opcional)"
-            placeholderTextColor="#9ca3af"
-            value={form.external_id}
-            onChangeText={(v) => updateField('external_id', v)}
           />
         </View>
 
@@ -349,6 +389,77 @@ export default function AdminStationNewScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={provincePickerOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setProvincePickerOpen(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.pickerCard}>
+            <Text style={styles.pickerTitle}>Selecciona provincia</Text>
+            {CATALUNYA_PROVINCES.map((province) => (
+              <TouchableOpacity
+                key={province}
+                style={styles.pickerOption}
+                onPress={() => selectProvince(province)}
+              >
+                <Text style={styles.pickerOptionText}>{province}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => setProvincePickerOpen(false)}
+            >
+              <Text style={styles.secondaryButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={municipalityPickerOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setMunicipalityPickerOpen(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.pickerCard}>
+            <Text style={styles.pickerTitle}>Selecciona municipio</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Buscar municipio"
+              placeholderTextColor="#9ca3af"
+              value={municipalityQuery}
+              onChangeText={setMunicipalityQuery}
+            />
+            <ScrollView style={styles.pickerList}>
+              {filteredMunicipalityOptions.map((municipality) => (
+                <TouchableOpacity
+                  key={municipality}
+                  style={styles.pickerOption}
+                  onPress={() => selectMunicipality(municipality)}
+                >
+                  <Text style={styles.pickerOptionText}>{municipality}</Text>
+                </TouchableOpacity>
+              ))}
+              {!filteredMunicipalityOptions.length ? (
+                <Text style={styles.emptyText}>No se han encontrado municipios</Text>
+              ) : null}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => {
+                setMunicipalityQuery('');
+                setMunicipalityPickerOpen(false);
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -413,6 +524,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#fafafa',
     marginBottom: 10,
+  },
+  selectInput: {
+    justifyContent: 'center',
+  },
+  selectText: {
+    fontSize: 15,
+    color: '#111827',
+  },
+  placeholderText: {
+    fontSize: 15,
+    color: '#9ca3af',
+  },
+  disabledInput: {
+    opacity: 0.55,
   },
   row: {
     flexDirection: 'row',
@@ -489,6 +614,47 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pickerCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 18,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  pickerList: {
+    maxHeight: 320,
+  },
+  pickerOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+    marginBottom: 8,
+  },
+  pickerOptionText: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
   errorText: {
     color: '#dc2626',
