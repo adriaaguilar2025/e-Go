@@ -28,17 +28,22 @@ import {
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { API_URL } from '@/constants/api';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 export default function VehiclesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
   // Estats per guardar els valors temporals abans d'aplicar
-  const [nom, setNom] = '';
+  const [nom, setNom] = useState((params.potencia as string) || '');
   const [potencia, setPotencia] = useState((params.potencia as string) || '');
   const [connectorType, setConnectorType] = useState((params.connectorType as string) || '');
   const [acDc, setAcDc] = useState((params.ac_dc as string) || '');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  const { user } = useAuth();
 
   // Llista de connectors més habituals
   const CONNECTOR_TYPES = ['CCS Combo2', 'CHAdeMO', 'Schuko', 'MENNEKES', 'TESLA'];
@@ -58,14 +63,14 @@ export default function VehiclesScreen() {
     
     try {
       const method = 'POST';
-      const res = await fetch(`${API_URL}/newcar`, {
+      const res = await fetch(`${API_URL}/car/newcar`, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuari_id: user.id, v_nom: nom, v_potencia: potencia, v_conector: connectorType, v_corrent: acDc}),
       });
 
       if (res.ok) {
-        router.navigate({ pathname: '/car' });
+        //router.navigate({ pathname: '/car' });
       } else {
         Alert.alert("Error", "No se ha podido guardar el vehículo");
       }
@@ -73,17 +78,6 @@ export default function VehiclesScreen() {
       console.error('Error al guardar vehiculo', e);
       Alert.alert("Error", "Error de conexión");
     }
-    
-
-    // 2. Si tot és correcte (o si falta algun dels dos camps), apliquem els filtres
-/*    router.navigate({
-      pathname: '/',
-      params: {//Enviamos los parametros de vuelta al index
-          potencia,
-          ac_dc: acDc,
-          connectorType
-      }
-    });*/
   };
 
   const handleClear = () => {
