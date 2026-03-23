@@ -12,16 +12,16 @@ async function addCar(usuariId, nom, potencia, conector, corrent) {
     //Si no ens donen els parametres llençem exepció, si no cridem al model per el Delete
   if (!usuariId || !estacioId) throw new Error('Faltan IDs de usuario o estación');
   return await favoriteModel.removeFavorite(usuariId, estacioId);
-}
-
-async function getUserFavorites(usuariId) {
-    //Si no ens donen els parametres llençem exepció, si no cridem al model per el Select
-  if (!usuariId) throw new Error('ID de usuario no proporcionado');
-  return await favoriteModel.getFavoritesByUser(usuariId);
 }*/
 
+async function getUserVehicles(usuariId) {
+    //Si no ens donen els parametres llençem exepció, si no cridem al model per el Select
+  if (!usuariId) throw new Error('ID de usuario no proporcionado');
+  return await vehicleModel.getVehiclesByUser(usuariId);
+}
+
 module.exports = {
-  addCar//,
+  addCar,
   //removeFavorite,
-  //getUserFavorites
+  getUserVehicles
 };

@@ -10,7 +10,7 @@ export default function PantallaProva() {
 
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,15 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { API_URL } from '@/constants/api';
 import { useAuth } from '@/contexts/AuthContext';
+//import { MaterialIcons } from '@expo/vector-icons';
+
+interface Vehicle {
+  usuari: number;
+  nom: string;
+  potencia: string;
+  conector: string;
+  corrent: string;
+}
 
 
 export default function VehiclesScreen() {
@@ -42,6 +51,7 @@ export default function VehiclesScreen() {
   const [connectorType, setConnectorType] = useState((params.connectorType as string) || '');
   const [acDc, setAcDc] = useState((params.ac_dc as string) || '');
   const [errorMessage, setErrorMessage] = useState('');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   
   const { user } = useAuth();
 
@@ -49,6 +59,20 @@ export default function VehiclesScreen() {
   const CONNECTOR_TYPES = ['CCS Combo2', 'CHAdeMO', 'Schuko', 'MENNEKES', 'TESLA'];
 
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (user) {
+      fetchVehicles();
+    }
+  }, [user]);
+   
+/*  const vehicles = [
+    {id: 3},
+    {id: 6},
+    {id: 8},
+    {id: 36},
+    {id: 1}
+  ];*/
 
 
   const saveCar = async () => {
@@ -58,25 +82,35 @@ export default function VehiclesScreen() {
     if ((nom == '') || (potencia == '') || (connectorType == '') || (acDc == '')) {
 	setErrorMessage('Los vehículos deben estar completamente especificados (nombre, potencia, tipo de conector y de corriente)');
 	return;
-    }
-    
+    }    
     
     try {
       const method = 'POST';
-      const res = await fetch(`${API_URL}/car/newcar`, {
+      const res = await fetch(`${API_URL}/car`, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuari_id: user.id, v_nom: nom, v_potencia: potencia, v_conector: connectorType, v_corrent: acDc}),
       });
 
       if (res.ok) {
-        //router.navigate({ pathname: '/car' });
+        router.navigate({ pathname: '/car' });
       } else {
         Alert.alert("Error", "No se ha podido guardar el vehículo");
       }
     } catch (e) {
       console.error('Error al guardar vehiculo', e);
       Alert.alert("Error", "Error de conexión");
+    }
+  };
+  
+  const fetchVehicles = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`${API_URL}/car?usuari_id=${user.id}`); // Ajustado a tu ruta GET
+      const data = await response.json();
+      setVehicles(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error cargando favoritos:", error);
     }
   };
 
@@ -94,7 +128,7 @@ export default function VehiclesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.title}>Gestión de vehículos</Text>
+        <Text style={styles.title}>Garaje</Text>
         <View style={{ width: 24 }} /* Espai buit per centrar el títol */ />
       </View>
 
@@ -105,12 +139,22 @@ export default function VehiclesScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
+        {vehicles.map((v, i) => {
+          return (
+            <View style={styles.infoPanel}>
+              <Text style={styles.title}>
+                {v.nom}
+              </Text>
+            </View>
+          );
+        })}
+        <View style={styles.infoPanel}>
         {/* Això fa que si toques qualsevol espai buit, s'amagui el teclat */}
         <TouchableWithoutFeedback onPress={() => Keyboard.dismiss}>
           <View style={{flex: 1}}>
             
-          <Text style={styles.description}>
-                Introduce los parámetros de tu vehículo:
+          <Text style={styles.titleNew}>
+                Nuevo vehículo
               </Text>
 
             {/* Input Nom */}
@@ -204,14 +248,14 @@ export default function VehiclesScreen() {
             </View>
           </View>
         </TouchableWithoutFeedback>
+        {/* Botons d'acció */}
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.applyBtn} onPress={saveCar} activeOpacity={0.8}>
+            <Text style={styles.applyBtnText}>Guardar vehículo</Text>
+          </TouchableOpacity>
+        </View>
+        </View>
       </ScrollView> {/*<-- Final de content*/}
-
-      {/* Botons d'acció */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.applyBtn} onPress={saveCar} activeOpacity={0.8}>
-          <Text style={styles.applyBtnText}>Guardar vehículo</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* --- POP-UP FLOTANT D'ERROR --- */}
       <Modal
@@ -270,6 +314,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1f2937',
+  },
+  titleNew: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 16
   },
   content: {
     padding: 24,
@@ -433,5 +483,13 @@ const styles = StyleSheet.create({
     padding: 4,
     backgroundColor: '#f1f5f9',
     borderRadius: 20,
+  },
+  infoPanel: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    boxShadow: '0px 0px 12px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
+    elevation: 10,
+    marginBottom: 16,
   },
 });

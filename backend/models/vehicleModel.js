@@ -24,23 +24,23 @@ async function addCar(usuariId, nom, potencia, conector, corrent) {
   `;
   const result = await pool.query(query, [usuariId, estacioId]);
   return result.rows[0];//Solo devolvemos una fila
-}
+}*/
 
-async function getFavoritesByUser(usuariId) {
+async function getVehiclesByUser(usuariId) {
   // Esta consulta une favoritos con estaciones para devolver la info completa
   const query = `
-    SELECT e.*
-    FROM ego.estaciones e INNER JOIN ego.favorits f ON e.id = f.estacio_id
-    WHERE f.usuari_id = $1
-    ORDER BY f.created_at DESC;
+    SELECT *
+    FROM ego.vehicles
+    WHERE usuari_id = $1
+    ORDER BY created_at DESC;
   `;
   const result = await pool.query(query, [usuariId]);
   return result.rows;
-}*/
+}
 
 //Funciones que queremos que se puedan llamar desde el exterior
 module.exports = {
-  addCar//,
+  addCar,
   //removeFavorite,
-  //getFavoritesByUser
+  getVehiclesByUser
 };

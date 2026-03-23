@@ -32,21 +32,21 @@ async function addCar(req, res) {
     console.error('Error al eliminar favorito:', err);
     res.status(500).json({ error: 'Error al procesar la solicitud' });
   }
-}
+}*/
 
-async function getFavorites(req, res) {
+async function getVehicles(req, res) {
   try {
     const { usuari_id } = req.query; // Se puede pasar por query param
-    const favorites = await favoriteService.getUserFavorites(usuari_id);
-    res.json(favorites);
+    const vehicles = await vehicleService.getUserVehicles(usuari_id);
+    res.json(vehicles);
   } catch (err) {
     console.error('Error al obtener favoritos:', err);
     res.status(500).json({ error: 'Error al obtener favoritos' });
   }
-}*/
+}
 
 module.exports = {
-  addCar//,
+  addCar,
   //removeFavorite,
-  //getFavorites
+  getVehicles
 };
