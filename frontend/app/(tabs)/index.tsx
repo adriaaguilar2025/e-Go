@@ -402,34 +402,37 @@ useEffect(() => {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
+          key={`map-${displayedStations.length}`} // <-- TRUCO VITAL: Fuerza al mapa a pintarse cuando llegan los datos
           style={StyleSheet.absoluteFillObject}
           initialRegion={region}
-          showsUserLocation
+          showsUserLocation={true}
           onPress={() => setSelectedStation(null)}
         >
-          {userLocation && ( //marcamos la ubi del user manualmente en la web (showsUserLocation no sirve aqui)
+          {/* Marcador manual del usuario para la Web */}
+          {userLocation && (
             <Marker
               coordinate={{
                 latitude: userLocation.coords.latitude,
                 longitude: userLocation.coords.longitude,
               }}
               title="Tu ubicación"
-              //(por si acaso el showsUserLocation falla)
               pinColor="blue"
-              //isUserLocation={true}
+              // @ts-ignore
+              cluster={false} // <-- SÚPER IMPORTANTE: Evita que tu ubicación se agrupe con las estaciones
             />
           )}
 
+          {/* Puntos de recarga (Estos sí se agruparán automáticamente) */}
           {displayedStations.map((est) => (
             <Marker
-              key={est.id}
+              key={`station-${est.id}`}
               coordinate={{
                 latitude: parseFloat(est.latitud),
                 longitude: parseFloat(est.longitud),
               }}
-              pinColor = {favoriteIds.includes(est.id) ? 'red' : 'green'}
+              pinColor={favoriteIds.includes(est.id) ? 'red' : 'green'}
               onPress={(e: any) => {
-                e.stopPropagation();
+                e.stopPropagation(); // Evita que el toque pase al mapa y cierre el panel
                 setSelectedStation(est);
               }}
             />

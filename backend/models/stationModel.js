@@ -24,7 +24,7 @@ ON CONFLICT (external_id) DO UPDATE SET
 // inserta estaciones nuevas y update de las que han cambiado
 async function upsertStation(est) {
   await pool.query(upsertQuery, [
-    est[':id'] || est.id, // Mantenemos tu parche de la rama Bugs para la API de Socrata
+    est.id, 
     est.promotor_gestor,
     est.acces,
     est.tipus_velocitat,
