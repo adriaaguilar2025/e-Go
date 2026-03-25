@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import { API_URL } from '@/constants/api';
+import { getApiUrl } from '@/constants/api';
 import { MapView, Marker } from '@/components/MapWrapper';
 
 const ADMIN_TOKEN_KEY = '@ego_admin_token';
@@ -149,7 +149,7 @@ export default function AdminStationNewScreen() {
         const payload = Object.fromEntries(
           Object.entries(basePayload).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
         );
-        res = await fetch(`${API_URL}/admin/stations/${stationId}`, {
+        res = await fetch(`${getApiUrl()}/admin/stations/${stationId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -161,7 +161,7 @@ export default function AdminStationNewScreen() {
         setError('ID de estacion invalido');
         return;
       } else {
-        res = await fetch(`${API_URL}/admin/stations`, {
+        res = await fetch(`${getApiUrl()}/admin/stations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Modal,
@@ -90,7 +90,7 @@ export default function AdminHomeScreen() {
   async function loadMyStations(token: string) {
     setLoadingStations(true);
     try {
-      const res = await fetch(`${getApiUrl}/admin/stations/mine`, {
+      const res = await fetch(`${getApiUrl()}/admin/stations/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -114,7 +114,7 @@ export default function AdminHomeScreen() {
     }
     setLoadingStations(true);
     try {
-      const res = await fetch(`${getApiUrl}/admin/stations/${id}`, {
+      const res = await fetch(`${getApiUrl()}/admin/stations/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -160,7 +160,7 @@ export default function AdminHomeScreen() {
             </View>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => router.push('/admin-station-new')}
+              onPress={() => router.push('/admin-station-new' as Href)}
             >
               <Text style={styles.primaryButtonText}>Anadir estacion manual</Text>
             </TouchableOpacity>
@@ -175,7 +175,7 @@ export default function AdminHomeScreen() {
                       setError('No hay sesion admin');
                       return;
                     }
-                    const userRes = await fetch(`${getApiUrl}/admin/user`, {
+                    const userRes = await fetch(`${getApiUrl()}/admin/user`, {
                       headers: { Authorization: `Bearer ${token}` },
                     });
                     const userData = await userRes.json();
@@ -235,8 +235,8 @@ export default function AdminHomeScreen() {
                       <TouchableOpacity
                         style={styles.editButton}
                         onPress={() =>
-                          router.push({
-                            pathname: '/admin-station-new',
+                          router.push(({
+                            pathname: '/admin-station-new' as Href,
                             params: {
                               mode: 'edit',
                               id: String(s.id),
@@ -254,7 +254,7 @@ export default function AdminHomeScreen() {
                               acces: s.acces || '',
                               external_id: s.external_id || '',
                             },
-                          })
+                          }) as Href)
                         }
                       >
                         <Text style={styles.editButtonText}>Editar</Text>
@@ -407,6 +407,136 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  section: {
+    marginTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  sectionLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  stationItem: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: '#fafafa',
+    marginBottom: 12,
+  },
+  stationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 6,
+  },
+  stationName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  stationMeta: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  stationActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  editButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#b91c1c',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  confirmText: {
+    fontSize: 14,
+    color: '#4b5563',
+    marginBottom: 18,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  confirmCancel: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  confirmCancelText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmDelete: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+  },
+  confirmDeleteText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
