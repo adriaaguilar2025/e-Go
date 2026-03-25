@@ -18,7 +18,14 @@ CREATE TABLE IF NOT EXISTS ego.estaciones (
   municipi               VARCHAR(100),
   provincia              VARCHAR(100),
   created_at             TIMESTAMPTZ DEFAULT NOW(),
-  updated_at             TIMESTAMPTZ DEFAULT NOW()
+  updated_at             TIMESTAMPTZ DEFAULT NOW(),
+  is_manual              BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by_admin_id    INTEGER,
+
+  --Importante crear la tabla admin antes de ejecutar esto
+  CONSTRAINT estaciones_created_by_admin_id_fkey
+  FOREIGN KEY (created_by_admin_id) REFERENCES ego.usuarios(id)
+  ON DELETE SET NULL
 );
 
 -- Trigger para updated_at (opcional, reutilizando el del login si existe)
