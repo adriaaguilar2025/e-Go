@@ -15,15 +15,15 @@ import {
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { API_URL } from '@/constants/api';
+import { getApiUrl } from '@/constants/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Vehicle {
   usuari: number;
   nom: string;
-  potencia: string;
-  conector: string;
-  corrent: string;
+  kw: string;
+  tipu_connexio: string;
+  ac_dc: string;
 }
 
 
@@ -76,7 +76,7 @@ export default function VehiclesScreen() {
 	setErrorMessage('Los vehículos deben estar completamente especificados (nombre, potencia, tipo de conector y de corriente)');
 	return;
     }    
-    
+    if (user == null) setErrorMessage('Fallo de usuario'); return;
     try {
       const method = 'POST';
       const res = await fetch(`${API_URL}/car`, {
@@ -95,7 +95,7 @@ export default function VehiclesScreen() {
           router.navigate({
             pathname: '/',
             params: {// Paràmetres de la cerca
-              minKw: potencia - 20, // L'òptim és 20 kW menys de la potencia màxima
+              minKw: (1 * potencia) - 20, // L'òptim és 20 kW menys de la potencia màxima
               ac_dc: acDc,
               connectorType: connectorType
             }
@@ -132,38 +132,35 @@ export default function VehiclesScreen() {
         {vehicles.map((v, i) => { // Llistat de vehicles
           return (
             <View key={v.nom} style={styles.infoPanel}>
-              <View style={styles.infoContent}>
-		            <Text style={styles.title}>
-		              {v.nom}
-		            </Text>
-		            
-								{/* Informació del vahicle */}
-                <View style={styles.infoBadgeRow}>
-                  <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
-                    <MaterialIcons name="bolt" size={14} color="#10b981" />
-                    <Text style={[styles.badgeText, { color: '#047857' }]}>{v.kw} kW</Text>
-                  </View>
-                  <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
-                    <MaterialIcons name="ev-station" size={14} color="#10b981" />
-                    <Text style={[styles.badgeText, { color: '#047857' }]}>{v.ac_dc}</Text>
-                  </View>
-                  <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
-                    <MaterialIcons name="electrical-services" size={14} color="#10b981" />
-                    <Text style={[styles.badgeText, { color: '#047857' }]}>{v.tipus_connexio}</Text>
-                  </View>
-                </View>
-                
-                <TouchableOpacity style={styles.applyBtn} onPress={() => router.navigate({
-								  pathname: '/',
-								  params: { // Filtre en el mapa
-										  minKw: v.kw - 20,
-										  ac_dc: v.ac_dc,
-										  connectorType: v.tipus_connexio
-									}
-				        })} activeOpacity={0.8}>
-          	      <Text style={styles.applyBtnText}>Buscar estaciones</Text>
-                </TouchableOpacity>
-              </View>
+				<Text style={styles.title}>
+				  {v.nom}
+				</Text>
+			{/* Informació del vahicle */}
+			<View style={styles.infoBadgeRow}>
+			  <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+				<MaterialIcons name="bolt" size={14} color="#10b981" />
+				<Text style={[styles.badgeText, { color: '#047857' }]}>{v.kw} kW</Text>
+			  </View>
+			  <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+				<MaterialIcons name="ev-station" size={14} color="#10b981" />
+				<Text style={[styles.badgeText, { color: '#047857' }]}>{v.ac_dc}</Text>
+			  </View>
+			  <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
+				<MaterialIcons name="electrical-services" size={14} color="#10b981" />
+				<Text style={[styles.badgeText, { color: '#047857' }]}>{v.tipus_connexio}</Text>
+			  </View>
+			</View>
+			
+			<TouchableOpacity style={styles.applyBtn} onPress={() => router.navigate({
+							  pathname: '/',
+							  params: { // Filtre en el mapa
+									  minKw: v.kw - 20,
+									  ac_dc: v.ac_dc,
+									  connectorType: v.tipus_connexio
+								}
+					})} activeOpacity={0.8}>
+			  <Text style={styles.applyBtnText}>Buscar estaciones</Text>
+			</TouchableOpacity>
             </View>
           );
         })}
@@ -184,7 +181,7 @@ export default function VehiclesScreen() {
 				            styles.input, focusedInput === 'nom' && styles.inputFocused,
 				            Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}
 				          ]}
-				          keyboardType="text"
+				          keyboardType="default"
 				          cursorColor="#10b981"
 				          value={nom}
 				          onChangeText={setNom}
@@ -509,7 +506,6 @@ const styles = StyleSheet.create({
     boxShadow: '0px 0px 12px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
     elevation: 10,
     marginBottom: 16,
-    wordbreak: 'break-all',
   },
   lastinfoPanel: {
     backgroundColor: '#fff',
