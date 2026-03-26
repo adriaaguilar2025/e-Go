@@ -22,7 +22,7 @@ interface Vehicle {
   usuari: number;
   nom: string;
   kw: string;
-  tipu_connexio: string;
+  tipus_connexio: string;
   ac_dc: string;
 }
 
@@ -51,7 +51,7 @@ export default function VehiclesScreen() {
   const fetchVehicles = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`${API_URL}/car?usuari_id=${user.id}`); // vehicles d'un usuari
+      const response = await fetch(`${getApiUrl()}/car?usuari_id=${user.id}`); // vehicles d'un usuari
       const data = await response.json();
       setVehicles(Array.isArray(data) ? data : []);
       console.log(data);
@@ -75,27 +75,27 @@ export default function VehiclesScreen() {
     if ((nom === '') || (potencia === '') || (connectorType === '') || (acDc === '')) {
 	setErrorMessage('Los vehículos deben estar completamente especificados (nombre, potencia, tipo de conector y de corriente)');
 	return;
-    }    
-    if (user == null) setErrorMessage('Fallo de usuario'); return;
+    }
+	  
     try {
       const method = 'POST';
-      const res = await fetch(`${API_URL}/car`, {
+      const res = await fetch(`${getApiUrl()}/car`, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuari_id: user.id, v_nom: nom, v_potencia: potencia, v_conector: connectorType, v_corrent: acDc}),
+        body: JSON.stringify({ usuari_id: user!.id, v_nom: nom, v_potencia: potencia, v_conector: connectorType, v_corrent: acDc}),
       });
 
       if (res.ok) {
         try {
           // És fetchvehicles() però fa la cerca després
-          const response = await fetch(`${API_URL}/car?usuari_id=${user.id}`);
+          const response = await fetch(`${getApiUrl()}/car?usuari_id=${user!.id}`);
           const data = await response.json();
           setVehicles(Array.isArray(data) ? data : []);
           console.log(data);
           router.navigate({
             pathname: '/',
             params: {// Paràmetres de la cerca
-              minKw: (1 * potencia) - 20, // L'òptim és 20 kW menys de la potencia màxima
+              minKw: Number(potencia) - 20, // L'òptim és 20 kW menys de la potencia màxima
               ac_dc: acDc,
               connectorType: connectorType
             }
@@ -154,7 +154,7 @@ export default function VehiclesScreen() {
 			<TouchableOpacity style={styles.applyBtn} onPress={() => router.navigate({
 							  pathname: '/',
 							  params: { // Filtre en el mapa
-									  minKw: v.kw - 20,
+									  minKw: Number(v.kw) - 20,
 									  ac_dc: v.ac_dc,
 									  connectorType: v.tipus_connexio
 								}
