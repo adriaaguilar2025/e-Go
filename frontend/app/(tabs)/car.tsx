@@ -11,7 +11,6 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
-  Switch,
   Modal
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
@@ -49,13 +48,6 @@ export default function VehiclesScreen() {
 
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   
-  // Carregar vehicles inicialment
-  useEffect(() => {
-    if (user) {
-      fetchVehicles();
-    }
-  }, [user]);
-  
   const fetchVehicles = async () => {
     if (!user?.id) return;
     try {
@@ -67,13 +59,20 @@ export default function VehiclesScreen() {
       console.error("Error cargando vehiculos:", error);
     }
   };
+  
+  // Carregar vehicles inicialment
+  useEffect(() => {
+    if (user) {
+      fetchVehicles();
+    }
+  }, [user]);
 
   // Guardar vehicle
   const saveCar = async () => {
     // Netegem l'error abans de tornar a comprovar
     setErrorMessage('');
     
-    if ((nom == '') || (potencia == '') || (connectorType == '') || (acDc == '')) {
+    if ((nom === '') || (potencia === '') || (connectorType === '') || (acDc === '')) {
 	setErrorMessage('Los vehículos deben estar completamente especificados (nombre, potencia, tipo de conector y de corriente)');
 	return;
     }    
@@ -132,7 +131,7 @@ export default function VehiclesScreen() {
       >
         {vehicles.map((v, i) => { // Llistat de vehicles
           return (
-            <View style={styles.infoPanel}>
+            <View key={v.nom} style={styles.infoPanel}>
               <View style={styles.infoContent}>
 		            <Text style={styles.title}>
 		              {v.nom}
