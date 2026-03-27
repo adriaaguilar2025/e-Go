@@ -92,3 +92,7 @@ export const Marker = ({ coordinate, position, onPress, ...props }: any) => {
 
   return <GoogleMarker position={markerPosition} onClick={handleMarkerClick} {...props} />;
 };
+
+export default function MapWrapperWeb() {
+  return null;
+}
