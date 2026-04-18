@@ -56,7 +56,7 @@ describe('Proves dintegració de vehicles', () => {
   test('Afegir correctament un vehicle (codi 201) | POST a /car', async () => {
     const response = await request(app)
       .post('/car')
-      .send({ usuari_id: testUserId, nom: testCarName, kw: testCarPotencia, ac_dc: testCarCorrent, tipus_connexio: testCarConector });
+      .send({ usuari_id: testUserId, v_nom: testCarName, v_potencia: testCarPotencia, v_corrent: testCarCorrent, v_conector: testCarConector });
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
@@ -99,7 +99,7 @@ describe('Proves dintegració de vehicles', () => {
   test('Eliminar correctament un vehicle (codi 200) | DELETE a /car', async () => {
     const response = await request(app)
       .delete('/car')
-      .send({ usuari_id: testUserId, nom: testCarName });
+      .send({ usuari_id: testUserId, v_nom: testCarName });
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
