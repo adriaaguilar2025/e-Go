@@ -56,7 +56,7 @@ describe('Proves dintegració de vehicles', () => {
   test('Afegir correctament un vehicle (codi 201) | POST a /car', async () => {
     const response = await request(app)
       .post('/car')
-      .send({ usuari_id: testUserId, v_nom: testCarName, v_potencia: testCarPotencia, v_corrent: testCarCorrent, v_conector: testCarConector });
+      .send({ usuari_id: testUserId, v_nom: 'Test 5000', v_potencia: testCarPotencia, v_corrent: testCarCorrent, v_conector: testCarConector });
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
@@ -91,7 +91,7 @@ describe('Proves dintegració de vehicles', () => {
     expect(estaElVehicle).toBeDefined();
     //Verifiquem les dades del vehicle
     expect(estaElVehicle.nom).toBe(testCarName);
-    expect(estaElVehicle.kw).toBe(testCarPotencia);
+    expect(Number(estaElVehicle.kw)).toBe(testCarPotencia);
     expect(estaElVehicle.ac_dc).toBe(testCarCorrent);
     expect(estaElVehicle.tipus_connexio).toBe(testCarConector);
   });
