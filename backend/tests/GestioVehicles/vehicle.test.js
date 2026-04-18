@@ -11,7 +11,7 @@ const { pool } = require('../../lib/db');
 const app = express();
 
 app.use(express.json());
-app.use('/vehicles', vehiclesRouter);
+app.use('/car', vehiclesRouter);
 
 describe('Proves dintegració de vehicles', () => {
   //id d'usuari alt per evitar conflictes amb dades reals
