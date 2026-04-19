@@ -91,7 +91,7 @@ async function getElevationGain(pointsInRoute) {
       throw new Error("Route must have at least 2 points");
     }
 
-    // Fetch elevations from Google API (points already sampled)
+    // coger la elevacion de cada punto del recorrido a partir de la API de Google Maps
     const locations = pointsInRoute.map(p => `${p.lat},${p.lon}`).join('|');
     const url = `https://maps.googleapis.com/maps/api/elevation/json?locations=${locations}&key=${GOOGLE_MAPS_API_KEY}`;
     
@@ -102,13 +102,13 @@ async function getElevationGain(pointsInRoute) {
       throw new Error(`Google Elevation API error: ${data.status}`);
     }
 
-    // Extract elevations and calculate total gain
+    // calcular elevacion total del recorrido
     const elevations = data.results.map(r => r.elevation);
     let elevationGain = 0;
 
     for (let i = 1; i < elevations.length; i++) {
       const difference = elevations[i] - elevations[i - 1];
-      if (difference > 0) {
+      if (difference > 0) { //si hay elevacion positiva
         elevationGain += difference;
       }
     }
