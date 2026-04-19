@@ -2,7 +2,7 @@ const { decode } = require("@googlemaps/polyline-codec");
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-const ENERGY_CONSTANTS = { // datos estimados desde valores conocidos publicamente
+const ENERGY_CONSTANTS = { // datos estimados de consumo de energia a partir de valores conocidos publicamente
   bike: {
     baseConsumption: 0.008, // kWh/km
     elevationFactor: 0.000003, // kWh/m
@@ -15,6 +15,7 @@ const ENERGY_CONSTANTS = { // datos estimados desde valores conocidos publicamen
 
 async function canReach({ start, end, vehicleType, batteryKWh }) {
   try {
+    //validar los datos de entrada
     if (!start || typeof start.lat !== "number" || typeof start.lon !== "number") {
       throw new Error("Invalid start coordinate");
     }
@@ -30,7 +31,6 @@ async function canReach({ start, end, vehicleType, batteryKWh }) {
     if (typeof batteryKWh !== "number" || batteryKWh < 0) {
       throw new Error("Invalid batteryKWh.");
     }
-
 
     const routeData = await getRoute(start, end, vehicleType); //obtener distancia y puntos del recorrido
     const distanceKm = routeData.distanceMeters / 1000;
