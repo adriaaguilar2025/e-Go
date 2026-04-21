@@ -8,6 +8,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const apiKeyMiddleware = (req, res, next) => {
+    const apiKey = req.header('x-api-key');
+    const appApiKey = process.env.MY_API_KEY_SECRET;
+    if (!apiKey || apiKey !== appApiKey) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next(); //pasamos a la siguiente funcion
+}
+
+app.use(apiKeyMiddleware);
+
 app.get('/can-reach', async (req, res) => {
     try {
         const { startLat, startLon, endLat, endLon, vehicleType, batteryKWh } = req.query;
