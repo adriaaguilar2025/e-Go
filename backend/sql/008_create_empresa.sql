@@ -1,8 +1,10 @@
--- Tabla de admins (backoffice)
--- Ajusta el schema y el nombre de tabla si tu DB usa otros valores.
+-- Tabla de empresas autorizadas para gestionar estaciones manuales
 
 CREATE SCHEMA IF NOT EXISTS ego;
 
-CREATE TABLE IF NOT EXISTS ego.empresa (
-    id         SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS ego.empresas (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER NOT NULL UNIQUE REFERENCES ego.usuari(id) ON DELETE CASCADE,
+  nombre     VARCHAR(255),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

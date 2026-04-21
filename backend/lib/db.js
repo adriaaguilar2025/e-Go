@@ -17,7 +17,17 @@ const pool = new Pool({
 const DB_SCHEMA = process.env.DB_SCHEMA || 'public';
 const DB_TABLE_USUARIOS = process.env.DB_TABLE_USUARIOS || 'usuari';
 const DB_TABLE_ADMINS = process.env.DB_TABLE_ADMINS || 'admins';
+const DB_TABLE_EMPRESAS = process.env.DB_TABLE_EMPRESAS || 'empresas';
+const DB_TABLE_STATION_REQUESTS = process.env.DB_TABLE_STATION_REQUESTS || 'station_requests';
 const USUARIOS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_USUARIOS}"`;
 const ADMINS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_ADMINS}"`;
+const EMPRESAS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_EMPRESAS}"`;
+const STATION_REQUESTS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_STATION_REQUESTS}"`;
 
-module.exports = { pool, USUARIOS_TABLE, ADMINS_TABLE };
+module.exports = {
+  pool,
+  USUARIOS_TABLE,
+  ADMINS_TABLE,
+  EMPRESAS_TABLE,
+  STATION_REQUESTS_TABLE,
+};
