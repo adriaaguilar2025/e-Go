@@ -16,20 +16,28 @@ const ENERGY_CONSTANTS = { // datos estimados de consumo de energia a partir de 
 async function canReach({ start, end, vehicleType, batteryKWh }) {
   try {
     //validar los datos de entrada
-    if (!start || typeof start.lat !== "number" || typeof start.lon !== "number") {
-      throw new Error("Invalid start coordinate");
+    if (!start || isNaN(start.lat) || isNaN(start.lon)) {
+      const err = new Error("Coordenadas de inicio inválidas.");
+      err.type = "VALIDATION_ERROR";
+      throw err;
     }
 
-    if (!end || typeof end.lat !== "number" || typeof end.lon !== "number") {
-      throw new Error("Invalid end coordinate.");
+    if (!end || isNaN(end.lat) || isNaN(end.lon)) {
+      const err = new Error("Coordenadas de final inválidas.");
+      err.type = "VALIDATION_ERROR";
+      throw err;
     }
 
     if (!["bike", "car"].includes(vehicleType)) {
-      throw new Error("Invalid vehicleType.");
+      const err = new Error("Tipo de vehículo inválido.");
+      err.type = "VALIDATION_ERROR";
+      throw err;
     }
 
-    if (typeof batteryKWh !== "number" || batteryKWh < 0) {
-      throw new Error("Invalid batteryKWh.");
+    if (isNaN(batteryKWh) || batteryKWh < 0) {
+      const err = new Error("Batería inválida.");
+      err.type = "VALIDATION_ERROR";
+      throw err;
     }
 
     const routeData = await getRoute(start, end, vehicleType); //obtener distancia y puntos del recorrido
@@ -61,7 +69,17 @@ async function getRoute(start, end, vehicleType) {
     const response = await fetch(url);
     const data = await response.json();
     
-    if (data.status !== 'OK') {
+
+    //errores de la API de Google Maps
+    if(data.status === 'ZERO_RESULTS') {
+      const err = new Error('No hay una ruta disponible entre los puntos de origen y destino');
+      err.type = 'ROUTE_NOT_FOUND';
+      throw err;
+    } else if (data.status === 'OVER_QUERY_LIMIT') {
+      const err = new Error('Demasiadas solicitudes a la API. Intenta de nuevo más tarde.');
+      err.type = 'OVER_QUERY_LIMIT';
+      throw err;
+    } else if (data.status !== 'OK') {
       throw new Error(`Google Maps Directions API error: ${data.status}`);
     }
 

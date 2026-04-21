@@ -31,7 +31,19 @@ app.get('/can-reach', async (req, res) => {
         const result = await canReach(data);
         res.json(result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        switch (error.type) {
+            case 'VALIDATION_ERROR':
+                res.status(400).json({ error: error.message });
+                break;
+            case 'ROUTE_NOT_FOUND':
+                res.status(404).json({ error: error.message });
+                break;
+            case 'OVER_QUERY_LIMIT':
+                res.status(429).json({ error: error.message });
+                break;
+            default:
+                res.status(500).json({ error: 'Error en el servidor' });
+        }
     }
 });
 
