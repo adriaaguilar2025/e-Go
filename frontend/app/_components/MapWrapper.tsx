@@ -5,6 +5,12 @@ import { View, Text, StyleSheet } from 'react-native';
 // Exportamos Marker y Callout para que el index.tsx los use normalmente
 export { Marker, Callout };
 
+function formatClusterCount(points: number) {
+  if (points < 1000) return String(points);
+  if (points < 1000000) return `+${Math.floor(points / 1000)}k`;
+  return `+${Math.floor(points / 1000000)}M`;
+}
+
 // Exportamos MapViewCluster con el nombre MapView para que el código sea intercambiable
 export const MapView = (props: any) => {
   return (
@@ -15,6 +21,7 @@ export const MapView = (props: any) => {
       renderCluster={(cluster: any) => {
         const { id, geometry, onPress, properties } = cluster;
         const points = properties.point_count;
+        const label = formatClusterCount(points);
 
         return (
           <Marker
@@ -23,12 +30,11 @@ export const MapView = (props: any) => {
               longitude: geometry.coordinates[0],
               latitude: geometry.coordinates[1],
             }}
-            tracksViewChanges={false}
             onPress={onPress}
           >
             <View style={styles.clusterContainer}>
               <Text style={styles.clusterText}>
-                {points}
+                {label}
               </Text>
             </View>
           </Marker>
@@ -65,7 +71,7 @@ const styles = StyleSheet.create({
   clusterText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 10.5,
     lineHeight: 16,
     includeFontPadding: false,
     textAlignVertical: 'center',

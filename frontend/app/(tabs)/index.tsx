@@ -608,7 +608,6 @@ useEffect(() => {
                 latitude: parseFloat(est.latitud),
                 longitude: parseFloat(est.longitud),
               }}
-              tracksViewChanges={false}
               pinColor={favoriteIds.includes(est.id) ? 'red' : 'green'}
               onPress={(e: any) => {
                 e.stopPropagation(); // Evita que el toque pase al mapa y cierre el panel
