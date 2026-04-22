@@ -13,6 +13,27 @@ const ENERGY_CONSTANTS = { // datos estimados de consumo de energia a partir de 
   },
 };
 
+const SPEED_CONSUMPTION_PROFILES = {
+  bike: {
+    lowMaxKmh: 15,
+    highMinKmh: 25,
+    factors: {
+      low: 0.95,
+      normal: 1,
+      high: 1.1,
+    },
+  },
+  car: {
+    lowMaxKmh: 40,
+    highMinKmh: 90,
+    factors: {
+      low: 0.95,
+      normal: 1,
+      high: 1.15,
+    },
+  },
+};
+
 async function canReach({ start, end, vehicleType, batteryKWh }) {
   try {
     //validar los datos de entrada
@@ -42,10 +63,11 @@ async function canReach({ start, end, vehicleType, batteryKWh }) {
 
     const routeData = await getRoute(start, end, vehicleType); //obtener distancia y puntos del recorrido
     const distanceKm = routeData.distanceMeters / 1000;
+    const averageSpeed = routeData.durationSeconds > 0 ? (routeData.distanceMeters / routeData.durationSeconds) * 3.6 : 0; //en km/h
     const pointsInRoute = routeData.polyline; //array con los puntos del recorrido
 
     const elevationGainM = await getElevationGain(pointsInRoute); //calcular la elevacion total 
-    const energyNeeded = estimateEnergy(distanceKm, elevationGainM, vehicleType); //calcular energia necesaria para el recorrido a partir de la distancia y la elevacion
+    const energyNeeded = estimateEnergy(distanceKm, elevationGainM, vehicleType, averageSpeed); //calcular energia necesaria para el recorrido a partir de la distancia y la elevacion
     
     const batteryLeftKWh = batteryKWh - energyNeeded; //calcular la bateria que quedara despues de hacer el recorrido
     const canReach = (batteryLeftKWh >= 0) ? true : false;
@@ -84,14 +106,16 @@ async function getRoute(start, end, vehicleType) {
     }
 
     const route = data.routes[0];
-    const distanceMeters = route.legs[0].distance.value;
+    const leg = route.legs[0];
+    const distanceMeters = leg.distance.value;
+    const durationSeconds = leg.duration.value;
     const polyline = decode(route.overview_polyline.points).map(([lat, lon]) => ({
       lat,
       lon,
     }));
     const sampledPolyline = samplePolyline(polyline, 75);
 
-    return { distanceMeters, polyline: sampledPolyline };
+    return { distanceMeters, durationSeconds, polyline: sampledPolyline };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error);
@@ -141,14 +165,35 @@ async function getElevationGain(pointsInRoute) {
   }
 }
 
-function estimateEnergy(distanceKm, elevationGainM, vehicleType) {
+//Modelo simple que aplica un multiplicador al consumo según la velocidad media del recorrido
+function getSpeedConsumptionFactor(vehicleType, averageSpeed) {
+  if (!Number.isFinite(averageSpeed) || averageSpeed <= 0) {
+    return 1;
+  }
+
+  const profile = SPEED_CONSUMPTION_PROFILES[vehicleType];
+  if (!profile) {
+    return 1;
+  }
+
+  if (averageSpeed < profile.lowMaxKmh) {
+    return profile.factors.low;
+  }
+  if (averageSpeed > profile.highMinKmh) {
+    return profile.factors.high;
+  }
+  return profile.factors.normal;
+}
+
+function estimateEnergy(distanceKm, elevationGainM, vehicleType, averageSpeed) {
   const constants = ENERGY_CONSTANTS[vehicleType];
 
   if (!constants) {
     throw new Error(`Unknown vehicle type: ${vehicleType}`);
   }
 
-  const baseEnergy = distanceKm * constants.baseConsumption;
+  const speedFactor = getSpeedConsumptionFactor(vehicleType, averageSpeed);
+  const baseEnergy = distanceKm * constants.baseConsumption * speedFactor;
   const elevationEnergy = elevationGainM * constants.elevationFactor;
   const totalEnergy = baseEnergy + elevationEnergy;
 

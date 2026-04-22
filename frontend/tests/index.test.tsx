@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Alert } from 'react-native';
-import InicioScreen from './index';
+import InicioScreen from '@/app/(tabs)/index';
 
 const mockUseAuth = jest.fn();
 const mockUseLocalSearchParams = jest.fn();
@@ -28,12 +28,12 @@ jest.mock('expo-location', () => ({
   getCurrentPositionAsync: () => mockGetCurrentPositionAsync(),
 }));
 
-jest.mock('../../components/TopBar', () => () => null);
-jest.mock('../../components/FavoriteButton', () => ({
+jest.mock('@/components/TopBar', () => () => null);
+jest.mock('@/components/FavoriteButton', () => ({
   FavoriteButton: () => null,
 }));
 
-jest.mock('../_components/MapWrapper', () => {
+jest.mock('@/app/_components/MapWrapper', () => {
   const React = require('react');
   const { View, TouchableOpacity } = require('react-native');
 

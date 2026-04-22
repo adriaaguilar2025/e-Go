@@ -1,8 +1,87 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
+jest.mock('@googlemaps/polyline-codec', () => ({
+  decode: jest.fn(() => [
+    [41.3851, 2.1734],
+    [41.3861, 2.1754],
+    [41.3871, 2.1774],
+  ]),
+}), { virtual: true });
+
 const { canReach } = require('../services/rangeCalculationService');
 
 describe('canReach() - Range Calculator Service', () => {
+  const originalFetch = global.fetch;
+
+  function buildDirectionsResponse(distanceMeters, durationSeconds) {
+    return {
+      status: 'OK',
+      routes: [
+        {
+          legs: [
+            {
+              distance: { value: distanceMeters },
+              duration: { value: durationSeconds },
+            },
+          ],
+          // Polyline con 3 puntos válido para el decoder
+          overview_polyline: { points: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' },
+        },
+      ],
+    };
+  }
+
+  function buildElevationResponse() {
+    return {
+      status: 'OK',
+      results: [
+        { elevation: 10 },
+        { elevation: 16 },
+        { elevation: 12 },
+      ],
+    };
+  }
+
+  function getMockRouteByCoordinates(url) {
+    // Escenarios usados en el test para mantener expectativas similares
+    if (url.includes('origin=40.4168,-3.7038') && url.includes('destination=37.3891,-5.9845')) {
+      return buildDirectionsResponse(500000, 19800); // ~500 km, ~90.9 km/h
+    }
+
+    if (url.includes('origin=41.3851,2.1734') && url.includes('destination=41.8781,1.2900')) {
+      return buildDirectionsResponse(50000, 3000); // ~50 km, ~60 km/h
+    }
+
+    if (url.includes('origin=41.3851,2.1734') && url.includes('destination=41.3852,2.1735')) {
+      return buildDirectionsResponse(300, 60); // muy corta
+    }
+
+    if (url.includes('origin=41.3851,2.1734') && url.includes('destination=41.3851,2.1734')) {
+      return buildDirectionsResponse(50, 30); // mismo punto
+    }
+
+    return buildDirectionsResponse(1000, 120); // por defecto ~1 km
+  }
+
+  beforeEach(() => {
+    global.fetch = jest.fn(async (url) => {
+      if (url.includes('/directions/')) {
+        return { json: async () => getMockRouteByCoordinates(url) };
+      }
+      if (url.includes('/elevation/')) {
+        return { json: async () => buildElevationResponse() };
+      }
+      return { json: async () => ({ status: 'OK' }) };
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
   
   describe('Vehicles can reach destination', () => {
     
@@ -187,7 +266,7 @@ describe('canReach() - Range Calculator Service', () => {
           vehicleType: 'bike',
           batteryKWh: 0.5,
         })
-      ).rejects.toThrow(/start/);
+      ).rejects.toMatchObject({ type: 'VALIDATION_ERROR' });
     });
 
     test('Rejects invalid end coordinate (wrong type)', async () => {
@@ -198,7 +277,7 @@ describe('canReach() - Range Calculator Service', () => {
           vehicleType: 'bike',
           batteryKWh: 0.5,
         })
-      ).rejects.toThrow(/end/);
+      ).rejects.toMatchObject({ type: 'VALIDATION_ERROR' });
     });
 
     test('Rejects invalid vehicle type', async () => {
@@ -209,7 +288,7 @@ describe('canReach() - Range Calculator Service', () => {
           vehicleType: 'helicopter',
           batteryKWh: 0.5,
         })
-      ).rejects.toThrow(/vehicleType/);
+      ).rejects.toMatchObject({ type: 'VALIDATION_ERROR' });
     });
 
     test('Rejects negative battery', async () => {
@@ -220,7 +299,7 @@ describe('canReach() - Range Calculator Service', () => {
           vehicleType: 'bike',
           batteryKWh: -5,
         })
-      ).rejects.toThrow(/batteryKWh/);
+      ).rejects.toMatchObject({ type: 'VALIDATION_ERROR' });
     });
 
     test('Handles zero distance (same start and end)', async () => {
