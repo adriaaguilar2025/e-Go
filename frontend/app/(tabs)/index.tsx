@@ -88,6 +88,21 @@ export default function InicioScreen() {
   const [authLoadingGoogle, setAuthLoadingGoogle] = useState(false);
   const [authError, setAuthError] = useState('');
 
+  function continueWithoutGoogleTemporarily() {
+    const now = new Date().toISOString();
+    setUser({
+      id: -1,
+      email: 'emulator@local.dev',
+      username: 'Emulator User',
+      created_at: now,
+      updated_at: now,
+    });
+    setAuthStep('google');
+    setPendingAuth(null);
+    setWelcomeUsername('');
+    setAuthError('');
+  }
+
   // Cargar estaciones de la base de datos
   useEffect(() => {
     if (user) {
@@ -467,6 +482,14 @@ useEffect(() => {
                     </>
                   )}
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.loginButton, styles.skipGoogleButton]}
+                  onPress={continueWithoutGoogleTemporarily}
+                  disabled={authLoadingGoogle}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.loginButtonText}>Continuar sin Google (temporal)</Text>
+                </TouchableOpacity>
               </>
             )}
           </View>
@@ -798,6 +821,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  skipGoogleButton: {
+    marginTop: 10,
   },
   googleIcon: {
     width: 22,
