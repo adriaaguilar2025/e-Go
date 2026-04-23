@@ -4,13 +4,11 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { getApiUrl } from '@/constants/api';
 import { useAuth } from '@/contexts/AuthContext';
-
-type SubscriptionStatus = {
-  status: string;
-  isPremium: boolean;
-  current_period_end: string | null;
-  cancel_at_period_end: boolean;
-};
+import {
+  buildFallbackStatus,
+  formatPeriodEnd,
+  type SubscriptionStatus,
+} from '@/features/subscription/subscriptionHelpers';
 
 const STRIPE_SUCCESS_URL = 'https://example.com/stripe/success';
 const STRIPE_CANCEL_URL = 'https://example.com/stripe/cancel';
@@ -43,12 +41,7 @@ export default function PaymentsScreen() {
       setSubStatus(data);
     } catch (err) {
       console.warn('[payments] Error cargando suscripción:', err);
-      setSubStatus({
-        status: 'inactive',
-        isPremium: false,
-        current_period_end: null,
-        cancel_at_period_end: false,
-      });
+      setSubStatus(buildFallbackStatus());
     } finally {
       setLoadingStatus(false);
     }
@@ -59,10 +52,7 @@ export default function PaymentsScreen() {
   }, [loadSubscriptionStatus]);
 
   const periodEndLabel = useMemo(() => {
-    if (!subStatus?.current_period_end) return null;
-    const date = new Date(subStatus.current_period_end);
-    if (Number.isNaN(date.getTime())) return null;
-    return date.toLocaleDateString('es-ES');
+    return formatPeriodEnd(subStatus?.current_period_end ?? null);
   }, [subStatus?.current_period_end]);
 
   const onStartPremium = useCallback(async () => {
