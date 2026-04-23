@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "315410371298",
+    "project_id": "e-go-pauelmillor",
+    "storage_bucket": "e-go-pauelmillor.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315410371298:android:520e548506c820635984bb",
+        "android_client_info": {
+          "package_name": "com.ego.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "315410371298-0jc1ku8jkbim89i1ae59kd4bkbrcn3bc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB06DHUwxvEgmTsp3Ju4PXAh1XVQgTrJzM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "315410371298-0jc1ku8jkbim89i1ae59kd4bkbrcn3bc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
