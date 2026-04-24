@@ -14,6 +14,7 @@ const favoriteRoutes = require('./routes/favorits'); // Importamos la ruta de fa
 const vehicleRoutes = require('./routes/vehicles');//Importamos la ruta de vehiculos
 const subscriptionRoutes = require('./routes/subscription');
 const { handleWebhook } = require('./controllers/stripeWebhookController');
+const { canReach } = require('./services/rangeCalculationService');
 
 const { pool } = require('./lib/db');
 const { startScheduler } = require('./lib/scheduler'); // Importamos el planificador
@@ -38,6 +39,25 @@ app.use('/stations', stationRoutes);
 app.use('/favorites', favoriteRoutes);
 app.use('/car', vehicleRoutes);
 app.use('/subscription', subscriptionRoutes);
+
+// Can Reach endpoint (range calculation)
+app.get('/can-reach', async (req, res) => {
+  try {
+    const { startLat, startLon, endLat, endLon, vehicleType, batteryKWh } = req.query;
+    const result = await canReach({
+      start: { lat: Number(startLat), lon: Number(startLon) },
+      end: { lat: Number(endLat), lon: Number(endLon) },
+      vehicleType: String(vehicleType || '').toLowerCase(),
+      batteryKWh: Number(batteryKWh),
+    });
+    res.json(result);
+  } catch (error) {
+    if (error?.type === 'VALIDATION_ERROR') return res.status(400).json({ error: error.message });
+    if (error?.type === 'ROUTE_NOT_FOUND') return res.status(404).json({ error: error.message });
+    if (error?.type === 'OVER_QUERY_LIMIT') return res.status(429).json({ error: error.message });
+    return res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
 
 // 1. Root / Health Check
 app.get('/', async (req, res) => {
