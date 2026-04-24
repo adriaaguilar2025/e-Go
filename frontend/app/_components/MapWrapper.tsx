@@ -6,9 +6,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export { Marker, Callout };
 
 function formatClusterCount(points: number) {
-  if (points < 1000) return String(points);
-  if (points < 1000000) return `+${Math.floor(points / 1000)}k`;
-  return `+${Math.floor(points / 1000000)}M`;
+  return String(points);
 }
 
 // Exportamos MapViewCluster con el nombre MapView para que el código sea intercambiable
@@ -23,6 +21,7 @@ export const MapView = (props: any) => {
         const points = properties.point_count;
         const label = formatClusterCount(points);
 
+        const size = points >= 100 ? 58 : points >= 30 ? 52 : 46;
         return (
           <Marker
             key={`cluster-${id}`}
@@ -32,7 +31,7 @@ export const MapView = (props: any) => {
             }}
             onPress={onPress}
           >
-            <View style={styles.clusterContainer}>
+            <View style={[styles.clusterContainer, { minWidth: size, minHeight: size }]}>
               <Text style={styles.clusterText}>
                 {label}
               </Text>
@@ -55,10 +54,10 @@ const styles = StyleSheet.create({
   clusterContainer: {
     backgroundColor: '#10b981', // Verde e-Go
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    minWidth: 40,
-    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 46,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -71,8 +70,8 @@ const styles = StyleSheet.create({
   clusterText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 10.5,
-    lineHeight: 16,
+    fontSize: 12.5,
+    lineHeight: 18,
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
