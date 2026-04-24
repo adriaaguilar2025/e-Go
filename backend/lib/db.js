@@ -10,12 +10,13 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'postgres',
-  ssl: { rejectUnauthorized: false }, // necesario para RDS desde Lambda
+  // Desactivem SSL NOMÉS si s'està executant a GitHub Actions
+  ssl: process.env.GITHUB_ACTIONS ? false : { rejectUnauthorized: false },
 });
 
-// Tabla de usuarios y admins (ej. schema ego, tabla Usuari)
+// Tabla de usuarios y admins (ej. schema ego, tabla usuari)
 const DB_SCHEMA = process.env.DB_SCHEMA || 'public';
-const DB_TABLE_USUARIOS = process.env.DB_TABLE_USUARIOS || 'usuarios';
+const DB_TABLE_USUARIOS = process.env.DB_TABLE_USUARIOS || 'usuari';
 const DB_TABLE_ADMINS = process.env.DB_TABLE_ADMINS || 'admins';
 const USUARIOS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_USUARIOS}"`;
 const ADMINS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_ADMINS}"`;

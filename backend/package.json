@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --runInBand",
     "package:lambda": "node scripts/build-lambda-zip.js"
   },
   "keywords": [],
@@ -24,7 +24,8 @@
     "multer": "^2.1.1",
     "multer-s3": "^3.0.1",
     "pg": "^8.20.0",
-    "serverless-http": "^4.0.0"
+    "serverless-http": "^4.0.0",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "archiver": "^7.0.1",
