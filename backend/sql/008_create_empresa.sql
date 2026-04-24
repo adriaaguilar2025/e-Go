@@ -4,5 +4,5 @@
 CREATE SCHEMA IF NOT EXISTS ego;
 
 CREATE TABLE IF NOT EXISTS ego.empresa (
-    id         SERIAL PRIMARY KEY,
+    id         SERIAL PRIMARY KEY
 );

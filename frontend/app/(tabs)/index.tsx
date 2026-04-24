@@ -462,27 +462,6 @@ useEffect(() => {
               <>
                 {authError ? <Text style={styles.welcomeErrorText}>{authError}</Text> : null}
                 <TouchableOpacity
-                  style={styles.loginButton}
-                  onPress={handleNativeLoginFromWelcome}
-                  disabled={authLoadingGoogle}
-                  activeOpacity={0.8}
-                >
-                  {authLoadingGoogle ? (
-                    <ActivityIndicator color="#3c4043" />
-                  ) : (
-                    <>
-                      <Image
-                        source={{
-                          uri: 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
-                        }}
-                        style={styles.googleIcon}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.loginButtonText}>Continuar con Google</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
                   style={[styles.loginButton, styles.skipGoogleButton]}
                   onPress={continueWithoutGoogleTemporarily}
                   disabled={authLoadingGoogle}
@@ -492,6 +471,18 @@ useEffect(() => {
                 </TouchableOpacity>
               </>
             )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push({ pathname: '/login', params: { openGoogle: '1' } })}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png' }}
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.loginButtonText}>Continuar con Google</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -595,6 +586,7 @@ useEffect(() => {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
+          key={`map-${displayedStations.length}`} // <-- TRUCO VITAL: Fuerza al mapa a pintarse cuando llegan los datos
           style={StyleSheet.absoluteFillObject}
           initialRegion={region}
           showsUserLocation={true}
@@ -821,9 +813,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  skipGoogleButton: {
-    marginTop: 10,
-  },
   googleIcon: {
     width: 22,
     height: 22,
@@ -832,6 +821,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
+  },
+  skipGoogleButton: {
+    marginTop: 10,
   },
   adminLink: {
     marginBottom: 16,
