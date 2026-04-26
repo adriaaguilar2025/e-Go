@@ -10,7 +10,8 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'postgres',
-  ssl: { rejectUnauthorized: false },
+  // Desactivem SSL NOMÉS si s'està executant a GitHub Actions
+  ssl: process.env.GITHUB_ACTIONS ? false : { rejectUnauthorized: false },
 });
 
 // Tabla de usuarios y admins (ej. schema ego, tabla usuari)
