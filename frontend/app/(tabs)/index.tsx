@@ -59,7 +59,6 @@ export default function InicioScreen() {
   const ac_dc = params.ac_dc as string | undefined;
 
   const { user, setUser, logout, isLoading: authLoading } = useAuth();
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [estaciones, setEstaciones] = useState<Estacion[]>([]);
   const [loadingEstaciones, setLoadingEstaciones] = useState(false);
@@ -87,6 +86,21 @@ export default function InicioScreen() {
   const [welcomeUsername, setWelcomeUsername] = useState('');
   const [authLoadingGoogle, setAuthLoadingGoogle] = useState(false);
   const [authError, setAuthError] = useState('');
+
+  function continueWithoutGoogleTemporarily() {
+    const now = new Date().toISOString();
+    setUser({
+      id: -1,
+      email: 'emulator@local.dev',
+      username: 'Emulator User',
+      created_at: now,
+      updated_at: now,
+    });
+    setAuthStep('google');
+    setPendingAuth(null);
+    setWelcomeUsername('');
+    setAuthError('');
+  }
 
   // Cargar estaciones de la base de datos
   useEffect(() => {
@@ -269,14 +283,13 @@ useEffect(() => {
   }
 
   const hasFilters = !!minKw || !!maxKw || !!connectorType || !!ac_dc || !!showFavoritesFilter;
-
   async function handleNativeLoginFromWelcome() {
     setAuthLoadingGoogle(true);
     setAuthError('');
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken;
+      const idToken = (userInfo as any).data?.idToken ?? (userInfo as any).idToken;
 
       if (!idToken) {
         setAuthError('No se pudo obtener el token de Google');
@@ -447,28 +460,27 @@ useEffect(() => {
               <>
                 {authError ? <Text style={styles.welcomeErrorText}>{authError}</Text> : null}
                 <TouchableOpacity
-                  style={styles.loginButton}
-                  onPress={handleNativeLoginFromWelcome}
+                  style={[styles.loginButton, styles.skipGoogleButton]}
+                  onPress={continueWithoutGoogleTemporarily}
                   disabled={authLoadingGoogle}
                   activeOpacity={0.8}
                 >
-                  {authLoadingGoogle ? (
-                    <ActivityIndicator color="#3c4043" />
-                  ) : (
-                    <>
-                      <Image
-                        source={{
-                          uri: 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
-                        }}
-                        style={styles.googleIcon}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.loginButtonText}>Continuar con Google</Text>
-                    </>
-                  )}
+                  <Text style={styles.loginButtonText}>Continuar sin Google (temporal)</Text>
                 </TouchableOpacity>
               </>
             )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push({ pathname: '/login', params: { openGoogle: '1' } })}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png' }}
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.loginButtonText}>Continuar con Google</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -807,6 +819,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
+  },
+  skipGoogleButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  skipGoogleButtonText: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '600',
   },
   adminLink: {
     marginBottom: 16,

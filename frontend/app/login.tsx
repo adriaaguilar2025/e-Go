@@ -33,6 +33,18 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  function continueWithoutGoogleTemporarily() {
+    const now = new Date().toISOString();
+    setUser({
+      id: -1,
+      email: 'emulator@local.dev',
+      username: 'Emulator User',
+      created_at: now,
+      updated_at: now,
+    });
+    router.replace('/(tabs)');
+  }
+
   // ESTA ES LA ÚNICA FUNCIÓN QUE NECESITAS PARA LOGUEARTE
   async function handleNativeLogin() {
     setLoading(true);
@@ -40,7 +52,7 @@ export default function LoginScreen() {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken;
+      const idToken = (userInfo as any).data?.idToken ?? (userInfo as any).idToken;
 
       if (!idToken) {
         setError('No se pudo obtener el token de Google');
@@ -89,7 +101,7 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        setError('');
+        // Cancelado por el usuario
       } else if (err.code === statusCodes.IN_PROGRESS) {
         setError('Ya hay un inicio de sesión en curso');
       } else {
@@ -192,6 +204,15 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.googleButton, styles.skipGoogleButton]}
+          onPress={continueWithoutGoogleTemporarily}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.googleButtonText}>Continuar sin Google (temporal)</Text>
+        </TouchableOpacity>
+
         <Text style={styles.terms}>Al continuar, aceptas nuestros términos y condiciones</Text>
       </View>
     </ScrollView>
@@ -206,6 +227,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: '#1f2937', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 15, color: '#6b7280', textAlign: 'center', marginBottom: 28 },
   googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, width: '100%', paddingVertical: 14, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb' },
+  skipGoogleButton: { marginTop: 10 },
   googleIcon: { width: 22, height: 22 },
   googleButtonText: { fontSize: 16, fontWeight: '600', color: '#1f2937' },
   primaryButton: { width: '100%', paddingVertical: 14, borderRadius: 10, backgroundColor: BRAND_GREEN, alignItems: 'center', marginTop: 8 },

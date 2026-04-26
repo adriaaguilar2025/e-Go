@@ -1,4 +1,5 @@
--- Tabla de empresas autorizadas para gestionar estaciones manuales
+-- Tabla de admins (backoffice)
+-- Ajusta el schema y el nombre de tabla si tu DB usa otros valores.
 
 CREATE SCHEMA IF NOT EXISTS ego;
 
