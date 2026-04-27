@@ -733,6 +733,18 @@ useEffect(() => {
               style={styles.menuItem}
               onPress={() => {
                 setMenuOpen(false);
+                router.push('../view-events');
+              }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="event" size={22} color="#1f2937" />
+              <Text style={styles.menuItemText}>Ver eventos</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
                 logout();
               }}
               activeOpacity={0.7}
