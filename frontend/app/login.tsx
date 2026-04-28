@@ -33,6 +33,18 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  function continueWithoutGoogleTemporarily() {
+    const now = new Date().toISOString();
+    setUser({
+      id: 2,
+      email: 'guest@ego.app',
+      username: 'Guest User',
+      created_at: now,
+      updated_at: now,
+    });
+    router.replace('/(tabs)');
+  }
+
   // ESTA ES LA ÚNICA FUNCIÓN QUE NECESITAS PARA LOGUEARTE
   async function handleNativeLogin() {
     setLoading(true);

@@ -73,6 +73,28 @@ export default function InicioScreen() {
 
   const mapRef = useRef<any>(null);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+
+  const [authStep, setAuthStep] = useState<'google' | 'username'>('google');
+  const [pendingAuth, setPendingAuth] = useState<{ pending_token: string } | null>(null);
+  const [welcomeUsername, setWelcomeUsername] = useState('');
+  const [authLoadingGoogle, setAuthLoadingGoogle] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  function continueWithoutGoogleTemporarily() {
+    const now = new Date().toISOString();
+    setUser({
+      id: 2,
+      email: 'guest@ego.app',
+      username: 'Guest User',
+      created_at: now,
+      updated_at: now,
+    });
+    setAuthStep('google');
+    setPendingAuth(null);
+    setWelcomeUsername('');
+    setAuthError('');
+  }
+
   // Cargar estaciones de la base de datos
   useEffect(() => {
     if (user) {
