@@ -36,7 +36,6 @@
     },
     "plugins": [
       "expo-dev-client",
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -49,7 +48,7 @@
           }
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin/app.plugin.js"
     ],
     "experiments": {
       "typedRoutes": true,
