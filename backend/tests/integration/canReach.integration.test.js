@@ -1,17 +1,40 @@
 const request = require('supertest');
 const app = require('../../index.jsx');
 
-// Run only when DB/integration mode is explicitly enabled.
-const describeDb = process.env.RUN_DB_INTEGRATION === 'true' ? describe : describe.skip;
-const testWithGoogleApi = process.env.GOOGLE_MAPS_API_KEY ? test : test.skip;
 const originalFetch = global.fetch;
 
-describeDb('canReach integration', () => {
+describe('canReach integration', () => {
   afterEach(() => {
     global.fetch = originalFetch;
   });
 
-  testWithGoogleApi('GET /can-reach returns 200 for valid input', async () => {
+  test('GET /can-reach returns 200 for valid input', async () => {
+    // Mockeamos Directions + Elevation para evitar dependencia de red real
+    // y mantener el test de happy-path siempre ejecutable.
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          status: 'OK',
+          routes: [
+            {
+              legs: [{ distance: { value: 1000 }, duration: { value: 120 } }],
+              overview_polyline: { points: '??gE?gE' },
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          status: 'OK',
+          results: [
+            { elevation: 10 },
+            { elevation: 15 },
+            { elevation: 12 },
+          ],
+        }),
+      });
+
     // Datos válidos devuelven 200 y un payload con tipos esperados.
     const res = await request(app).get('/can-reach').query({
       startLat: 41.3851,

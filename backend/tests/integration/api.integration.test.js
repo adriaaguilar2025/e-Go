@@ -2,10 +2,11 @@ const request = require('supertest');
 const app = require('../../index.jsx');
 const { pool } = require('../../lib/db');
 
-//permitir ejecutar los tests de la base de datos
-const describeDb = process.env.RUN_DB_INTEGRATION === 'true' ? describe : describe.skip;
+describe('API integration', () => {
+  afterAll(async () => {
+    await pool.end();
+  });
 
-describeDb('API integration', () => {
   test('GET / returns API and DB status', async () => {
     const res = await request(app).get('/');
 

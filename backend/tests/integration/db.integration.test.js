@@ -2,10 +2,7 @@ const request = require('supertest');
 const app = require('../../index.jsx');
 const { pool } = require('../../lib/db');
 
-//permitir ejecutar los tests de la base de datos
-const describeDb = process.env.RUN_DB_INTEGRATION === 'true' ? describe : describe.skip;
-
-describeDb('DB integration', () => {
+describe('DB integration', () => {
   //asignamos id y nombre de la prueba
   const testUserId = 900001;
   const emptyUserId = 900002;
