@@ -677,13 +677,25 @@ useEffect(() => {
               )}
             </View>
 
-            <TouchableOpacity
-              style={styles.routeButton}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="directions" size={20} color="#fff" />
-              <Text style={styles.routeButtonText}>Cómo llegar</Text>
-            </TouchableOpacity>
+            <View style={styles.nearbyEventsButtonRow}>
+              <TouchableOpacity
+                style={styles.nearbyEventsButton}
+                onPress={() => {
+                  router.push({
+                    pathname: '../view-events',
+                    params: {
+                      originLat: selectedStation.latitud,
+                      originLng: selectedStation.longitud,
+                      radiusKm: '10',
+                    },
+                  });
+                }}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="event" size={16} color="#fff" />
+                <Text style={styles.nearbyEventsButtonText}>Buscar eventos cercanos</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -998,19 +1010,26 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontStyle: 'italic',
   },
-  routeButton: {
+  nearbyEventsButtonRow: {
+    marginTop: 4,
+    alignItems: 'flex-end',
+  },
+  nearbyEventsButton: {
     backgroundColor: '#10b981',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    elevation: 3,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.15)',
   },
-  routeButtonText: {
+  nearbyEventsButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   menuBackdrop: {
     flex: 1,
