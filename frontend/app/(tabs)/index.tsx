@@ -18,7 +18,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Href, useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
@@ -436,13 +436,25 @@ useEffect(() => {
           <View style={styles.cardCompact}>
             <Image source={LOGO} style={styles.logo} resizeMode="contain" />
             <Text style={styles.title}>Bienvenido a e-Go</Text>
-            <TouchableOpacity
-              style={styles.adminLink}
-              onPress={() => router.push('/admin-login')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.adminLinkText}>Acceso Admin</Text>
-            </TouchableOpacity>
+            <Text style={styles.subtitle}>
+              Tu navegador de estaciones de carga en Catalunya
+            </Text>
+            <View style={styles.authLinksRow}>
+              <TouchableOpacity
+                style={styles.adminLink}
+                onPress={() => router.push('/company-login' as Href)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.adminLinkText}>Acceso Empresa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.adminLink}
+                onPress={() => router.push('/admin-login')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.adminLinkText}>Acceso Admin</Text>
+              </TouchableOpacity>
+            </View>
 
             {authStep === 'username' ? (
               <>
@@ -867,6 +879,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
+  subtitle: {
+    fontSize: 15,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 18,
+  },
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -906,6 +924,10 @@ const styles = StyleSheet.create({
   },
   adminLink: {
     marginBottom: 16,
+  },
+  authLinksRow: {
+    flexDirection: 'row',
+    gap: 16,
   },
   adminLinkText: {
     fontSize: 14,

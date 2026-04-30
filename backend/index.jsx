@@ -9,6 +9,7 @@ const serverless = require('serverless-http');
 // --- IMPORTACIÓN DE RUTAS ---
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const companyRoutes = require('./routes/company');
 const stationRoutes = require('./routes/stations');
 const favoriteRoutes = require('./routes/favorits'); // Importamos la ruta de favoritos
 const vehicleRoutes = require('./routes/vehicles');//Importamos la ruta de vehiculos
@@ -35,6 +36,7 @@ app.use(express.json());
 // --- RUTAS ---
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/company', companyRoutes);
 app.use('/stations', stationRoutes);
 // Cualquier petición que empiece con la URL /favorites debe ser gestionada por las reglas de favoriteRoutes
 app.use('/favorites', favoriteRoutes);
