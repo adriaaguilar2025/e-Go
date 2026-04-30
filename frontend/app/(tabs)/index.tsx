@@ -23,7 +23,21 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useCharging } from '@/contexts/ChargingContext';
 import { getApiUrl, GOOGLE_WEB_CLIENT_ID } from '@/constants/api';
+import { ChargingTimerDisplay } from '../../components/ChargingTimerDisplay';
+import { ChargingActionCard } from '../../components/ChargingActionCard';
+import { ChargingResultModal } from '../../components/ChargingResultModal';
+import { StartChargingButton } from '../../components/StartChargingButton';
+import {
+  requestLocationPermissions,
+  isLocationServiceEnabled,
+  getCurrentLocation
+} from '@/services/chargingLocationService';
+import {
+  startChargingSession as apiStartCharging,
+  endChargingSession as apiEndCharging
+} from '@/services/chargingApiService';
 
 const LOGO = require('../_assets/favicon.png');
 //Importamos el boton de favoritos
@@ -59,6 +73,30 @@ export default function InicioScreen() {
   const ac_dc = params.ac_dc as string | undefined;
 
   const { user, setUser, logout, isLoading: authLoading } = useAuth();
+  const {
+    isCharging,
+    session,
+    distanceToStation,
+    elapsedSeconds,
+    startChargingSession,
+    stopChargingSession,
+    cancelChargingSession
+  } = useCharging();
+
+  // Estados para resultado de carga
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [chargingResult, setChargingResult] = useState<{
+    durationMinutes: number;
+    basePoints: number;
+    totalPoints: number;
+    multiplier: number;
+    isPremium: boolean;
+    sessionId: number;
+    reason: string;
+  } | null>(null);
+  const [resultLoading, setResultLoading] = useState(false);
+  const [chargingError, setChargingError] = useState('');
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [estaciones, setEstaciones] = useState<Estacion[]>([]);
   const [loadingEstaciones, setLoadingEstaciones] = useState(false);
@@ -101,6 +139,142 @@ export default function InicioScreen() {
     setWelcomeUsername('');
     setAuthError('');
   }
+
+  // Función para manejar el inicio de una sesión de carga
+  const handleStartCharging = async (): Promise<boolean> => {
+    if (!user || !selectedStation || !userLocation) {
+      setChargingError('Faltan datos necesarios para iniciar la carga');
+      return false;
+    }
+
+    try {
+      // Verificar permisos de ubicación
+      const hasPermission = await requestLocationPermissions();
+      if (!hasPermission) {
+        setChargingError('Necesitas otorgar permisos de ubicación');
+        return false;
+      }
+
+      // Verificar que los servicios de ubicación estén habilitados
+      const isEnabled = await isLocationServiceEnabled();
+      if (!isEnabled) {
+        setChargingError('Por favor, activa los servicios de ubicación en tu dispositivo');
+        return false;
+      }
+
+      // Obtener ubicación actual
+      const currentLocation = await getCurrentLocation();
+      if (!currentLocation) {
+        setChargingError('No se pudo obtener tu ubicación actual');
+        return false;
+      }
+
+      // Iniciar sesión en el contexto
+      const success = await startChargingSession(
+        selectedStation.id,
+        parseFloat(selectedStation.latitud),
+        parseFloat(selectedStation.longitud),
+        currentLocation.coords.latitude,
+        currentLocation.coords.longitude
+      );
+
+      if (success) {
+        // Crear sesión en el backend
+        const apiResponse = await apiStartCharging(
+          user.id,
+          selectedStation.id,
+          currentLocation.coords.latitude,
+          currentLocation.coords.longitude
+        );
+
+        // Guardar el ID de la sesión en el contexto
+        if (apiResponse.session?.id) {
+          // Actualizar sesión con ID del backend
+          console.log('Sesión creada en backend:', apiResponse.session.id);
+        }
+      }
+
+      return success;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al iniciar carga';
+      setChargingError(message);
+      console.error('Error iniciando carga:', error);
+      return false;
+    }
+  };
+
+  // Función para finalizar la carga
+  const handleFinishCharging = async () => {
+    if (!user || !session) {
+      setChargingError('No hay sesión de carga activa');
+      return;
+    }
+
+    setResultLoading(true);
+    try {
+      const endSessionData = await stopChargingSession('manual');
+
+      if (!endSessionData) {
+        setChargingError('Error al finalizar la sesión');
+        return;
+      }
+
+      // Enviar a backend
+      const apiResponse = await apiEndCharging(
+        session.id || 0,
+        user.id,
+        endSessionData.durationMinutes,
+        session.userLat,
+        session.userLon,
+        endSessionData.reason
+      );
+
+      // Mostrar resultado
+      setChargingResult({
+        durationMinutes: endSessionData.durationMinutes,
+        basePoints: apiResponse.pointsGained.basePoints,
+        totalPoints: apiResponse.pointsGained.totalPoints,
+        multiplier: apiResponse.pointsGained.multiplier,
+        isPremium: apiResponse.isPremium,
+        sessionId: apiResponse.session.id,
+        reason: endSessionData.reason,
+      });
+
+      setShowResultModal(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al finalizar carga';
+      setChargingError(message);
+      console.error('Error finalizando carga:', error);
+      Alert.alert('Error', message);
+    } finally {
+      setResultLoading(false);
+    }
+  };
+
+  // Función para cancelar la carga
+  const handleCancelCharging = () => {
+    Alert.alert(
+      'Cancelar carga',
+      '¿Estás seguro de que deseas cancelar la sesión de carga?',
+      [
+        { text: 'Continuar', style: 'cancel' },
+        {
+          text: 'Cancelar sesión',
+          style: 'destructive',
+          onPress: () => {
+            cancelChargingSession();
+            setChargingError('');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResultModalConfirm = () => {
+    setShowResultModal(false);
+    setChargingResult(null);
+    setSelectedStation(null);
+  };
 
   // Cargar estaciones de la base de datos
   useEffect(() => {
@@ -677,15 +851,82 @@ useEffect(() => {
               )}
             </View>
 
-            <TouchableOpacity
-              style={styles.routeButton}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="directions" size={20} color="#fff" />
-              <Text style={styles.routeButtonText}>Cómo llegar</Text>
-            </TouchableOpacity>
+            {/* Mostrar timer si está cargando */}
+            {isCharging && (
+              <View>
+                <ChargingTimerDisplay
+                  elapsedSeconds={elapsedSeconds}
+                  distanceToStation={distanceToStation}
+                />
+              </View>
+            )}
+
+            {/* Mostrar tarjeta de acciones si está cargando */}
+            {isCharging && (
+              <ChargingActionCard
+                isCharging={isCharging}
+                elapsedSeconds={elapsedSeconds}
+                distanceToStation={distanceToStation}
+                onFinishCharging={handleFinishCharging}
+                onCancelCharging={handleCancelCharging}
+              />
+            )}
+
+            {/* Mostrar botón para iniciar carga si no está cargando */}
+            {!isCharging && userLocation && (
+              <View style={styles.chargingButtonContainer}>
+                <StartChargingButton
+                  stationId={selectedStation.id}
+                  stationLat={parseFloat(selectedStation.latitud)}
+                  stationLon={parseFloat(selectedStation.longitud)}
+                  userLat={userLocation.coords.latitude}
+                  userLon={userLocation.coords.longitude}
+                  isCharging={isCharging}
+                  onStartCharging={handleStartCharging}
+                  onError={(message) => {
+                    setChargingError(message);
+                    Alert.alert('Error', message);
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Mostrar error de carga si existe */}
+            {chargingError && (
+              <View style={styles.errorMessage}>
+                <MaterialIcons name="error-outline" size={16} color="#ef4444" />
+                <Text style={styles.errorText}>{chargingError}</Text>
+              </View>
+            )}
+
+            {/* Botón de cómo llegar */}
+            {!isCharging && (
+              <TouchableOpacity
+                style={styles.routeButton}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="directions" size={20} color="#fff" />
+                <Text style={styles.routeButtonText}>Cómo llegar</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
+
+        {/* Modal de resultado de carga */}
+        <ChargingResultModal
+          visible={showResultModal}
+          durationMinutes={chargingResult?.durationMinutes || 0}
+          basePoints={chargingResult?.basePoints || 0}
+          totalPoints={chargingResult?.totalPoints || 0}
+          multiplier={chargingResult?.multiplier || 1}
+          isPremium={chargingResult?.isPremium || false}
+          isLoading={resultLoading}
+          onClose={() => {
+            setShowResultModal(false);
+            setChargingResult(null);
+          }}
+          onConfirm={handleResultModalConfirm}
+        />
       </View>
 
       <Modal
