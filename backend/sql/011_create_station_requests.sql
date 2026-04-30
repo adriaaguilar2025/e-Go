@@ -1,12 +1,12 @@
 CREATE TABLE IF NOT EXISTS ego.station_requests (
   id                   SERIAL PRIMARY KEY,
-  empresa_id           INTEGER NOT NULL REFERENCES ego.empresas(id) ON DELETE CASCADE,
+  empresa_id           INTEGER NOT NULL REFERENCES ego.empresas(user_id) ON DELETE CASCADE,
   station_id           INTEGER REFERENCES ego.estaciones(id) ON DELETE SET NULL,
   action               VARCHAR(20) NOT NULL CHECK (action IN ('create', 'update', 'delete')),
   status               VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   payload              JSONB NOT NULL DEFAULT '{}'::jsonb,
   rejection_reason     TEXT,
-  reviewed_by_admin_id INTEGER REFERENCES ego.usuari(id) ON DELETE SET NULL,
+  reviewed_by_admin_id INTEGER REFERENCES ego.admins(user_id) ON DELETE SET NULL,
   reviewed_at          TIMESTAMPTZ,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()

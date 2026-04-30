@@ -10,7 +10,7 @@ BEGIN
   ) THEN
     ALTER TABLE ego.estaciones
       ADD CONSTRAINT estaciones_owner_company_id_fkey
-      FOREIGN KEY (owner_company_id) REFERENCES ego.empresas(id)
+      FOREIGN KEY (owner_company_id) REFERENCES ego.empresas(user_id)
       ON DELETE SET NULL;
   END IF;
 END $$;

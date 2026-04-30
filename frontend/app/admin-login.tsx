@@ -1,5 +1,4 @@
 // Login admin con Google; devuelve JWT para backoffice
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session';
@@ -18,13 +17,12 @@ import {
 
 import { getApiUrl, GOOGLE_WEB_CLIENT_ID } from '@/constants/api';
 import { Colors } from '@/constants/theme';
+import { savePrivilegedSession } from '@/services/privilegedAuth';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const BRAND_GREEN = Colors.light.tint;
 const LOGO = require('./_assets/favicon.png');
-const ADMIN_TOKEN_KEY = '@ego_admin_token';
-const ADMIN_USER_KEY = '@ego_admin_user';
 const IS_WEB = Platform.OS === 'web';
 
 GoogleSignin.configure({
@@ -91,8 +89,7 @@ export default function AdminLoginScreen() {
 
       if (data.admin && data.token) {
         setAdmin(data.admin);
-        await AsyncStorage.setItem(ADMIN_TOKEN_KEY, data.token);
-        await AsyncStorage.setItem(ADMIN_USER_KEY, JSON.stringify(data.admin));
+        await savePrivilegedSession('admin', { token: data.token, user: data.admin });
         router.replace('/admin-home');
       }
     } catch (err) {
@@ -118,8 +115,7 @@ export default function AdminLoginScreen() {
 
       if (data.admin && data.token) {
         setAdmin(data.admin);
-        await AsyncStorage.setItem(ADMIN_TOKEN_KEY, data.token);
-        await AsyncStorage.setItem(ADMIN_USER_KEY, JSON.stringify(data.admin));
+        await savePrivilegedSession('admin', { token: data.token, user: data.admin });
         router.replace('/admin-home');
       }
     } catch (err) {

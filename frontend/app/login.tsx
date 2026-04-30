@@ -1,5 +1,5 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { useRouter, useLocalSearchParams } from 'expo-router'; 
+import { Href, useRouter, useLocalSearchParams } from 'expo-router'; 
 import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -178,9 +178,14 @@ export default function LoginScreen() {
         <Text style={styles.title}>Bienvenido a e-Go</Text>
         <Text style={styles.subtitle}>Tu navegador de estaciones de carga en Catalunya</Text>
 
-        <TouchableOpacity style={styles.adminLink} onPress={() => router.push('/admin-login')}>
-          <Text style={styles.adminLinkText}>Acceso Admin</Text>
-        </TouchableOpacity>
+        <View style={styles.linksRow}>
+          <TouchableOpacity style={styles.adminLink} onPress={() => router.push('/company-login' as Href)}>
+            <Text style={styles.adminLinkText}>Acceso Empresa</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.adminLink} onPress={() => router.push('/admin-login')}>
+            <Text style={styles.adminLinkText}>Acceso Admin</Text>
+          </TouchableOpacity>
+        </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -234,7 +239,8 @@ const styles = StyleSheet.create({
   primaryButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   input: { width: '100%', paddingVertical: 12, paddingHorizontal: 16, fontSize: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, marginBottom: 16 },
   errorText: { color: '#dc2626', fontSize: 14, textAlign: 'center', marginBottom: 12 },
-  adminLink: { marginBottom: 18 },
+  linksRow: { flexDirection: 'row', gap: 16, marginBottom: 18 },
+  adminLink: {},
   adminLinkText: { fontSize: 14, color: '#111827', fontWeight: '600' },
   terms: { marginTop: 24, fontSize: 12, color: '#9ca3af', textAlign: 'center' },
 });

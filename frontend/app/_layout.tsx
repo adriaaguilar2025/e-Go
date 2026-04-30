@@ -25,8 +25,13 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="admin-login" options={{ headerShown: false }} />
+          <Stack.Screen name="company-login" options={{ headerShown: false }} />
           <Stack.Screen name="admin-home" options={{ headerShown: false }} />
+          <Stack.Screen name="company-home" options={{ headerShown: false }} />
+          <Stack.Screen name="company-requests" options={{ headerShown: false }} />
+          <Stack.Screen name="admin-requests" options={{ headerShown: false }} />
           <Stack.Screen name="admin-station-new" options={{ headerShown: false }} />
+          <Stack.Screen name="company-station-new" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>

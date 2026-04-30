@@ -55,7 +55,7 @@ router.post('/admin/google', async (req, res) => {
     return await loginPrivilegedUser(req, res, {
       role: 'admin',
       relationTable: ADMINS_TABLE,
-      selectFields: 'u.id, u.id AS user_id, u.email, u.username, r.created_at AS admin_since',
+      selectFields: 'u.id, r.user_id, u.email, u.username, r.created_at AS admin_since',
       forbiddenMessage: 'No eres admin',
     });
   } catch (err) {
@@ -69,7 +69,7 @@ router.post('/company/google', async (req, res) => {
     return await loginPrivilegedUser(req, res, {
       role: 'company',
       relationTable: EMPRESAS_TABLE,
-      selectFields: 'r.id, r.user_id, r.nombre, r.created_at AS company_since, u.email, u.username',
+      selectFields: 'u.id, r.user_id, u.email, u.username, r.nombre, r.created_at AS company_since',
       forbiddenMessage: 'No eres una empresa autorizada',
     });
   } catch (err) {

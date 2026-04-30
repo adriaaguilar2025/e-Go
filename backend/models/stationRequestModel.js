@@ -15,7 +15,7 @@ async function getPendingRequests() {
   const result = await pool.query(
     `SELECT sr.*, e.nombre AS empresa_nombre, u.email AS empresa_email, u.username AS empresa_username
      FROM ${STATION_REQUESTS_TABLE} sr
-     JOIN ${EMPRESAS_TABLE} e ON e.id = sr.empresa_id
+     JOIN ${EMPRESAS_TABLE} e ON e.user_id = sr.empresa_id
      JOIN ${USUARIOS_TABLE} u ON u.id = e.user_id
      WHERE sr.status = 'pending'
      ORDER BY sr.created_at ASC`

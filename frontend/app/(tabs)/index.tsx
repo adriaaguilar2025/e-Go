@@ -16,7 +16,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Href, useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
@@ -417,13 +417,22 @@ useEffect(() => {
             <Text style={styles.subtitle}>
               Tu navegador de estaciones de carga en Catalunya
             </Text>
-            <TouchableOpacity
-              style={styles.adminLink}
-              onPress={() => router.push('/admin-login')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.adminLinkText}>Acceso Admin</Text>
-            </TouchableOpacity>
+            <View style={styles.authLinksRow}>
+              <TouchableOpacity
+                style={styles.adminLink}
+                onPress={() => router.push('/company-login' as Href)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.adminLinkText}>Acceso Empresa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.adminLink}
+                onPress={() => router.push('/admin-login')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.adminLinkText}>Acceso Admin</Text>
+              </TouchableOpacity>
+            </View>
 
             {authStep === 'username' ? (
               <>
@@ -831,6 +840,10 @@ const styles = StyleSheet.create({
   },
   adminLink: {
     marginBottom: 16,
+  },
+  authLinksRow: {
+    flexDirection: 'row',
+    gap: 16,
   },
   adminLinkText: {
     fontSize: 14,
