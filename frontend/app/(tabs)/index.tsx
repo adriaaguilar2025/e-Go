@@ -31,6 +31,9 @@ const LOGO = require('../_assets/favicon.png');
 //Importamos el boton de favoritos
 import { FavoriteButton } from '../../components/FavoriteButton';
 
+//Importamos el mapa de direcciones
+import MapViewDirections from 'react-native-maps-directions';
+
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
 });
@@ -90,6 +93,51 @@ export default function InicioScreen() {
   const [welcomePassword, setWelcomePassword] = useState('');
   const [authLoadingGoogle, setAuthLoadingGoogle] = useState(false);
   const [authError, setAuthError] = useState('');
+
+  //Estados para la navegacion a un punto
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [routeOrigin, setRouteOrigin] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeDestination, setRouteDestination] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+
+  const handleStartNavigation = (estacion: Estacion) => {
+      setRouteDestination({
+        latitude: parseFloat(estacion.latitud),
+        longitude: parseFloat(estacion.longitud)
+      });
+
+      //Preguntamos al usuario el origen
+      Alert.alert(
+        "Iniciar ruta",
+        "¿Desde dónde quieres calcular la ruta?",
+        [
+          {
+            text: "Mi ubicación actual",
+            onPress: () => {
+              if (userLocation && userLocation.coords) {//Si tenemos la ubicación del usuario la ponemos como origen
+                setRouteOrigin({
+                  latitude: userLocation.coords.latitude,
+                  longitude: userLocation.coords.longitude
+                });
+                setIsNavigating(true);
+              } else {
+                Alert.alert("GPS desactivado", "No podemos encontrar tu ubicación actual.");
+              }
+            }
+          },
+          {
+            text: "Buscar otro origen",
+            onPress: () => {
+              // Aquí puedes habilitar un modo de búsqueda en tu TopBar
+              // Por ahora mostramos una alerta informativa
+              Alert.alert("Modo búsqueda", "Busca un lugar en la barra superior para usarlo como origen.");
+              // Opcional: setIsSearchingOrigin(true);
+            }
+          },
+          { text: "Cancelar", style: "cancel" }
+        ]
+      );
+  };
 
   // Cargar estaciones de la base de datos
   useEffect(() => {
@@ -644,8 +692,8 @@ useEffect(() => {
           showsUserLocation={true}
           onPress={() => setSelectedStation(null)}
         >
-          {/* Puntos de recarga (Estos sí se agruparán automáticamente) */}
-          {displayedStations.map((est) => (
+          {/* Puntos de recarga (Los ocultamos si estamos navegando) */}
+          {!isNavigating && displayedStations.map((est) => (
             <Marker
               key={`station-${est.id}`}
               coordinate={{
@@ -659,7 +707,70 @@ useEffect(() => {
               }}
             />
           ))}
+
+            {/* EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
+                {isNavigating && routeDestination && selectedStation && (
+                  <Marker
+                    coordinate={routeDestination}
+                    title={selectedStation.nom}
+                    pinColor="#10b981"
+                  />
+            )}
+
+            {/* Trazado de la ruta (Solo visible si estamos navegando) */}
+            {isNavigating && routeOrigin && routeDestination && (
+              <MapViewDirections
+                origin={routeOrigin}
+                destination={routeDestination}
+                apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''} //Usa la del .env
+                strokeWidth={4}
+                strokeColor="#3b82f6" //Un azul eléctrico estilo Google Maps
+                mode="DRIVING"
+                onReady={(result) => {
+                  //Guardamos tiempo y distancia para mostrarlo en pantalla
+                  setRouteInfo({
+                    distance: result.distance,
+                    duration: result.duration
+                  });
+
+                  //Auto-Zoom: Centra el mapa para que se vean tanto el origen como el destino
+                  mapRef.current?.fitToCoordinates(result.coordinates, {
+                    edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+                    animated: true
+                  });
+                }}
+                onError={(errorMessage) => {
+                  Alert.alert("Error de ruta", "No se ha podido calcular la ruta. Revisa que 'Directions API' esté activa en Google Cloud.");
+                  console.log(errorMessage);
+                }}
+              />
+            )}
         </MapView>
+          {/* ========================================================== */}
+          {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) */}
+          {/* ========================================================== */}
+            {/* Panel de Información de Ruta Activa */}
+            {isNavigating && routeInfo && (
+              <View style={styles.navPanel}>
+                <View>
+                  <Text style={styles.navTextBold}>Ruta hacia {selectedStation?.nom}</Text>
+                  <Text style={styles.navText}>
+                    {routeInfo.distance.toFixed(1)} km • {Math.ceil(routeInfo.duration)} min
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.cancelRouteBtn}
+                  onPress={() => {
+                    setIsNavigating(false);
+                    setRouteOrigin(null);
+                    setRouteDestination(null);
+                    setRouteInfo(null);
+                  }}
+                >
+                  <MaterialIcons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
 
         {loadingEstaciones && (
           <View style={styles.mapLoading}>
@@ -668,7 +779,7 @@ useEffect(() => {
         )}
 
         {/* Mini panel de información de la estación */}
-        {selectedStation && (
+        {!isNavigating && selectedStation && (
           <View style={styles.infoPanel}>
             <View style={styles.infoHandle} />
 
@@ -730,13 +841,12 @@ useEffect(() => {
                 </Text>
               )}
             </View>
-
             <TouchableOpacity
               style={styles.routeButton}
               activeOpacity={0.8}
+              onPress={() => handleStartNavigation(selectedStation)}
             >
-              <MaterialIcons name="directions" size={20} color="#fff" />
-              <Text style={styles.routeButtonText}>Cómo llegar</Text>
+              <Text style={styles.buttonText}>Cómo llegar</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1163,5 +1273,41 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     borderLeftWidth: 1, // Posa una línia fineta que separa els filtres de la X
     borderLeftColor: '#e2e8f0',
+  },
+
+  //Estilos de los componentes de rutas de navegacion
+  navPanel: {
+    position: 'absolute',
+    top: 50, // Ajusta según tu TopBar
+    left: 20,
+    right: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    zIndex: 100,
+    borderWidth: 2,
+    borderColor: '#10b981', // Tu verde e-Go
+  },
+  navTextBold: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  navText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  cancelRouteBtn: {
+    backgroundColor: '#ef4444', // Rojo para cancelar
+    padding: 10,
+    borderRadius: 50,
   },
 });
