@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { type Href, useRouter } from 'expo-router';
 import {
@@ -12,10 +11,10 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { getApiUrl } from '@/constants/api';
-
-const ADMIN_TOKEN_KEY = '@ego_admin_token';
-const ADMIN_USER_KEY = '@ego_admin_user';
+import { ManualStationCard } from '@/components/stations/ManualStationCard';
+import { ManualStation } from '@/components/stations/types';
+import { clearPrivilegedSession, getPrivilegedToken, privilegedFetch } from '@/services/privilegedAuth';
+import { deleteAdminStation, listAdminStations } from '@/services/stationModeration';
 
 type AdminPayload = {
   sub: number;
@@ -25,31 +24,13 @@ type AdminPayload = {
   exp?: number;
 };
 
-type AdminStation = {
-  id: number;
-  nom: string;
-  created_at: string;
-  external_id?: string | null;
-  latitud?: string | number | null;
-  longitud?: string | number | null;
-  tipus_connexio?: string | null;
-  tipus_velocitat?: string | null;
-  adreca?: string | null;
-  municipi?: string;
-  provincia?: string;
-  kw?: string | number;
-  ac_dc?: string | null;
-  promotor?: string | null;
-  acces?: string | null;
-};
-
 export default function AdminHomeScreen() {
   const router = useRouter();
   const { setUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [admin, setAdmin] = useState<AdminPayload | null>(null);
   const [error, setError] = useState('');
-  const [stations, setStations] = useState<AdminStation[]>([]);
+  const [stations, setStations] = useState<ManualStation[]>([]);
   const [loadingStations, setLoadingStations] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
@@ -58,21 +39,19 @@ export default function AdminHomeScreen() {
       setLoading(true);
       setError('');
       try {
-        const token = await AsyncStorage.getItem(ADMIN_TOKEN_KEY);
+        const token = await getPrivilegedToken('admin');
         if (!token) {
           setError('No hay sesion admin');
           return;
         }
-        const res = await fetch(`${getApiUrl()}/admin/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await privilegedFetch('admin', '/admin/me');
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || 'No autorizado');
           return;
         }
         setAdmin(data.admin);
-        await loadMyStations(token);
+        await loadMyStations();
       } catch (err) {
         setError('No se pudo conectar con el servidor');
       } finally {
@@ -82,23 +61,14 @@ export default function AdminHomeScreen() {
   }, []);
 
   async function logoutAdmin() {
-    await AsyncStorage.removeItem(ADMIN_TOKEN_KEY);
-    await AsyncStorage.removeItem(ADMIN_USER_KEY);
+    await clearPrivilegedSession('admin');
     router.replace('/admin-login');
   }
 
-  async function loadMyStations(token: string) {
+  async function loadMyStations() {
     setLoadingStations(true);
     try {
-      const res = await fetch(`${getApiUrl()}/admin/stations/mine`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'No se pudieron cargar las estaciones');
-        return;
-      }
-      setStations(data);
+      setStations(await listAdminStations());
     } catch (err) {
       setError('No se pudo conectar con el servidor');
     } finally {
@@ -107,17 +77,14 @@ export default function AdminHomeScreen() {
   }
 
   async function deleteStation(id: number) {
-    const token = await AsyncStorage.getItem(ADMIN_TOKEN_KEY);
+    const token = await getPrivilegedToken('admin');
     if (!token) {
       setError('No hay sesion admin');
       return;
     }
     setLoadingStations(true);
     try {
-      const res = await fetch(`${getApiUrl()}/admin/stations/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await deleteAdminStation(id);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'No se pudo borrar la estacion');
@@ -166,18 +133,17 @@ export default function AdminHomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.primaryButtonAlt}
+              onPress={() => router.push('/admin-requests' as Href)}
+            >
+              <Text style={styles.primaryButtonAltText}>Revisar solicitudes pendientes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryButton}
               onPress={() => {
                 (async () => {
                   if (!admin?.email) return;
                   try {
-                    const token = await AsyncStorage.getItem(ADMIN_TOKEN_KEY);
-                    if (!token) {
-                      setError('No hay sesion admin');
-                      return;
-                    }
-                    const userRes = await fetch(`${getApiUrl()}/admin/user`, {
-                      headers: { Authorization: `Bearer ${token}` },
-                    });
+                    const userRes = await privilegedFetch('admin', '/admin/user');
                     const userData = await userRes.json();
                     if (!userRes.ok || !userData.user) {
                       setError(userData.error || 'No se pudo cargar el usuario');
@@ -191,7 +157,7 @@ export default function AdminHomeScreen() {
                 })();
               }}
             >
-              <Text style={styles.primaryButtonAltText}>Ir a la aplicacion</Text>
+              <Text style={styles.primaryButtonText}>Ir a la aplicacion</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryButton} onPress={logoutAdmin}>
               <Text style={styles.secondaryButtonText}>Cerrar sesion admin</Text>
@@ -201,10 +167,7 @@ export default function AdminHomeScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Tus estaciones manuales</Text>
                 <TouchableOpacity
-                  onPress={async () => {
-                    const token = await AsyncStorage.getItem(ADMIN_TOKEN_KEY);
-                    if (token) await loadMyStations(token);
-                  }}
+                  onPress={loadMyStations}
                   disabled={loadingStations}
                 >
                   <Text style={styles.sectionLink}>
@@ -218,56 +181,33 @@ export default function AdminHomeScreen() {
                 <Text style={styles.muted}>No has creado estaciones manuales.</Text>
               ) : (
                 stations.map((s) => (
-                  <View key={s.id} style={styles.stationItem}>
-                    <View style={styles.stationRow}>
-                      <Text style={styles.stationName}>{s.nom}</Text>
-                      <Text style={styles.stationMeta}>
-                        {new Date(s.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <Text style={styles.stationMeta}>
-                      {s.municipi || 'Sin municipio'} {s.provincia ? `· ${s.provincia}` : ''}
-                    </Text>
-                    <Text style={styles.stationMeta}>
-                      {s.kw ?? 0} kW {s.ac_dc ? `· ${s.ac_dc}` : ''}
-                    </Text>
-                    <View style={styles.stationActions}>
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() =>
-                          router.push(({
-                            pathname: '/admin-station-new' as Href,
-                            params: {
-                              mode: 'edit',
-                              id: String(s.id),
-                              nom: s.nom || '',
-                              latitud: s.latitud ? String(s.latitud) : '',
-                              longitud: s.longitud ? String(s.longitud) : '',
-                              kw: s.kw !== undefined && s.kw !== null ? String(s.kw) : '',
-                              ac_dc: s.ac_dc || '',
-                              tipus_connexio: s.tipus_connexio || '',
-                              tipus_velocitat: s.tipus_velocitat || '',
-                              adreca: s.adreca || '',
-                              municipi: s.municipi || '',
-                              provincia: s.provincia || '',
-                              promotor: s.promotor || '',
-                              acces: s.acces || '',
-                              external_id: s.external_id || '',
-                            },
-                          }) as Href)
-                        }
-                      >
-                        <Text style={styles.editButtonText}>Editar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => setConfirmDeleteId(s.id)}
-                      >
-                        <Text style={styles.deleteButtonText}>Borrar</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                  </View>
+                  <ManualStationCard
+                    key={s.id}
+                    station={s}
+                    onEdit={() =>
+                      router.push(({
+                        pathname: '/admin-station-new' as Href,
+                        params: {
+                          mode: 'edit',
+                          id: String(s.id),
+                          nom: s.nom || '',
+                          latitud: s.latitud ? String(s.latitud) : '',
+                          longitud: s.longitud ? String(s.longitud) : '',
+                          kw: s.kw !== undefined && s.kw !== null ? String(s.kw) : '',
+                          ac_dc: s.ac_dc || '',
+                          tipus_connexio: s.tipus_connexio || '',
+                          tipus_velocitat: s.tipus_velocitat || '',
+                          adreca: s.adreca || '',
+                          municipi: s.municipi || '',
+                          provincia: s.provincia || '',
+                          promotor: s.promotor || '',
+                          acces: s.acces || '',
+                          external_id: s.external_id || '',
+                        },
+                      }) as Href)
+                    }
+                    onDelete={() => setConfirmDeleteId(s.id)}
+                  />
                 ))
               )}
             </View>
@@ -432,61 +372,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
-  },
-  stationItem: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#fafafa',
-    marginBottom: 12,
-  },
-  stationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 6,
-  },
-  stationName: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  stationMeta: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  stationActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-  editButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#111827',
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#fee2e2',
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#b91c1c',
-    fontSize: 14,
-    fontWeight: '600',
   },
   confirmBackdrop: {
     flex: 1,

@@ -9,11 +9,16 @@ const serverless = require('serverless-http');
 // --- IMPORTACIÓN DE RUTAS ---
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const companyRoutes = require('./routes/company');
 const stationRoutes = require('./routes/stations');
 const favoriteRoutes = require('./routes/favorits'); // Importamos la ruta de favoritos
 const vehicleRoutes = require('./routes/vehicles');//Importamos la ruta de vehiculos
 const subscriptionRoutes = require('./routes/subscription');
+const chargingRoutes = require('./routes/charging'); // Importamos la ruta de carga
+const rankingRoutes = require('./routes/ranking');
+const userRoutes = require('./routes/users');
 const { handleWebhook } = require('./controllers/stripeWebhookController');
+const { canReach } = require('./services/rangeCalculationService');
 
 const { pool } = require('./lib/db');
 const { startScheduler } = require('./lib/scheduler'); // Importamos el planificador
@@ -33,11 +38,34 @@ app.use(express.json());
 // --- RUTAS ---
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/company', companyRoutes);
 app.use('/stations', stationRoutes);
 // Cualquier petición que empiece con la URL /favorites debe ser gestionada por las reglas de favoriteRoutes
 app.use('/favorites', favoriteRoutes);
 app.use('/car', vehicleRoutes);
 app.use('/subscription', subscriptionRoutes);
+app.use('/charging', chargingRoutes); // Rutas para sesiones de carga y puntos
+app.use('/ranking', rankingRoutes);
+app.use('/user', userRoutes);
+
+// Can Reach endpoint (range calculation)
+app.get('/can-reach', async (req, res) => {
+  try {
+    const { startLat, startLon, endLat, endLon, vehicleType, batteryKWh } = req.query;
+    const result = await canReach({
+      start: { lat: Number(startLat), lon: Number(startLon) },
+      end: { lat: Number(endLat), lon: Number(endLon) },
+      vehicleType: String(vehicleType || '').toLowerCase(),
+      batteryKWh: Number(batteryKWh),
+    });
+    res.json(result);
+  } catch (error) {
+    if (error?.type === 'VALIDATION_ERROR') return res.status(400).json({ error: error.message });
+    if (error?.type === 'ROUTE_NOT_FOUND') return res.status(404).json({ error: error.message });
+    if (error?.type === 'OVER_QUERY_LIMIT') return res.status(429).json({ error: error.message });
+    return res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
 
 // 1. Root / Health Check
 app.get('/', async (req, res) => {
