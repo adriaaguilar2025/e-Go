@@ -15,6 +15,7 @@ const favoriteRoutes = require('./routes/favorits'); // Importamos la ruta de fa
 const vehicleRoutes = require('./routes/vehicles');//Importamos la ruta de vehiculos
 const subscriptionRoutes = require('./routes/subscription');
 const rankingRoutes = require('./routes/ranking');
+const userRoutes = require('./routes/users');
 const { handleWebhook } = require('./controllers/stripeWebhookController');
 const { canReach } = require('./services/rangeCalculationService');
 
@@ -43,6 +44,7 @@ app.use('/favorites', favoriteRoutes);
 app.use('/car', vehicleRoutes);
 app.use('/subscription', subscriptionRoutes);
 app.use('/ranking', rankingRoutes);
+app.use('/user', userRoutes);
 
 // Can Reach endpoint (range calculation)
 app.get('/can-reach', async (req, res) => {

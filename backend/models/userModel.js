@@ -1,5 +1,5 @@
 // Acceso a BD para usuarios: buscar por email y crear usuario
-const { pool, USUARIOS_TABLE } = require('../lib/db');
+const { pool, USUARIOS_TABLE, CONDUCTORES_TABLE, SUBSCRIPTIONS_TABLE, ADMINS_TABLE, EMPRESAS_TABLE } = require('../lib/db');
 let passwordHashColumnEnsured = false;
 
 async function ensurePasswordHashColumn() {
@@ -49,6 +49,18 @@ async function findById(id) {
   return result.rows[0] || null;
 }
 
+async function getInfoUser(userId) {
+  const user = await pool.query(
+  //  `SELECT username, email, punts, u.created_at, exists(select * from ${SUBSCRIPTIONS_TABLE} where usuari_id = $1) as premium, exists(select * from ${ADMINS_TABLE} where user_id = $1) as admin, exists(select * from ${EMPRESAS_TABLE} where user_id = $1) as empresa FROM ${USUARIOS_TABLE} u, ${CONDUCTORES_TABLE} c WHERE u.id = $1 AND c.user_id = $1`,
+    `SELECT u.id, u.username, u.email, c.punts, u.created_at, exists(select * from ego.subscription where usuari_id = $1) as premium, exists(select * from ego.admins where user_id = $1) as admin, exists(select * from ego.empresas where user_id = $1) as empresa FROM ${USUARIOS_TABLE} u, ${CONDUCTORES_TABLE} c WHERE u.id = $1 AND c.user_id = $1`,
+    [userId]
+  );
+  if (!user) {
+    throw new Error('User not found');
+  }
+  return user.rows[0];
+}
+
 async function createUser(email, username) {
   const result = await pool.query(
     `INSERT INTO ${USUARIOS_TABLE} (email, username) VALUES ($1, $2)
@@ -87,6 +99,7 @@ module.exports = {
   findByEmail,
   findByEmailWithPassword,
   findById,
+  getInfoUser,
   createUser,
   createLocalUser,
   setPasswordHashByUserId,
