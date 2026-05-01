@@ -104,6 +104,8 @@ export default function InicioScreen() {
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
   //Estado para saber las coordenadas que ocupan la ruta
   const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  //Estado para saber si estamos seleccionando nosotros mismos el origen de la ruta
+  const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
 
   //Funcion para empezar la navegacion
   const handleStartNavigation = (coordenadas: {latitude: number, longitude: number}) => {
@@ -132,7 +134,8 @@ export default function InicioScreen() {
           {
             text: "Buscar otro origen",
             onPress: () => {
-              Alert.alert("Modo búsqueda", "Busca un lugar en la barra superior para usarlo como origen.");
+              setIsSelectingOrigin(true); //Activamos el modo selección de punto de origen
+              //Alert.alert("Modo búsqueda", "Busca un lugar en la barra superior para usarlo como origen.");
             }
           },
           { text: "Cancelar", style: "cancel" }
@@ -693,6 +696,13 @@ useEffect(() => {
           showsUserLocation={true}
           //Al clicar en el mapa cogemos el punto exacto donde ha hecho clic y quitamos si habia una estación seleccionada
           onPress={(e: any) => {
+            if (isSelectingOrigin) {//Si estamos seleccionando un punto de origen para la ruta solo hacemos el cuerpo del if
+                  setRouteOrigin(e.nativeEvent.coordinate); //Guardamos donde ha tocado como origen
+                  setIsSelectingOrigin(false); //Salimos del modo selección
+                  setIsNavigating(true); //Iniciamos la navegación
+                  return; //Cortamos la ejecución aquí
+            }
+
             //Verificamos que el toque provenga del mapa y tenga coordenadas
             if (e.nativeEvent.coordinate) {
               //Limpiamos cualquier estación seleccionada previamente
@@ -721,6 +731,18 @@ useEffect(() => {
               pinColor={favoriteIds.includes(est.id) ? 'red' : 'green'}
               onPress={(e: any) => {
                 e.stopPropagation(); //Evita que el toque pase al mapa y cierre el panel
+
+                //Si estamos eligiendo origen, interceptamos el clic en la estación
+                if (isSelectingOrigin) {
+                  setRouteOrigin({
+                    latitude: parseFloat(est.latitud),
+                    longitude: parseFloat(est.longitud)
+                  });
+                  setIsSelectingOrigin(false);
+                  setIsNavigating(true);
+                  return; //Cortamos aquí
+                }
+
                 setSelectedStation(est);
                 setSelectedLocation(null); //Limpiamos el punto manual si seleccionan una estación
                 setRouteCoords([]);
@@ -1398,5 +1420,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444', // Rojo para cancelar
     padding: 10,
     borderRadius: 50,
+  },
+selectingOriginPanel: {
+    position: 'absolute',
+    top: 50, // Ajusta según tu TopBar
+    left: 20,
+    right: 20,
+    backgroundColor: '#3b82f6', // Un color azul que destaque
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 10,
+    elevation: 5,
+  },
+  selectingOriginText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  cancelSelectingBtn: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    padding: 8,
+    borderRadius: 20,
   },
 });
