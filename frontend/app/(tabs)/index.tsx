@@ -185,6 +185,7 @@ export default function InicioScreen() {
           { text: "Cancelar", style: "cancel" }
         ]
       );
+  };
   // Función para manejar el inicio de una sesión de carga
   const handleStartCharging = async (): Promise<boolean> => {
     if (!user || !selectedStation || !userLocation) {
