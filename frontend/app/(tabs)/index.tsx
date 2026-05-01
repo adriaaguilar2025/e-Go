@@ -778,12 +778,12 @@ useEffect(() => {
                 />
             )}
 
-            {/* EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
-                {isNavigating && routeDestination && selectedStation && (
+            {/*EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
+                {isNavigating && routeDestination && (
                   <Marker
                     coordinate={routeDestination}
-                    title={selectedStation.nom}
-                    pinColor="#10b981"
+                    title="Ubicación seleccionada"
+                    pinColor="#a855f7"
                   />
             )}
 
