@@ -9,7 +9,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -42,9 +41,14 @@ import {
   endChargingSession as apiEndCharging
 } from '@/services/chargingApiService';
 
-const LOGO = require('../_assets/favicon.png');
 //Importamos el boton de favoritos
 import { FavoriteButton } from '../../components/FavoriteButton';
+
+//Importamos el mapa de direcciones
+import MapViewDirections from 'react-native-maps-directions';
+import { Polyline } from 'react-native-maps'; //Para pintar el trazado de la ruta
+
+const LOGO = require('../_assets/favicon.png'); //Siempre ha de ir debajo de los imports
 
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -135,6 +139,53 @@ export default function InicioScreen() {
   const [authLoadingGoogle, setAuthLoadingGoogle] = useState(false);
   const [authError, setAuthError] = useState('');
 
+  //Estados para la navegacion a un punto
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [routeOrigin, setRouteOrigin] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeDestination, setRouteDestination] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  //Estado para saber el punto  marcado por el usuario (lo uso para cunado un conductor quiere ir a un sitio que no es un punto de carga y lo selecciona en el mapa)
+  const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  //Estado para saber las coordenadas que ocupan la ruta
+  const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  //Estado para saber si estamos seleccionando nosotros mismos el origen de la ruta
+  const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
+
+  //Funcion para empezar la navegacion
+  const handleStartNavigation = (coordenadas: {latitude: number, longitude: number}) => {
+      setRouteCoords([]);
+      setRouteInfo(null);
+      setRouteDestination(coordenadas);
+      //Preguntamos al usuario el origen
+      Alert.alert(
+        "Iniciar ruta",
+        "¿Desde dónde quieres calcular la ruta?",
+        [
+          {
+            text: "Mi ubicación actual",
+            onPress: () => {
+              if (userLocation && userLocation.coords) {
+                setRouteOrigin({
+                  latitude: userLocation.coords.latitude,
+                  longitude: userLocation.coords.longitude
+                });
+                setIsNavigating(true);
+              } else {
+                Alert.alert("GPS desactivado", "No podemos encontrar tu ubicación actual.");
+              }
+            }
+          },
+          {
+            text: "Buscar otro origen",
+            onPress: () => {
+              setIsSelectingOrigin(true); //Activamos el modo selección de punto de origen
+              //Alert.alert("Modo búsqueda", "Busca un lugar en la barra superior para usarlo como origen.");
+            }
+          },
+          { text: "Cancelar", style: "cancel" }
+        ]
+      );
+  };
   // Función para manejar el inicio de una sesión de carga
   const handleStartCharging = async (): Promise<boolean> => {
     if (!user || !selectedStation || !userLocation) {
@@ -808,6 +859,22 @@ useEffect(() => {
         isSearching={isSearching}
       />
 
+      {/* Aviso de selección de origen para cuando estamos seleccionando el punto de origen de una ruta */}
+      {isSelectingOrigin && (
+        <View style={styles.originSelectionNotice}>
+          <View style={styles.originSelectionContent}>
+            <MaterialIcons name="location-on" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.originSelectionText}>Selecciona el punto de origen en el mapa</Text>
+          </View>
+          <TouchableOpacity //Botón de cerrar por si no queremos hacer una ruta.
+            onPress={() => setIsSelectingOrigin(false)}
+            style={styles.originSelectionClose}
+          >
+            <MaterialIcons name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* --- CAIXETA DE FILTRES ACTIUS APILATS --- */}
       {(hasFilters && selectedStation === null ) ? (
         <View style={styles.activeFiltersBadge}>
@@ -894,14 +961,41 @@ useEffect(() => {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          key={`map-${displayedStations.length}`} // <-- TRUCO VITAL: Fuerza al mapa a pintarse cuando llegan los datos
+          key={`map-${displayedStations.length}-${isNavigating}`}  //TRUCO VITAL: Fuerza al mapa a pintarse cuando llegan los datos o cuando se acaba la navegación (para borrar el recorrido de esta)
           style={StyleSheet.absoluteFillObject}
           initialRegion={region}
           showsUserLocation={true}
-          onPress={() => setSelectedStation(null)}
+          //Al clicar en el mapa cogemos el punto exacto donde ha hecho clic y quitamos si habia una estación seleccionada
+          onPress={(e: any) => {
+            if (isSelectingOrigin) {//Si estamos seleccionando un punto de origen para la ruta solo hacemos el cuerpo del if
+                  setRouteOrigin(e.nativeEvent.coordinate); //Guardamos donde ha tocado como origen
+                  setIsSelectingOrigin(false); //Salimos del modo selección
+                  setIsNavigating(true); //Iniciamos la navegación
+                  return; //Cortamos la ejecución aquí
+            }
+            if (isNavigating) {//Esto permite que si clicamos a un punto del mapa cuando estamos navegando en una ruta esto sea ignorado (para salir de la navegación hay un boton especifico)
+                return
+            }
+
+            //Verificamos que el toque provenga del mapa y tenga coordenadas
+            if (e.nativeEvent.coordinate) {
+              //Limpiamos cualquier estación seleccionada previamente
+              setSelectedStation(null);
+              //Guardamos la nueva ubicación libre
+              setSelectedLocation({
+                latitude: e.nativeEvent.coordinate.latitude,
+                longitude: e.nativeEvent.coordinate.longitude,
+              });
+              //Limpiamos la ruta
+              setIsNavigating(false);
+              setRouteCoords([]);
+              setRouteDestination(null);
+              setRouteInfo(null);
+            }
+          }}
         >
-          {/* Puntos de recarga (Estos sí se agruparán automáticamente) */}
-          {displayedStations.map((est) => (
+          {/* Puntos de recarga (Los ocultamos si estamos navegando) */}
+          {!isNavigating && displayedStations.map((est) => (
             <Marker
               key={`station-${est.id}`}
               coordinate={{
@@ -910,12 +1004,119 @@ useEffect(() => {
               }}
               pinColor={favoriteIds.includes(est.id) ? 'red' : 'green'}
               onPress={(e: any) => {
-                e.stopPropagation(); // Evita que el toque pase al mapa y cierre el panel
+                e.stopPropagation(); //Evita que el toque pase al mapa y cierre el panel
+
+                //Si estamos eligiendo origen, interceptamos el clic en la estación
+                if (isSelectingOrigin) {
+                  setRouteOrigin({
+                    latitude: parseFloat(est.latitud),
+                    longitude: parseFloat(est.longitud)
+                  });
+                  setIsSelectingOrigin(false);
+                  setIsNavigating(true);
+                  return; //Cortamos aquí
+                }
+
                 setSelectedStation(est);
+                setSelectedLocation(null); //Limpiamos el punto manual si seleccionan una estación
+                setRouteCoords([]);
+                setIsNavigating(false);
+                setRouteInfo(null);
               }}
             />
           ))}
+
+            {/*Marcador de la ubicacion clicada por el usuario con un clic manualmente */}
+              {!isNavigating && selectedLocation && !selectedStation && (
+                <Marker
+                  key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} //Soluciona el problema de que no se borren al clicar en otro sitio
+                  coordinate={selectedLocation}
+                  pinColor="#f59e0b" //Un color naranja para diferenciarlo de las estaciones
+                  title="Ubicación seleccionada"
+                />
+            )}
+
+            {/*EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
+                {isNavigating && routeDestination && (
+                  <Marker
+                    coordinate={routeDestination}
+                    title="Ubicación seleccionada"
+                    pinColor="#a855f7"
+                  />
+            )}
+
+            {/* Trazado de la ruta (Solo visible si estamos navegando) */}
+            {isNavigating && routeOrigin && routeDestination && (
+              <MapViewDirections
+                origin={routeOrigin}
+                destination={routeDestination}
+                apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''} //Usa la del .env
+                strokeWidth={0} //oculta la linea nativa que da problem
+                strokeColor="#3b82f6" //Un azul eléctrico estilo Google Maps
+                mode="DRIVING"
+                onReady={(result) => {
+                  //Guardamos tiempo y distancia para mostrarlo en pantalla
+                  setRouteInfo({
+                    distance: result.distance,
+                    duration: result.duration
+                  });
+                    //Guardamos las coordenadas para pintarlas nosotros con el polyline
+                    setRouteCoords(result.coordinates);
+
+                  //Auto-Zoom: Centra el mapa para que se vean tanto el origen como el destino
+                  mapRef.current?.fitToCoordinates(result.coordinates, {
+                    edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+                    animated: true
+                  });
+                }}
+                onError={(errorMessage) => {
+                  Alert.alert("Error de ruta", "No se ha podido calcular la ruta");
+                  console.log(errorMessage);
+                }}
+              />
+            )}
+            {/*Nuestro propio trazado de la ruta (100% controlable) */}
+              {isNavigating && routeCoords.length > 0 && (
+                <Polyline
+                  key={`polyline-${routeCoords.length}`}
+                  coordinates={routeCoords}
+                  strokeWidth={4}
+                  strokeColor="#3b82f6"
+                  lineJoin="round"
+                />
+            )}
         </MapView>
+          {/* ========================================================== */}
+          {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) para cuando hay ruta */}
+          {/* ========================================================== */}
+            {/* Panel de Información de Ruta Activa */}
+            {isNavigating && routeInfo && (
+              <View style={styles.navPanel}>
+                <View>
+                    {/* ponemos el nombre de la estacion si existe, si no, uno por default */}
+                  <Text style={styles.navTextBold}>
+                    Ruta hacia {selectedStation ? selectedStation.nom : 'Ubicación seleccionada'}
+                  </Text>
+                  <Text style={styles.navText}>
+                    {routeInfo.distance.toFixed(1)} km • {Math.ceil(routeInfo.duration)} min
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.cancelRouteBtn}
+                  onPress={() => {
+                    setIsNavigating(false);
+                    setRouteOrigin(null);
+                    setRouteDestination(null);
+                    setRouteInfo(null);
+                    setRouteCoords([]);
+                    setSelectedLocation(null);
+                    setSelectedStation(null);
+                  }}
+                >
+                  <MaterialIcons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
 
         {loadingEstaciones && (
           <View style={styles.mapLoading}>
@@ -924,7 +1125,7 @@ useEffect(() => {
         )}
 
         {/* Mini panel de información de la estación */}
-        {selectedStation && (
+        {!isNavigating && selectedStation && !isSelectingOrigin &&(
           <View style={styles.infoPanel}>
             <View style={styles.infoHandle} />
 
@@ -967,7 +1168,7 @@ useEffect(() => {
               <View style={styles.infoBadgeRow}>
                 <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
                   <MaterialIcons name="bolt" size={14} color="#10b981" />
-                  <Text style={[styles.badgeText, { color: '#047857' }]}>{(parseFloat(selectedStation.kw) != 0)? selectedStation.kw : 'n/a'} kW</Text>
+                  <Text style={[styles.badgeText, { color: '#047857' }]}>{(parseFloat(selectedStation.kw) !== 0)? selectedStation.kw : 'n/a'} kW</Text>
                 </View>
               <View style={[styles.badge, { backgroundColor: '#ecfdf5' }]}>
                 <MaterialIcons name="ev-station" size={14} color="#10b981" />
@@ -986,8 +1187,7 @@ useEffect(() => {
                 </Text>
               )}
             </View>
-
-            {/* Mostrar timer si está cargando */}
+{/* Mostrar timer si está cargando */}
             {isCharging && (
               <View>
                 <ChargingTimerDisplay
@@ -1035,11 +1235,15 @@ useEffect(() => {
               </View>
             )}
 
-            {/* Botón de cómo llegar */}
+            {/* Botón de cómo llegar (De TU rama feature/rutas, pero con el icono de dev) */}
             {!isCharging && (
               <TouchableOpacity
                 style={styles.routeButton}
                 activeOpacity={0.8}
+                onPress={() => handleStartNavigation({
+                  latitude: parseFloat(selectedStation.latitud),
+                  longitude: parseFloat(selectedStation.longitud)
+                })}
               >
                 <MaterialIcons name="directions" size={20} color="#fff" />
                 <Text style={styles.routeButtonText}>Cómo llegar</Text>
@@ -1048,7 +1252,42 @@ useEffect(() => {
           </View>
         )}
 
-        {/* Modal de resultado de carga */}
+        {/* Mini panel para cuando se clica a una ubicacion cualquiera del mapa (De TU rama feature/rutas) */}
+        {!isNavigating && selectedLocation && !selectedStation && (
+          <View style={styles.infoPanel}>
+            <View style={styles.infoHandle} />
+
+            <View style={styles.infoTitleRow}>
+              <MaterialIcons name="place" size={24} color="#f59e0b" />
+              <Text style={styles.infoTitle} numberOfLines={1}>
+                Ubicación seleccionada
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => setSelectedLocation(null)}
+                style={styles.infoCloseBtn}
+              >
+                <MaterialIcons name="close" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.infoContent}>
+              <Text style={styles.infoText}>
+                Lat: {selectedLocation.latitude.toFixed(5)}, Lon: {selectedLocation.longitude.toFixed(5)}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.routeButton}
+              activeOpacity={0.8}
+              onPress={() => handleStartNavigation(selectedLocation)}
+            >
+              <Text style={styles.routeButtonText}>Cómo llegar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Modal de resultado de carga (De la rama development) */}
         <ChargingResultModal
           visible={showResultModal}
           durationMinutes={chargingResult?.durationMinutes || 0}
@@ -1515,7 +1754,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6, // Espai horitzontal entre la icona i el text
   },
-  activeFiltersText: {
+activeFiltersText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1f2937',
@@ -1526,6 +1765,104 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1, // Posa una línia fineta que separa els filtres de la X
     borderLeftColor: '#e2e8f0',
   },
+
+  // --- Estilos de los componentes de rutas de navegacion ---
+  navPanel: {
+    position: 'absolute',
+    top: 50, // Ajusta según tu TopBar
+    left: 20,
+    right: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    zIndex: 100,
+    borderWidth: 2,
+    borderColor: '#10b981', // Tu verde e-Go
+  },
+  navTextBold: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  navText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  cancelRouteBtn: {
+    backgroundColor: '#ef4444', // Rojo para cancelar
+    padding: 10,
+    borderRadius: 50,
+  },
+  selectingOriginPanel: {
+    position: 'absolute',
+    top: 50, // Ajusta según tu TopBar
+    left: 20,
+    right: 20,
+    backgroundColor: '#3b82f6', // Un color azul que destaque
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 10,
+    elevation: 5,
+  },
+  selectingOriginText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  cancelSelectingBtn: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    padding: 8,
+    borderRadius: 20,
+  },
+  originSelectionNotice: {
+    position: 'absolute',
+    top: 100, // Ajusta este valor para que quede justo debajo de tu buscador/TopBar
+    left: 20,
+    right: 20,
+    backgroundColor: '#3b82f6', // Azul eléctrico
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 999, // Para que esté por encima de todo
+    elevation: 5, // Sombra en Android
+    shadowColor: '#000', // Sombra en iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  originSelectionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  originSelectionText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  originSelectionClose: {
+    marginLeft: 20,
+    padding: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', //Fondo traslúcido para el botón
+    borderRadius: 15,
+  },
+
+  // --- Estilos de carga (development) ---
   chargingButtonContainer: {
     marginTop: 16,
   },
