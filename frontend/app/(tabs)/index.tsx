@@ -32,7 +32,8 @@ import { StartChargingButton } from '../../components/StartChargingButton';
 import {
   requestLocationPermissions,
   isLocationServiceEnabled,
-  getCurrentLocation
+  getCurrentLocation,
+  calculateDistanceInMeters
 } from '@/services/chargingLocationService';
 import {
   startChargingSession as apiStartCharging,
@@ -72,6 +73,7 @@ export default function InicioScreen() {
   const connectorType = params.connectorType as string | undefined;
   const ac_dc = params.ac_dc as string | undefined;
   const autoSelectStationId = params.autoSelectStationId as string | undefined;
+  const [pendingAutoStart, setPendingAutoStart] = useState(false);
 
   const { user, setUser, logout, isLoading: authLoading } = useAuth();
   const {
@@ -171,6 +173,23 @@ export default function InicioScreen() {
       if (!currentLocation) {
         setChargingError('No se pudo obtener tu ubicación actual');
         return false;
+      }
+
+      // VERIFICACIÓ DE DISTÀNCIA AMB POP-UP
+      const distance = calculateDistanceInMeters(
+        currentLocation.coords.latitude,
+        currentLocation.coords.longitude,
+        parseFloat(selectedStation.latitud),
+        parseFloat(selectedStation.longitud)
+      );
+
+      if (distance > 30) {
+        Alert.alert(
+          'Demasiado lejos',
+          `Te encuentras a ${distance} metros del punto de carga.\n\nDebes acercarte a menos de 30 metros para poder iniciar la carga.`,
+          [{ text: 'Entendido', style: 'default' }]
+        );
+        return false; // Aturem l'execució aquí mateix
       }
 
       // Iniciar sesión en el contexto
@@ -322,6 +341,47 @@ export default function InicioScreen() {
       }
     })();
   }, [user]);
+
+// --- AUTO-SELECCIONAR ESTACIÓ I PREPARAR CÀRREGA ---
+  useEffect(() => {
+    if (autoSelectStationId && estaciones.length > 0) {
+      const stationToSelect = estaciones.find(est => est.id.toString() === autoSelectStationId);
+
+      if (stationToSelect) {
+        // Obrim el panell inferior assignant-la
+        setSelectedStation(stationToSelect);
+
+        // Centrem la càmera del mapa a sobre de l'estació
+        if (mapRef.current && typeof mapRef.current.animateToRegion === 'function') {
+          mapRef.current.animateToRegion({
+            latitude: parseFloat(stationToSelect.latitud),
+            longitude: parseFloat(stationToSelect.longitud),
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }, 1000);
+        }
+
+        // Activem l'avís d'inici automàtic
+        setPendingAutoStart(true);
+
+        // Esborrem el paràmetre de la URL
+        router.setParams({ autoSelectStationId: '' });
+      }
+    }
+  }, [autoSelectStationId, estaciones]);
+
+  // --- INICIAR LA CÀRREGA AUTOMÀTICAMENT QUAN TOT ESTIGUI LLEST ---
+  useEffect(() => {
+    // Si tenim la instrucció d'iniciar, el panell està obert, i tenim GPS...
+    if (pendingAutoStart && selectedStation && userLocation && !isCharging) {
+
+      // Apaguem l'avís immediatament perquè només s'executi un cop
+      setPendingAutoStart(false);
+
+      // Executem la funció d'iniciar càrrega (la mateixa que fa anar el botó)
+      handleStartCharging();
+    }
+  }, [pendingAutoStart, selectedStation, userLocation, isCharging]);
 
   const fetchEstaciones = async () => {
     setLoadingEstaciones(true);

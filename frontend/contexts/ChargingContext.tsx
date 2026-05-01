@@ -3,7 +3,10 @@ import * as Location from 'expo-location';
 import { getApiUrl } from '@/constants/api';
 import { calculateDistanceInMeters, startLocationTracking, stopLocationTracking } from '@/services/chargingLocationService';
 import { useAuth } from './AuthContext';
-import { endChargingSession as apiEndCharging } from '@/services/chargingApiService';
+import {
+    endChargingSession as apiEndCharging,
+    cancelChargingSession as apiCancelCharging
+} from '@/services/chargingApiService';
 
 interface ChargingSession {
   id?: number;
@@ -229,22 +232,41 @@ export function ChargingProvider({ children }: { children: React.ReactNode }) {
     );
 
 
-  const cancelChargingSession = useCallback(() => {
-    // Detener timer
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (signalLossTimerRef.current) clearInterval(signalLossTimerRef.current);
+  const cancelChargingSession = useCallback(async () => {
+    try {
+      // 1. Avisem al backend primer de tot
+      const currentSessionId = sessionIdRef.current || sessionRef.current?.id;
 
-    // Detener monitoreo de ubicación
-    if (locationUnsubscribeRef.current) {
-      stopLocationTracking(locationUnsubscribeRef.current);
-      locationUnsubscribeRef.current = null;
+      if (currentSessionId) {
+        try {
+          // Utilitzem la teva funció del servei passant-li l'ID i el motiu
+          await apiCancelCharging(currentSessionId, 'manual');
+          console.log('Sessió cancel·lada al backend correctament');
+        } catch (apiError) {
+          console.error('Error enviant la cancel·lació al backend:', apiError);
+        }
+      }
+
+      // 2. Netegem els timers i el rastreig del GPS
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (signalLossTimerRef.current) clearInterval(signalLossTimerRef.current);
+      if (locationUnsubscribeRef.current) {
+        stopLocationTracking(locationUnsubscribeRef.current);
+        locationUnsubscribeRef.current = null;
+      }
+
+      // 3. Apaguem tots els estats visuals i Refs
+      isChargingRef.current = false;
+      setIsCharging(false);
+      setSession(null);
+      sessionRef.current = null;
+      setElapsedSeconds(0);
+      sessionIdRef.current = null;
+
+    } catch (error) {
+      console.error('Error aturant la sessió localment:', error);
+      setIsCharging(false); // Ens assegurem que almenys la UI es desbloquegi
     }
-
-    setIsCharging(false);
-    setSession(null);
-    setElapsedSeconds(0);
-    setDistanceToStation(0);
-    sessionIdRef.current = null;
   }, []);
 
   return (
