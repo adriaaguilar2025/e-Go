@@ -60,7 +60,7 @@ export async function getCurrentLocation(): Promise<Location.LocationObject | nu
  */
 export async function startLocationTracking(
   onLocationChange: (location: Location.LocationObject) => void
-): Promise<string | null> {
+): Promise<(() => void) | null> {
   try {
     const subscription = await Location.watchPositionAsync(
       {

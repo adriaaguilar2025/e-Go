@@ -1511,4 +1511,21 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1, // Posa una línia fineta que separa els filtres de la X
     borderLeftColor: '#e2e8f0',
   },
+  chargingButtonContainer: {
+    marginTop: 16,
+  },
+  errorMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2', // Un fons vermell claret
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: '#ef4444', // Vermell més fosc pel text
+    fontSize: 14,
+    flex: 1,
+  },
 });
