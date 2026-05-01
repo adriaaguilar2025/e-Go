@@ -3,9 +3,11 @@ name: Deploy Backend to AWS Lambda
 on:
   push:
     branches:
-      - main
-      - develop
       - development
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-cd.yml"
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -29,14 +31,25 @@ jobs:
       - name: Create Zip Bundle
         working-directory: backend
         run: |
-          cp index.jsx index.js
-          zip -r deploy.zip index.js package.json node_modules routes lib controllers models services middleware
+          set -euo pipefail
+          node scripts/build-lambda-zip.js
+          cp lambda_deploy.zip deploy.zip
+          ls -lh deploy.zip
 
-      - name: Deploy to AWS Lambda
-        uses: appleboy/lambda-action@v0.2.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: eu-north-1
-          function_name: backend-ego-api
-          zip_file: backend/deploy.zip
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
+
+      - name: Deploy to AWS Lambda (AWS CLI)
+        run: |
+          set -euo pipefail
+          aws lambda update-function-code \
+            --function-name backend-ego-api \
+            --zip-file fileb://backend/deploy.zip \
+            --region eu-north-1
+          aws lambda wait function-updated \
+            --function-name backend-ego-api \
+            --region eu-north-1
