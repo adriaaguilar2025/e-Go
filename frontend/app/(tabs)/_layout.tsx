@@ -62,6 +62,15 @@ export default function TabLayout() {
         }}
       />
 
+      {/* 4. Pestanya de ranking */}
+      <Tabs.Screen
+        name="ranking"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => <MaterialIcons name="emoji-events" size={28} color={color} />, // Subimos a 28
+        }}
+      />
+
     </Tabs>
   );
 }

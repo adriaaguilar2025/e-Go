@@ -9,6 +9,7 @@ jest.mock('../../lib/db', () => ({
   pool: { query: jest.fn() },
   USUARIOS_TABLE: '"ego"."usuarios"',
   ADMINS_TABLE: '"ego"."admins"',
+  EMPRESAS_TABLE: '"ego"."empresas"',
 }));
 
 jest.mock('../../lib/authHelpers', () => ({

@@ -177,16 +177,20 @@ module.exports = {
   updateManualStation,
   deleteManualStation,
   getManualStationsByAdmin,
+  getManualStationsByCompany,
+  getCompanyOwnedManualStationById,
+  updateCompanyOwnedManualStation,
+  deleteCompanyOwnedManualStation,
   searchStations
 };
 
-async function createManualStation(data) {
+async function createManualStation(data, dbClient = pool) {
   const query = `
     INSERT INTO ego.estaciones (
       external_id, promotor, acces, tipus_velocitat, tipus_connexio,
       latitud, longitud, nom, kw, ac_dc, adreca, municipi, provincia,
-      is_manual, created_by_admin_id
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,$14)
+      is_manual, created_by_admin_id, owner_company_id
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,$14,$15)
     RETURNING *;
   `;
   const values = [
@@ -203,13 +207,14 @@ async function createManualStation(data) {
     data.adreca || null,
     data.municipi || null,
     data.provincia || null,
-    data.created_by_admin_id,
+    data.created_by_admin_id || null,
+    data.owner_company_id || null,
   ];
-  const result = await pool.query(query, values);
+  const result = await dbClient.query(query, values);
   return result.rows[0];
 }
 
-async function updateManualStation(id, patch) {
+async function updateManualStation(id, patch, dbClient = pool) {
   const fields = [];
   const values = [];
   let idx = 1;
@@ -229,12 +234,12 @@ async function updateManualStation(id, patch) {
     RETURNING *;
   `;
   values.push(id);
-  const result = await pool.query(query, values);
+  const result = await dbClient.query(query, values);
   return result.rows[0];
 }
 
-async function deleteManualStation(id) {
-  const result = await pool.query(
+async function deleteManualStation(id, dbClient = pool) {
+  const result = await dbClient.query(
     'DELETE FROM ego.estaciones WHERE id = $1 AND is_manual = true RETURNING id',
     [id]
   );
@@ -250,4 +255,59 @@ async function getManualStationsByAdmin(adminUserId) {
     [adminUserId]
   );
   return result.rows;
+}
+
+async function getManualStationsByCompany(companyId) {
+  const result = await pool.query(
+    `SELECT *
+     FROM ego.estaciones
+     WHERE is_manual = true AND owner_company_id = $1
+     ORDER BY created_at DESC`,
+    [companyId]
+  );
+  return result.rows;
+}
+
+async function getCompanyOwnedManualStationById(id, companyId) {
+  const result = await pool.query(
+    `SELECT *
+     FROM ego.estaciones
+     WHERE id = $1 AND is_manual = true AND owner_company_id = $2`,
+    [id, companyId]
+  );
+  return result.rows[0] || null;
+}
+
+async function updateCompanyOwnedManualStation(id, companyId, patch, dbClient = pool) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  for (const [key, value] of Object.entries(patch)) {
+    fields.push(`${key} = $${idx}`);
+    values.push(value);
+    idx++;
+  }
+
+  if (fields.length === 0) return null;
+
+  const query = `
+    UPDATE ego.estaciones
+    SET ${fields.join(', ')}, updated_at = NOW()
+    WHERE id = $${idx} AND is_manual = true AND owner_company_id = $${idx + 1}
+    RETURNING *;
+  `;
+  values.push(id, companyId);
+  const result = await dbClient.query(query, values);
+  return result.rows[0] || null;
+}
+
+async function deleteCompanyOwnedManualStation(id, companyId, dbClient = pool) {
+  const result = await dbClient.query(
+    `DELETE FROM ego.estaciones
+     WHERE id = $1 AND is_manual = true AND owner_company_id = $2
+     RETURNING id`,
+    [id, companyId]
+  );
+  return result.rows[0] || null;
 }

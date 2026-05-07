@@ -1,5 +1,5 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { useRouter, useLocalSearchParams } from 'expo-router'; 
+import { Href, useRouter, useLocalSearchParams } from 'expo-router'; 
 import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -106,7 +106,7 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // Cancelado por el usuario
+        setError('');
       } else if (err.code === statusCodes.IN_PROGRESS) {
         setError('Ya hay un inicio de sesión en curso');
       } else {
@@ -237,9 +237,14 @@ export default function LoginScreen() {
         />
         <Text style={styles.title}>Bienvenido a e-Go</Text>
 
-        <TouchableOpacity style={styles.adminLink} onPress={() => router.push('/admin-login')}>
-          <Text style={styles.adminLinkText}>Acceso Admin</Text>
-        </TouchableOpacity>
+        <View style={styles.linksRow}>
+          <TouchableOpacity style={styles.adminLink} onPress={() => router.push('/company-login' as Href)}>
+            <Text style={styles.adminLinkText}>Acceso Empresa</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.adminLink} onPress={() => router.push('/admin-login')}>
+            <Text style={styles.adminLinkText}>Acceso Admin</Text>
+          </TouchableOpacity>
+        </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -384,7 +389,8 @@ const styles = StyleSheet.create({
   mailButton: { marginTop: 0, marginBottom: 4 },
   input: { width: '100%', paddingVertical: 11, paddingHorizontal: 14, fontSize: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, marginBottom: 12 },
   errorText: { color: '#dc2626', fontSize: 14, textAlign: 'center', marginBottom: 12 },
-  adminLink: { marginBottom: 18 },
+  linksRow: { flexDirection: 'row', gap: 16, marginBottom: 18 },
+  adminLink: {},
   adminLinkText: { fontSize: 14, color: '#111827', fontWeight: '600' },
   localForm: {
     width: '100%',

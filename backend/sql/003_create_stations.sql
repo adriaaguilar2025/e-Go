@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS ego.estaciones (
 
   --Importante crear la tabla admin antes de ejecutar esto
   CONSTRAINT estaciones_created_by_admin_id_fkey
-  FOREIGN KEY (created_by_admin_id) REFERENCES ego.usuari(id)
+  FOREIGN KEY (created_by_admin_id) REFERENCES ego.admins(user_id)
   ON DELETE SET NULL
 );
 

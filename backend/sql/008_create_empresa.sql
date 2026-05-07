@@ -3,6 +3,8 @@
 
 CREATE SCHEMA IF NOT EXISTS ego;
 
-CREATE TABLE IF NOT EXISTS ego.empresa (
-    id         SERIAL PRIMARY KEY
+CREATE TABLE IF NOT EXISTS ego.empresas (
+  user_id    INTEGER PRIMARY KEY REFERENCES ego.usuari(id) ON DELETE CASCADE,
+  nombre     VARCHAR(255),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
