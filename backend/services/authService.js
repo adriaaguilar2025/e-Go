@@ -27,9 +27,14 @@ async function loginWithGoogle(body) {
   }
   const email = payload.email;
 
-  const user = await userModel.findByEmail(email);
+  const user = await userModel.findConductorByEmail(email);
   if (user) {
     return { user, needsUsername: false };
+  }
+  const existingUser = await userModel.findByEmail(email);
+  if (existingUser) {
+    await userModel.ensureConductorForUser(existingUser.id);
+    return { user: existingUser, needsUsername: false };
   }
   const pending_token = createPendingToken(email);
   return { needsUsername: true, email, pending_token };
@@ -61,6 +66,7 @@ async function register(body) {
   }
 
   const user = await userModel.createUser(email, name);
+  await userModel.ensureConductorForUser(user.id);
   return { user };
 }
 
@@ -103,16 +109,27 @@ async function registerWithEmail(body) {
 
   if (existingUser && !existingUser.password_hash) {
     const updatedUser = await userModel.setPasswordHashByUserId(existingUser.id, passwordHash);
+    if (updatedUser) {
+      await userModel.ensureConductorForUser(updatedUser.id);
+    }
     return { user: updatedUser };
   }
 
   const user = await userModel.createLocalUser(normalizedEmail, normalizedUsername, passwordHash);
+  await userModel.ensureConductorForUser(user.id);
   return { user };
 }
 
 async function loginWithEmail(body) {
   const { normalizedEmail } = validateLocalCredentials(body, false);
-  const user = await userModel.findByEmailWithPassword(normalizedEmail);
+  let user = await userModel.findConductorByEmailWithPassword(normalizedEmail);
+  if (!user) {
+    const existingUser = await userModel.findByEmailWithPassword(normalizedEmail);
+    if (existingUser) {
+      await userModel.ensureConductorForUser(existingUser.id);
+      user = existingUser;
+    }
+  }
   if (!user || !user.password_hash) {
     throw AuthError('INVALID_CREDENTIALS', 'Email o contraseña incorrectos');
   }

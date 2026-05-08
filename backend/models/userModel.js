@@ -29,12 +29,36 @@ async function findByEmail(email) {
   return result.rows[0] || null;
 }
 
+async function findConductorByEmail(email) {
+  const result = await pool.query(
+    `SELECT u.id, u.email, u.username, u.created_at, u.updated_at
+     FROM ${USUARIOS_TABLE} u
+     JOIN ${CONDUCTORES_TABLE} c ON c.user_id = u.id
+     WHERE u.email = $1`,
+    [email]
+  );
+  return result.rows[0] || null;
+}
+
 async function findByEmailWithPassword(email) {
   const result = await withPasswordColumnRetry(() =>
     pool.query(
       `SELECT id, email, username, password_hash, created_at, updated_at
        FROM ${USUARIOS_TABLE}
        WHERE email = $1`,
+      [email]
+    )
+  );
+  return result.rows[0] || null;
+}
+
+async function findConductorByEmailWithPassword(email) {
+  const result = await withPasswordColumnRetry(() =>
+    pool.query(
+      `SELECT u.id, u.email, u.username, u.password_hash, u.created_at, u.updated_at
+       FROM ${USUARIOS_TABLE} u
+       JOIN ${CONDUCTORES_TABLE} c ON c.user_id = u.id
+       WHERE u.email = $1`,
       [email]
     )
   );
@@ -120,13 +144,37 @@ async function setPasswordHashByUserId(userId, passwordHash) {
   return result.rows[0] || null;
 }
 
+async function ensureConductorForUser(userId) {
+  await pool.query(
+    `INSERT INTO ${CONDUCTORES_TABLE} (user_id)
+     VALUES ($1)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId]
+  );
+}
+
+async function backfillConductoresFromUsuarios() {
+  const result = await pool.query(
+    `INSERT INTO ${CONDUCTORES_TABLE} (user_id)
+     SELECT u.id
+     FROM ${USUARIOS_TABLE} u
+     LEFT JOIN ${CONDUCTORES_TABLE} c ON c.user_id = u.id
+     WHERE c.user_id IS NULL`
+  );
+  return result.rowCount || 0;
+}
+
 module.exports = {
   findByEmail,
+  findConductorByEmail,
   findByEmailWithPassword,
+  findConductorByEmailWithPassword,
   findById,
   getInfoUser,
   updateUser,
   createUser,
   createLocalUser,
   setPasswordHashByUserId,
+  ensureConductorForUser,
+  backfillConductoresFromUsuarios,
 };
