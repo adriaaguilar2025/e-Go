@@ -73,6 +73,7 @@ interface Estacion {
   tipus_velocitat?: string;
   tipus_connexio?: string;
   ac_dc?: string;
+  operatiu?: boolean;
 }
 
 export default function InicioScreen() {
@@ -784,6 +785,33 @@ useEffect(() => {
     }
   };
 
+  const handleSolvedIncidenciaSubmit = async () => {
+    if (!user || !selectedStation) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('comentari', 'La Incidencia está solucionada');
+      formData.append('tipus', 'Operatiu');
+      formData.append('conductor', String(user.id));
+      formData.append('estacio', String(selectedStation.id));
+
+      const response = await fetch(`${getApiUrl()}/incidencias`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'No se pudo registrar la incidencia solucionada');
+      }
+
+      Alert.alert('Incidencia reportada', 'Se ha marcado la estación como operativa.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al reportar incidencia solucionada';
+      Alert.alert('Error', message);
+    }
+  };
+
   const handlePickIncidenciaFile = async () => {
     if (!ImagePickerModule) {
       Alert.alert(
@@ -1108,7 +1136,13 @@ useEffect(() => {
                 latitude: parseFloat(est.latitud),
                 longitude: parseFloat(est.longitud),
               }}
-              pinColor={favoriteIds.includes(est.id) ? 'red' : 'green'}
+              pinColor={
+                favoriteIds.includes(est.id)
+                  ? 'red'
+                  : est.operatiu === false
+                    ? 'yellow'
+                    : 'green'
+              }
               onPress={(e: any) => {
                 e.stopPropagation(); //Evita que el toque pase al mapa y cierre el panel
 
@@ -1343,14 +1377,25 @@ useEffect(() => {
 
             {/* Botón de cómo llegar (De TU rama feature/rutas, pero con el icono de dev) */}
             {!isCharging && (
-              <TouchableOpacity
-                style={styles.reportButton}
-                activeOpacity={0.8}
-                onPress={handleOpenIncidenciaForm}
-              >
-                <MaterialIcons name="report-problem" size={20} color="#fff" />
-                <Text style={styles.routeButtonText}>Reportar incidencia</Text>
-              </TouchableOpacity>
+              selectedStation.operatiu === false ? (
+                <TouchableOpacity
+                  style={styles.solvedReportButton}
+                  activeOpacity={0.8}
+                  onPress={handleSolvedIncidenciaSubmit}
+                >
+                  <MaterialIcons name="check-circle" size={20} color="#fff" />
+                  <Text style={styles.routeButtonText}>Reportar incidencia solucionada</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.reportButton}
+                  activeOpacity={0.8}
+                  onPress={handleOpenIncidenciaForm}
+                >
+                  <MaterialIcons name="report-problem" size={20} color="#fff" />
+                  <Text style={styles.routeButtonText}>Reportar incidencia</Text>
+                </TouchableOpacity>
+              )
             )}
 
             {!isCharging && (
@@ -1859,6 +1904,16 @@ const styles = StyleSheet.create({
   },
   reportButton: {
     backgroundColor: '#f59e0b',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  solvedReportButton: {
+    backgroundColor: '#2563eb',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
