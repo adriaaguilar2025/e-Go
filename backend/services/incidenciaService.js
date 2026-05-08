@@ -1,7 +1,9 @@
 const incidenciaModel = require('../models/incidenciaModel');
 const { uploadFile, getPublicUrl } = require('../lib/s3Service');
+const { PREMIUM_MULTIPLIER } = require('./chargingService');
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
+const INCIDENCIA_BASE_POINTS = 50;
 
 async function listIncidenciaTypes() {
   return incidenciaModel.getIncidenciaTypes();
@@ -73,16 +75,25 @@ async function createIncidencia(data, file) {
     arxiu = getPublicUrl(uploadedKey);
   }
 
-  return incidenciaModel.createIncidencia({
+  const incidencia = await incidenciaModel.createIncidencia({
     tipus,
     comentari,
     arxiu,
     conductor,
     estacio,
   });
+
+  await incidenciaModel.addIncidenciaPoints(
+    conductor,
+    INCIDENCIA_BASE_POINTS,
+    PREMIUM_MULTIPLIER
+  );
+
+  return incidencia;
 }
 
 module.exports = {
   listIncidenciaTypes,
   createIncidencia,
+  INCIDENCIA_BASE_POINTS,
 };

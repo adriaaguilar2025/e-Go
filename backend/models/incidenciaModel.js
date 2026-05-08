@@ -49,9 +49,33 @@ async function createIncidencia({ tipus, comentari, arxiu, conductor, estacio })
   return result.rows[0];
 }
 
+async function addIncidenciaPoints(conductorId, basePoints, premiumMultiplier) {
+  const query = `
+    UPDATE ${CONDUCTORES_TABLE}
+    SET punts = punts + (
+      $2 * CASE
+        WHEN datainipremium IS NOT NULL THEN $3
+        ELSE 1
+      END
+    )::integer
+    WHERE user_id = $1
+    RETURNING
+      punts,
+      (
+        $2 * CASE
+          WHEN datainipremium IS NOT NULL THEN $3
+          ELSE 1
+        END
+      )::integer AS points_awarded;
+  `;
+  const result = await pool.query(query, [conductorId, basePoints, premiumMultiplier]);
+  return result.rows[0] || null;
+}
+
 module.exports = {
   getIncidenciaTypes,
   conductorExists,
   stationExists,
   createIncidencia,
+  addIncidenciaPoints,
 };

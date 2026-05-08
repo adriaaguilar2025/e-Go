@@ -102,7 +102,7 @@ describe('incidenciaController', () => {
     });
 
     test('responde 201 en flujo incidencia solucionada', async () => {
-      // OK
+      // el controller delega y devuelve 201.
       const req = {
         body: {
           comentari: 'La Incidencia está solucionada',

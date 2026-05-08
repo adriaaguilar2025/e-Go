@@ -1,21 +1,23 @@
 const request = require('supertest');
 const app = require('../../index.jsx');
 const { pool } = require('../../lib/db');
+const { PREMIUM_MULTIPLIER } = require('../../services/chargingService');
 
 describe('Incidencias integration (real DB)', () => {
   // Creamos ids altos de prueba que no puedan ser conflictivos con datos reales.
   const validUserId = 99100001;
   const validStationId = 99100002;
   const missingConductorUserId = 99100003;
+  const premiumUserId = 99100004;
   const missingStationId = 99919999;
   const testCommentPrefix = 'INT-INCIDENCIA-TEST';
 
   beforeAll(async () => {
     //Eliminamos elementos de prueba anteriores
-    await pool.query('DELETE FROM ego.incidencia WHERE conductor IN ($1, $2)', [validUserId, missingConductorUserId]);
-    await pool.query('DELETE FROM ego.conductor WHERE user_id IN ($1, $2)', [validUserId, missingConductorUserId]);
+    await pool.query('DELETE FROM ego.incidencia WHERE conductor IN ($1, $2, $3)', [validUserId, missingConductorUserId, premiumUserId]);
+    await pool.query('DELETE FROM ego.conductor WHERE user_id IN ($1, $2, $3)', [validUserId, missingConductorUserId, premiumUserId]);
     await pool.query('DELETE FROM ego.estaciones WHERE id = $1', [validStationId]);
-    await pool.query('DELETE FROM ego.usuari WHERE id IN ($1, $2)', [validUserId, missingConductorUserId]);
+    await pool.query('DELETE FROM ego.usuari WHERE id IN ($1, $2, $3)', [validUserId, missingConductorUserId, premiumUserId]);
 
     //
     await pool.query(
@@ -42,6 +44,22 @@ describe('Incidencias integration (real DB)', () => {
       [missingConductorUserId, 'integration-no-conductor@test.com', `incidencia-user-${missingConductorUserId}`]
     );
 
+    // Usuario premium (dataIniPremium informado)
+    await pool.query(
+      `
+      INSERT INTO ego.usuari (id, email, username)
+      VALUES ($1, $2, $3)
+      `,
+      [premiumUserId, 'integration-premium@test.com', `incidencia-user-${premiumUserId}`]
+    );
+    await pool.query(
+      `
+      INSERT INTO ego.conductor (user_id, datainipremium, punts)
+      VALUES ($1, NOW(), 0)
+      `,
+      [premiumUserId]
+    );
+
     // Creamos una estación de prueba
     await pool.query(
       `
@@ -54,10 +72,10 @@ describe('Incidencias integration (real DB)', () => {
 
   afterAll(async () => {
     // Eliminamos elementos de prueba
-    await pool.query('DELETE FROM ego.incidencia WHERE conductor IN ($1, $2)', [validUserId, missingConductorUserId]);
-    await pool.query('DELETE FROM ego.conductor WHERE user_id IN ($1, $2)', [validUserId, missingConductorUserId]);
+    await pool.query('DELETE FROM ego.incidencia WHERE conductor IN ($1, $2, $3)', [validUserId, missingConductorUserId, premiumUserId]);
+    await pool.query('DELETE FROM ego.conductor WHERE user_id IN ($1, $2, $3)', [validUserId, missingConductorUserId, premiumUserId]);
     await pool.query('DELETE FROM ego.estaciones WHERE id = $1', [validStationId]);
-    await pool.query('DELETE FROM ego.usuari WHERE id IN ($1, $2)', [validUserId, missingConductorUserId]);
+    await pool.query('DELETE FROM ego.usuari WHERE id IN ($1, $2, $3)', [validUserId, missingConductorUserId, premiumUserId]);
     await pool.end();
   });
 
@@ -72,7 +90,7 @@ describe('Incidencias integration (real DB)', () => {
   });
 
   test('POST /incidencias crea incidencia válida sin archivo (201)', async () => {
-    // OK
+    // crea incidencia y suma 50 puntos al conductor no premium.
     const res = await request(app).post('/incidencias').field('comentari', `${testCommentPrefix}-ok`).field('tipus', 'Operatiu').field('conductor', String(validUserId)).field('estacio', String(validStationId));
 
     expect(res.status).toBe(201);
@@ -86,6 +104,9 @@ describe('Incidencias integration (real DB)', () => {
         resolta: false,
       })
     );
+
+    const pointsRes = await pool.query('SELECT punts FROM ego.conductor WHERE user_id = $1', [validUserId]);
+    expect(pointsRes.rows[0].punts).toBe(50);
   });
 
   test('POST /incidencias devuelve 400 si falta comentario', async () => {
@@ -143,6 +164,9 @@ describe('Incidencias integration (real DB)', () => {
           resolta: false,
         })
       );
+
+      const pointsRes = await pool.query('SELECT punts FROM ego.conductor WHERE user_id = $1', [validUserId]);
+      expect(pointsRes.rows[0].punts).toBe(100);
     });
 
     test('POST /incidencias persistencia DB: guarda incidencia solucionada con defaults', async () => {
@@ -190,6 +214,22 @@ describe('Incidencias integration (real DB)', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('El tipo seleccionado no es válido');
+    });
+
+    test('POST /incidencias otorga puntos con multiplicador premium', async () => {
+      // Con usuario premium, la suma debe ser 50 * multiplicador
+      const expectedPremiumPoints = 50 * PREMIUM_MULTIPLIER;
+      const res = await request(app)
+        .post('/incidencias')
+        .field('comentari', 'La Incidencia está solucionada')
+        .field('tipus', 'Operatiu')
+        .field('conductor', String(premiumUserId))
+        .field('estacio', String(validStationId));
+
+      expect(res.status).toBe(201);
+
+      const pointsRes = await pool.query('SELECT punts FROM ego.conductor WHERE user_id = $1', [premiumUserId]);
+      expect(pointsRes.rows[0].punts).toBe(expectedPremiumPoints);
     });
   });
 
