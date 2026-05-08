@@ -7,8 +7,11 @@ import LoginScreen from '@/app/login';
 const mockSetUser = jest.fn();
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
-const mockHasPlayServices = jest.fn();
-const mockSignIn = jest.fn();
+const mockHasPlayServices = jest.fn<() => Promise<void>>();
+const mockSignIn = jest.fn<() => Promise<{ idToken: string }>>();
+const fetchMock = jest.fn<
+  (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+>();
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -27,8 +30,8 @@ jest.mock('expo-router', () => ({
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
     configure: jest.fn(),
-    hasPlayServices: (...args: unknown[]) => mockHasPlayServices(...args),
-    signIn: (...args: unknown[]) => mockSignIn(...args),
+    hasPlayServices: () => mockHasPlayServices(),
+    signIn: () => mockSignIn(),
   },
   statusCodes: {
     SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
@@ -41,7 +44,8 @@ describe('LoginScreen integration', () => {
     jest.clearAllMocks();
     mockHasPlayServices.mockResolvedValue(undefined);
     mockSignIn.mockResolvedValue({ idToken: 'google-token' });
-    globalThis.fetch = jest.fn(async (url: string) => {
+    fetchMock.mockImplementation(async (input: string | URL | Request) => {
+      const url = String(input);
       if (url.includes('/auth/google')) {
         return {
           ok: true,
@@ -54,11 +58,13 @@ describe('LoginScreen integration', () => {
         ok: false,
         json: async () => ({ error: 'Unexpected URL' }),
       } as Response;
-    }) as unknown as typeof fetch;
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
   test('login local con credenciales válidas navega a tabs', async () => {
-    (globalThis.fetch as unknown as jest.Mock).mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (input: string | URL | Request) => {
+      const url = String(input);
       if (url.includes('/auth/local/login')) {
         return {
           ok: true,
