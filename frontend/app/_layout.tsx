@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ChargingProvider } from '@/contexts/ChargingContext';
+import {GestureHandlerRootView} from "react-native-gesture-handler";
 
 // expo-keep-awake (usado por herramientas de desarrollo) puede rechazar la promesa si la
 // pantalla estuvo apagada o el activity no estaba listo; no afecta a producción.
@@ -20,25 +21,27 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <ChargingProvider>
-          <ThemeProvider value={DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="my-favorite-stations" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="login" options={{ headerShown: false }} />
-              <Stack.Screen name="admin-login" options={{ headerShown: false }} />
-              <Stack.Screen name="company-login" options={{ headerShown: false }} />
-              <Stack.Screen name="admin-home" options={{ headerShown: false }} />
-              <Stack.Screen name="company-home" options={{ headerShown: false }} />
-              <Stack.Screen name="company-requests" options={{ headerShown: false }} />
-              <Stack.Screen name="admin-requests" options={{ headerShown: false }} />
-              <Stack.Screen name="admin-station-new" options={{ headerShown: false }} />
-              <Stack.Screen name="company-station-new" options={{ headerShown: false }} />              
-            </Stack>
-            <StatusBar style="dark" />
-          </ThemeProvider>
-      </ChargingProvider>
-    </AuthProvider>
+    <GestureHandlerRootView>
+      <AuthProvider>
+        <ChargingProvider>
+            <ThemeProvider value={DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="my-favorite-stations" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="admin-login" options={{ headerShown: false }} />
+                <Stack.Screen name="company-login" options={{ headerShown: false }} />
+                <Stack.Screen name="admin-home" options={{ headerShown: false }} />
+                <Stack.Screen name="company-home" options={{ headerShown: false }} />
+                <Stack.Screen name="company-requests" options={{ headerShown: false }} />
+                <Stack.Screen name="admin-requests" options={{ headerShown: false }} />
+                <Stack.Screen name="admin-station-new" options={{ headerShown: false }} />
+                <Stack.Screen name="company-station-new" options={{ headerShown: false }} />
+              </Stack>
+              <StatusBar style="dark" />
+            </ThemeProvider>
+        </ChargingProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
