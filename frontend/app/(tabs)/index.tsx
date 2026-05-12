@@ -1,7 +1,7 @@
 // Inicio (primera pestaña). Sin sesión: bienvenida + Google. Con sesión: menú 3 barras + PANTALLA PRINCIPAL.
 import { useState, useEffect, useRef } from 'react';
 import { MapView, Marker } from '../_components/MapWrapper';
-import TopBar from '../../components/TopBar';
+import TopBar, { MapSearchListItem } from '../../components/TopBar';
 
 import {
   Image,
@@ -133,7 +133,8 @@ export default function InicioScreen() {
 
   // --- NOUS ESTATS PEL BUSCADOR ---
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Estacion[]>([]);
+  const [searchResults, setSearchResults] = useState<MapSearchListItem[]>([]);
+  const [searchMode, setSearchMode] = useState<'stations' | 'addresses'>('stations');
   const [isSearching, setIsSearching] = useState(false);
 
   // Estado para controlar la región visible del mapa
@@ -564,14 +565,36 @@ useEffect(() => {
 // Efecte per buscar quan l'usuari escriu (amb debounce de 500ms)
   useEffect(() => {
     if (searchQuery.length < 3) {
-      setSearchResults([]); // Si hi ha menys de 3 lletres, no busquem
+      setSearchResults([]);
       return;
     }
 
     const delayDebounceFn = setTimeout(async () => {
       setIsSearching(true);
       try {
-        // Construïm els paràmetres de la URL afegint-hi la cerca I ELS FILTRES
+        if (searchMode === 'addresses') {
+          const response = await fetch(
+            `${getApiUrl()}/geocode/autocomplete?input=${encodeURIComponent(searchQuery)}`
+          );
+          const data = await response.json();
+          if (!response.ok) {
+            setSearchResults([]);
+            return;
+          }
+          const rows = Array.isArray(data) ? data : [];
+          setSearchResults(
+            rows
+              .map((r: { placeId?: string; place_id?: string; label: string; subtitle?: string }) => ({
+                kind: 'address' as const,
+                placeId: (r.placeId || r.place_id || '').trim(),
+                label: r.label || '',
+                subtitle: r.subtitle || '',
+              }))
+              .filter((row) => row.placeId.length > 0)
+          );
+          return;
+        }
+
         let queryParams = [`q=${encodeURIComponent(searchQuery)}`];
 
         if (minKw) queryParams.push(`minKw=${minKw}`);
@@ -582,16 +605,17 @@ useEffect(() => {
         // Ajuntem tots els paràmetres amb un "&"
         const queryString = queryParams.join('&');
 
-        // CANVIA AQUESTA URL PER LA TEVA RUTA DE CERCA DEL BACKEND!
         const response = await fetch(`${getApiUrl()}/stations/search?${queryString}`);
         const data = await response.json();
 
         // --- APLIQUEM EL FILTRE DE FAVORITS LOCALMENT ---
-        let resultatsFinals = data;
+        let resultatsFinals = Array.isArray(data) ? data : [];
         if (showFavoritesFilter) {
-          resultatsFinals = data.filter((est: Estacion) => favoriteIds.includes(est.id));
+          resultatsFinals = resultatsFinals.filter((est: Estacion) => favoriteIds.includes(est.id));
         }
-        setSearchResults(resultatsFinals);
+        setSearchResults(
+          resultatsFinals.map((est: Estacion) => ({ kind: 'station' as const, station: est }))
+        );
       } catch (error) {
         console.error('Error cercant estacions:', error);
       } finally {
@@ -600,27 +624,67 @@ useEffect(() => {
     }, 500); // Espera mig segon després de parar d'escriure
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]);
+  }, [searchQuery, searchMode, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]);
 
 
-  // Funció que s'executa quan toquem un resultat del desplegable
-  const handleSelectSearchResult = (station: Estacion) => {
-    // 1. Tanquem el buscador i esborrem resultats
+  const toggleSearchMode = () => {
+    setSearchMode((m) => (m === 'stations' ? 'addresses' : 'stations'));
     setSearchQuery('');
     setSearchResults([]);
+  };
 
-    // 2. Centrem el mapa al punt exacte
-    if (mapRef.current && typeof mapRef.current.animateToRegion === 'function') {
-      mapRef.current.animateToRegion({
-        latitude: parseFloat(station.latitud),
-        longitude: parseFloat(station.longitud),
-        latitudeDelta: 0.01, // Més a prop (zoom in)
-        longitudeDelta: 0.01,
-      }, 1000);
+  // Funció que s'executa quan toquem un resultat del desplegable
+  const handleSelectSearchResult = async (item: MapSearchListItem) => {
+    if (item.kind === 'station') {
+      const station = item.station as Estacion;
+      setSearchQuery('');
+      setSearchResults([]);
+
+      if (mapRef.current && typeof mapRef.current.animateToRegion === 'function') {
+        mapRef.current.animateToRegion(
+          {
+            latitude: parseFloat(station.latitud),
+            longitude: parseFloat(station.longitud),
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          1000
+        );
+      }
+
+      setSelectedStation(station);
+      return;
     }
 
-    // 3. Obrim la informació de l'estació seleccionada (la caixeta de baix)
-    setSelectedStation(station);
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `${getApiUrl()}/geocode/place?placeId=${encodeURIComponent(item.placeId)}`
+      );
+      const data = await response.json();
+      if (!response.ok || typeof data.lat !== 'number' || typeof data.lng !== 'number') {
+        console.warn('geocode/place:', data);
+        return;
+      }
+      setSelectedStation(null);
+      if (mapRef.current && typeof mapRef.current.animateToRegion === 'function') {
+        mapRef.current.animateToRegion(
+          {
+            latitude: data.lat,
+            longitude: data.lng,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.02,
+          },
+          1000
+        );
+      }
+    } catch (e) {
+      console.error('Error resolviendo dirección:', e);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // --- LÒGICA PEL TEXT DELS FILTRES ---
@@ -1041,6 +1105,8 @@ useEffect(() => {
         searchResults={searchResults}
         onSelectResult={handleSelectSearchResult}
         isSearching={isSearching}
+        searchMode={searchMode}
+        onToggleSearchMode={toggleSearchMode}
       />
 
       {/* Aviso de selección de origen para cuando estamos seleccionando el punto de origen de una ruta */}
