@@ -250,9 +250,17 @@ export function ManualStationForm(props: Props) {
                     const suggestion = await reverseGeoAddress(picked.lat, picked.lng);
                     if (suggestion) {
                       applyGeoSuggestion(suggestion, false);
+                    } else {
+                      setGeoMessage(
+                        'No se encontro direccion para este punto. Puedes escribir la direccion a mano.'
+                      );
                     }
-                  } catch {
-                    setGeoMessage('No se pudo autocompletar la direccion desde el mapa.');
+                  } catch (e) {
+                    setGeoMessage(
+                      e instanceof Error
+                        ? e.message
+                        : 'No se pudo autocompletar la direccion desde el mapa.'
+                    );
                   } finally {
                     setReverseLoading(false);
                   }

@@ -1,4 +1,5 @@
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_KEY =
+  process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_GEOCODING_API_KEY;
 const GOOGLE_GEOCODE_BASE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 function buildAddressParts(addressComponents = []) {
@@ -21,20 +22,35 @@ function buildAddressParts(addressComponents = []) {
   return { municipality, province };
 }
 
+function parseLatLng(location) {
+  if (!location || typeof location !== 'object') return null;
+  const lat = Number(location.lat);
+  const lng = Number(location.lng);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
 function mapGeocodeResult(result) {
-  const location = result?.geometry?.location;
-  if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
-    return null;
-  }
+  const coords = parseLatLng(result?.geometry?.location);
+  if (!coords) return null;
 
   const { municipality, province } = buildAddressParts(result.address_components);
   return {
     formattedAddress: result.formatted_address || '',
-    lat: location.lat,
-    lng: location.lng,
+    lat: coords.lat,
+    lng: coords.lng,
     municipi: municipality,
     provincia: province,
   };
+}
+
+function pickBestGeocodeSuggestion(results = []) {
+  for (const result of results) {
+    const mapped = mapGeocodeResult(result);
+    if (mapped) return mapped;
+  }
+  return null;
 }
 
 async function callGeocode(params) {
@@ -58,7 +74,12 @@ async function callGeocode(params) {
     throw err;
   }
   if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    throw new Error(`Google Geocoding API error: ${data.status}`);
+    const err = new Error(
+      data.error_message || `Google Geocoding: ${data.status}`
+    );
+    err.type = 'GOOGLE_GEOCODE_ERROR';
+    err.googleStatus = data.status;
+    throw err;
   }
 
   return data;
@@ -67,7 +88,10 @@ async function callGeocode(params) {
 async function searchAddress(req, res) {
   try {
     if (!GOOGLE_MAPS_API_KEY) {
-      return res.status(500).json({ error: 'GOOGLE_MAPS_API_KEY no configurada' });
+      return res.status(500).json({
+        error:
+          'Falta GOOGLE_MAPS_API_KEY (o GOOGLE_GEOCODING_API_KEY) en el servidor para geocoding',
+      });
     }
 
     const q = String(req.query.q || '').trim();
@@ -86,6 +110,14 @@ async function searchAddress(req, res) {
     if (error?.type === 'OVER_QUERY_LIMIT') {
       return res.status(429).json({ error: error.message });
     }
+    if (error?.type === 'GOOGLE_GEOCODE_ERROR') {
+      console.error('Google geocode search error:', error.message);
+      return res.status(502).json({
+        error:
+          'Google Geocoding rechazo la peticion. Activa la API Geocoding en Google Cloud y revisa restricciones de la clave.',
+        details: error.message,
+      });
+    }
     console.error('Error searching address:', error);
     return res.status(500).json({ error: 'No se pudo buscar la direccion' });
   }
@@ -94,7 +126,10 @@ async function searchAddress(req, res) {
 async function reverseAddress(req, res) {
   try {
     if (!GOOGLE_MAPS_API_KEY) {
-      return res.status(500).json({ error: 'GOOGLE_MAPS_API_KEY no configurada' });
+      return res.status(500).json({
+        error:
+          'Falta GOOGLE_MAPS_API_KEY (o GOOGLE_GEOCODING_API_KEY) en el servidor para geocoding',
+      });
     }
 
     const lat = Number(req.query.lat);
@@ -107,11 +142,19 @@ async function reverseAddress(req, res) {
       latlng: `${lat},${lng}`,
       language: 'es',
     });
-    const best = mapGeocodeResult(data.results?.[0]);
+    const best = pickBestGeocodeSuggestion(data.results);
     return res.json(best);
   } catch (error) {
     if (error?.type === 'OVER_QUERY_LIMIT') {
       return res.status(429).json({ error: error.message });
+    }
+    if (error?.type === 'GOOGLE_GEOCODE_ERROR') {
+      console.error('Google reverse geocode error:', error.message);
+      return res.status(502).json({
+        error:
+          'Google Geocoding rechazo la peticion. Activa la API Geocoding en Google Cloud y revisa restricciones de la clave.',
+        details: error.message,
+      });
     }
     console.error('Error reverse geocoding:', error);
     return res.status(500).json({ error: 'No se pudo resolver la direccion' });
