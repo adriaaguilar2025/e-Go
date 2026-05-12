@@ -38,7 +38,13 @@ jest.mock('expo-location', () => ({
 // Simplified TopBar: exposes a real TextInput so we can drive the search flow.
 jest.mock('@/components/TopBar', () => ({
   __esModule: true,
-  default: ({ searchQuery, setSearchQuery, searchResults, onSelectResult, isSearching }: any) => {
+  default: ({
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    onSelectResult,
+    isSearching,
+  }: any) => {
     const { TextInput, TouchableOpacity, Text } = require('react-native');
     return (
       <>
@@ -53,15 +59,19 @@ jest.mock('@/components/TopBar', () => ({
 
         {searchQuery.length > 0 && searchResults.length > 0 ? (
           <>
-            {searchResults.map((r: any) => (
-              <TouchableOpacity
-                key={r.id}
-                testID={`result-${r.id}`}
-                onPress={() => onSelectResult?.(r)}
-              >
-                <Text>{r.nom}</Text>
-              </TouchableOpacity>
-            ))}
+            {searchResults.map((r: any) => {
+              const station = r.kind === 'station' ? r.station : null;
+              if (!station) return null;
+              return (
+                <TouchableOpacity
+                  key={station.id}
+                  testID={`result-${station.id}`}
+                  onPress={() => onSelectResult?.(r)}
+                >
+                  <Text>{station.nom}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </>
         ) : null}
       </>

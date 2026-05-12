@@ -18,6 +18,7 @@ const chargingRoutes = require('./routes/charging'); // Importamos la ruta de ca
 const rankingRoutes = require('./routes/ranking');
 const userRoutes = require('./routes/users');
 const incidenciaRoutes = require('./routes/incidencias');
+const geocodeRoutes = require('./routes/geocode');
 const { handleWebhook } = require('./controllers/stripeWebhookController');
 const { canReach } = require('./services/rangeCalculationService');
 
@@ -73,6 +74,7 @@ app.use('/charging', chargingRoutes); // Rutas para sesiones de carga y puntos
 app.use('/ranking', rankingRoutes);
 app.use('/user', userRoutes);
 app.use('/incidencias', incidenciaRoutes);
+app.use('/geocode', geocodeRoutes);
 
 // Can Reach endpoint (range calculation)
 app.get('/can-reach', async (req, res) => {
