@@ -1,7 +1,6 @@
 const incidenciaModel = require('../../models/incidenciaModel');
 const { uploadFile, getPublicUrl } = require('../../lib/s3Service');
 const incidenciaService = require('../../services/incidenciaService');
-const { PREMIUM_MULTIPLIER } = require('../../services/chargingService');
 
 // Mockeamos dependencias externas
 jest.mock('../../models/incidenciaModel', () => ({
@@ -9,7 +8,6 @@ jest.mock('../../models/incidenciaModel', () => ({
   conductorExists: jest.fn(),
   stationExists: jest.fn(),
   createIncidencia: jest.fn(),
-  addIncidenciaPoints: jest.fn(),
 }));
 
 jest.mock('../../lib/s3Service', () => ({
@@ -102,12 +100,11 @@ describe('incidenciaService', () => {
     });
 
     test('crea incidencia sin archivo cuando datos son válidos', async () => {
-      // Caso base: crea incidencia y asigna puntos sin depender de adjuntos.
+      // Caso base: crea incidencia sin depender de adjuntos.
       incidenciaModel.getIncidenciaTypes.mockResolvedValue(['Operatiu', 'Altres']);
       incidenciaModel.conductorExists.mockResolvedValue(true);
       incidenciaModel.stationExists.mockResolvedValue(true);
       incidenciaModel.createIncidencia.mockResolvedValue({ id: 10, ...validData, arxiu: null });
-      incidenciaModel.addIncidenciaPoints.mockResolvedValue({ punts: 50, points_awarded: 50 });
 
       const result = await incidenciaService.createIncidencia(validData);
 
@@ -120,19 +117,17 @@ describe('incidenciaService', () => {
           arxiu: null,
         })
       );
-      expect(incidenciaModel.addIncidenciaPoints).toHaveBeenCalledWith(18, 50, PREMIUM_MULTIPLIER);
       expect(result).toEqual(expect.objectContaining({ id: 10 }));
     });
 
     test('crea incidencia con archivo cuando mime es válido', async () => {
-      // Con imagen válida: guarda URL en incidencia y también suma puntos.
+      // Con imagen válida: guarda URL en incidencia.
       incidenciaModel.getIncidenciaTypes.mockResolvedValue(['Operatiu', 'Altres']);
       incidenciaModel.conductorExists.mockResolvedValue(true);
       incidenciaModel.stationExists.mockResolvedValue(true);
       uploadFile.mockResolvedValue('uploads/abc.jpg');
       getPublicUrl.mockReturnValue('https://bucket.s3.eu-north-1.amazonaws.com/uploads/abc.jpg');
       incidenciaModel.createIncidencia.mockResolvedValue({ id: 11, ...validData });
-      incidenciaModel.addIncidenciaPoints.mockResolvedValue({ punts: 150, points_awarded: 100 });
 
       const file = {
         buffer: Buffer.from('img'),
@@ -149,7 +144,6 @@ describe('incidenciaService', () => {
           arxiu: 'https://bucket.s3.eu-north-1.amazonaws.com/uploads/abc.jpg',
         })
       );
-      expect(incidenciaModel.addIncidenciaPoints).toHaveBeenCalledWith(18, 50, PREMIUM_MULTIPLIER);
     });
 
     describe('flujo incidencia solucionada', () => {
@@ -161,12 +155,10 @@ describe('incidenciaService', () => {
       };
 
       test('crea incidencia solucionada sin archivo adjunto', async () => {
-        //  incidencia y suma puntos a conductor.
         incidenciaModel.getIncidenciaTypes.mockResolvedValue(['Operatiu', 'Altres']);
         incidenciaModel.conductorExists.mockResolvedValue(true);
         incidenciaModel.stationExists.mockResolvedValue(true);
         incidenciaModel.createIncidencia.mockResolvedValue({ id: 99, ...solvedData, arxiu: null });
-        incidenciaModel.addIncidenciaPoints.mockResolvedValue({ punts: 200, points_awarded: 100 });
 
         const result = await incidenciaService.createIncidencia(solvedData);
 
@@ -181,7 +173,6 @@ describe('incidenciaService', () => {
             arxiu: null,
           })
         );
-        expect(incidenciaModel.addIncidenciaPoints).toHaveBeenCalledWith(18, 50, PREMIUM_MULTIPLIER);
         expect(result).toEqual(expect.objectContaining({ id: 99 }));
       });
 
@@ -203,7 +194,6 @@ describe('incidenciaService', () => {
         incidenciaModel.conductorExists.mockResolvedValue(true);
         incidenciaModel.stationExists.mockResolvedValue(true);
         incidenciaModel.createIncidencia.mockResolvedValue({ id: 100, ...solvedData, arxiu: null });
-        incidenciaModel.addIncidenciaPoints.mockResolvedValue({ punts: 250, points_awarded: 50 });
 
         await incidenciaService.createIncidencia(solvedData);
 
@@ -216,7 +206,6 @@ describe('incidenciaService', () => {
             arxiu: null,
           })
         );
-        expect(incidenciaModel.addIncidenciaPoints).toHaveBeenCalledWith(18, 50, PREMIUM_MULTIPLIER);
       });
     });
   });
