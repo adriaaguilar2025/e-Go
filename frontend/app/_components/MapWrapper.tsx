@@ -1,3 +1,4 @@
+import React, { forwardRef } from 'react';
 import MapViewCluster from 'react-native-map-clustering';
 import { Marker, Callout } from 'react-native-maps';
 import { View, Text, StyleSheet } from 'react-native';
@@ -5,17 +6,23 @@ import { View, Text, StyleSheet } from 'react-native';
 // Exportamos Marker y Callout para que el index.tsx los use normalmente
 export { Marker, Callout };
 
-// Exportamos MapViewCluster con el nombre MapView para que el código sea intercambiable
-export const MapView = (props: any) => {
+function formatClusterCount(points: number) {
+  return String(points);
+}
+
+export const MapView = forwardRef((props: any, ref: any) => {
   return (
     <MapViewCluster
+      ref={ref} // <--- ¡ESTA LÍNEA ES VITAL PARA LA NAVEGACIÓN!
       {...props}
       radius={50} // Radio de agrupación
       // Personalización del círculo del cluster
       renderCluster={(cluster: any) => {
         const { id, geometry, onPress, properties } = cluster;
         const points = properties.point_count;
+        const label = formatClusterCount(points);
 
+        const size = points >= 100 ? 58 : points >= 30 ? 52 : 46;
         return (
           <Marker
             key={`cluster-${id}`}
@@ -25,9 +32,9 @@ export const MapView = (props: any) => {
             }}
             onPress={onPress}
           >
-            <View style={styles.clusterContainer}>
+            <View style={[styles.clusterContainer, { minWidth: size, minHeight: size }]}>
               <Text style={styles.clusterText}>
-                {points}
+                {label}
               </Text>
             </View>
           </Marker>
@@ -37,7 +44,9 @@ export const MapView = (props: any) => {
       {props.children}
     </MapViewCluster>
   );
-};
+});
+
+MapView.displayName = 'MapView';
 
 // Export por defecto para evitar errores de Expo Router
 export default function MapWrapper() {
@@ -47,10 +56,11 @@ export default function MapWrapper() {
 const styles = StyleSheet.create({
   clusterContainer: {
     backgroundColor: '#10b981', // Verde e-Go
-    borderRadius: 20,
-    padding: 10,
-    minWidth: 40,
-    height: 40,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 46,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -63,6 +73,9 @@ const styles = StyleSheet.create({
   clusterText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 12.5,
+    lineHeight: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -2,21 +2,37 @@ import React from 'react';
 import { View, TextInput, StyleSheet, Image, TouchableOpacity, StatusBar, FlatList, Text, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+/** Fila de resultat: estació (backend) o adreça (Places via backend). */
+export type MapSearchListItem =
+  | { kind: 'station'; station: { id: number; nom?: string; adreca?: string; municipi?: string } }
+  | { kind: 'address'; placeId: string; label: string; subtitle: string };
+
 interface TopBarProps {
   onPressMenu: () => void;
-  // Noves propietats pel buscador
   searchQuery: string;
   setSearchQuery: (text: string) => void;
-  searchResults: any[];
-  onSelectResult: (station: any) => void;
+  searchResults: MapSearchListItem[];
+  onSelectResult: (item: MapSearchListItem) => void;
   isSearching: boolean;
+  searchMode: 'stations' | 'addresses';
+  onToggleSearchMode: () => void;
 }
 
-export default function TopBar({ onPressMenu, searchQuery, setSearchQuery, searchResults, onSelectResult, isSearching }: TopBarProps) {
+export default function TopBar({
+  onPressMenu,
+  searchQuery,
+  setSearchQuery,
+  searchResults,
+  onSelectResult,
+  isSearching,
+  searchMode,
+  onToggleSearchMode,
+}: TopBarProps) {
+  const isAddressMode = searchMode === 'addresses';
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerContainer}>
-        {/* Logo d'e-Go */}
         <TouchableOpacity style={styles.logoContainer}>
           <Image
             source={require('../assets/images/favicon.png')}
@@ -25,23 +41,22 @@ export default function TopBar({ onPressMenu, searchQuery, setSearchQuery, searc
           />
         </TouchableOpacity>
 
-        {/* Buscador */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+          <Ionicons
+            name={isAddressMode ? 'navigate-outline' : 'search'}
+            size={20}
+            color="#888"
+            style={styles.searchIcon}
+          />
           <TextInput
-            style={[
-              styles.searchInput,
-              Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)
-            ]}
-            placeholder="Buscar"
+            style={[styles.searchInput, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
+            placeholder={isAddressMode ? 'Dirección, calle…' : 'Buscar puntos de carga'}
             placeholderTextColor="#888"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            // Aquesta propietat nativa elimina la línia inferior o efectes de focus a Android
             underlineColorAndroid="transparent"
           />
           {isSearching && <ActivityIndicator size="small" color="#10b981" />}
-          {/* Botó per esborrar la cerca ràpidament */}
           {searchQuery.length > 0 && !isSearching && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={20} color="#888" />
@@ -49,29 +64,65 @@ export default function TopBar({ onPressMenu, searchQuery, setSearchQuery, searc
           )}
         </View>
 
-        {/* Menú d'opcions (Hamburguesa) */}
+        <TouchableOpacity
+          testID="topbar-search-mode-toggle"
+          style={[styles.modeToggle, isAddressMode && styles.modeToggleActive]}
+          onPress={onToggleSearchMode}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isAddressMode
+              ? 'Canviar a cerca de punts de recàrrega'
+              : "Canviar a cerca d'adreces al mapa"
+          }
+        >
+          <Ionicons name={isAddressMode ? 'flash-outline' : 'map-outline'} size={22} color={isAddressMode ? '#fff' : '#334155'} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.menuButton} onPress={onPressMenu}>
           <Ionicons name="menu" size={32} color="black" />
         </TouchableOpacity>
       </View>
 
-      {/* Llista de resultats desplegable */}
       {searchQuery.length > 0 && (
         <View style={styles.dropdownContainer}>
           {searchResults.length > 0 ? (
             <FlatList
               data={searchResults}
-              keyExtractor={(item) => item.id.toString()}
-              keyboardShouldPersistTaps="handled" // Permet clicar mentre el teclat està obert
+              keyExtractor={(item, index) =>
+                item.kind === 'station'
+                  ? `s-${item.station.id}-${index}`
+                  : `a-${item.placeId}-${index}`
+              }
+              keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.resultItem}
-                  onPress={() => onSelectResult(item)}
-                >
-                  <Ionicons name="location-outline" size={20} color="#10b981" />
+                <TouchableOpacity style={styles.resultItem} onPress={() => onSelectResult(item)}>
+                  <Ionicons
+                    name={item.kind === 'station' ? 'flash-outline' : 'location-outline'}
+                    size={20}
+                    color="#10b981"
+                  />
                   <View style={styles.resultTextContainer}>
-                    <Text style={styles.resultName} numberOfLines={1}>{item.nom || 'Punto de carga'}</Text>
-                    <Text style={styles.resultAddress} numberOfLines={1}>{item.adreca}, {item.municipi}</Text>
+                    {item.kind === 'station' ? (
+                      <>
+                        <Text style={styles.resultName} numberOfLines={1}>
+                          {item.station.nom || 'Punto de carga'}
+                        </Text>
+                        <Text style={styles.resultAddress} numberOfLines={1}>
+                          {item.station.adreca}, {item.station.municipi}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.resultName} numberOfLines={1}>
+                          {item.label}
+                        </Text>
+                        {item.subtitle ? (
+                          <Text style={styles.resultAddress} numberOfLines={2}>
+                            {item.subtitle}
+                          </Text>
+                        ) : null}
+                      </>
+                    )}
                   </View>
                 </TouchableOpacity>
               )}
@@ -91,46 +142,57 @@ export default function TopBar({ onPressMenu, searchQuery, setSearchQuery, searc
 
 const styles = StyleSheet.create({
   wrapper: {
-    zIndex: 100, // Molt important perquè el desplegable quedi per sobre del mapa
+    zIndex: 100,
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'white',
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     paddingBottom: 10,
-    paddingTop: (StatusBar.currentHeight || 24),
+    paddingTop: StatusBar.currentHeight || 24,
     elevation: 4,
-    zIndex: 10, // Manté la barra sobre l'ombra
+    zIndex: 10,
   },
-  logoContainer: { justifyContent: 'center', alignItems: 'center' },
-  logo: { width: 100, height: 60 },
+  logoContainer: { justifyContent: 'center', alignItems: 'center', width: 56 },
+  logo: { width: 56, height: 36, transform: [{ scale: 1.15 }] },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F0F0F0',
     borderRadius: 25,
-    marginHorizontal: 15,
+    marginHorizontal: 4,
     paddingHorizontal: 12,
     height: 40,
   },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, color: 'black' },
+  modeToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2,
+  },
+  modeToggleActive: {
+    backgroundColor: '#10b981',
+  },
   menuButton: { padding: 2 },
 
-  // Estils pel desplegable de resultats
   dropdownContainer: {
     position: 'absolute',
     top: '100%',
-    left: 15,
-    right: 15,
+    left: 10,
+    right: 10,
     backgroundColor: 'white',
     borderRadius: 12,
     maxHeight: 250,
-    elevation: 6, // Ombra Android
-    shadowColor: '#000', // Ombra iOS
+    elevation: 6,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -165,5 +227,5 @@ const styles = StyleSheet.create({
   noResultsText: {
     color: '#64748b',
     fontSize: 14,
-  }
+  },
 });
