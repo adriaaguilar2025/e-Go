@@ -1741,6 +1741,19 @@ useEffect(() => {
               <Text style={styles.menuItemText}>Mis Estaciones de Carga</Text>
             </TouchableOpacity>
 
+              {/* Botón para ir al asistente IA (De tu rama chatbot) */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push('/support-chat'); 
+              }}
+            >
+              <MaterialIcons name="support-agent" size={24} color="#10b981" />
+              <Text style={styles.menuItemText}>Asistente Virtual</Text>
+            </TouchableOpacity>
+
+            {/* Opciones de Accesibilidad y Tema (De la rama development) */}
             <View style={styles.themeSection}>
               <Text style={styles.themeSectionTitle}>Daltonismo</Text>
               <View style={styles.dyslexiaRow}>
