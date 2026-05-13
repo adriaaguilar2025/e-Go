@@ -39,7 +39,8 @@ describe('SupportChatScreen Integration', () => {
 
   test('permite al usuario escribir y recibir un mensaje de la IA', async () => {
     //Simulamos respuesta de la IA
-    (fetchGroqResponse as jest.Mock).mockResolvedValueOnce('¡Hola! Soy Voltix. ¿En qué te ayudo?');
+    (fetchGroqResponse as jest.MockedFunction<typeof fetchGroqResponse>)
+    .mockResolvedValueOnce('¡Hola! Soy Voltix. ¿En qué te ayudo?');
 
     const { getByPlaceholderText, getByText } = render(<SupportChatScreen />);
 

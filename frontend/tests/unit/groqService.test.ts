@@ -2,12 +2,13 @@
 //Este test verifica que la lógica de comunicación con la API de Groq sea correcta y maneje bien
 //los errores sin depender de una conexión real (usando mocks)
 import { fetchGroqResponse } from '../../services/groqService';
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 describe('groqService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    globalThis.fetch = jest.fn() as jest.Mock;
+    //Definimos el mock de fetch con el tipo correcto de TypeScript
+    globalThis.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
   });
 
   test('debe devolver la respuesta de la IA correctamente', async () => {
@@ -15,10 +16,11 @@ describe('groqService', () => {
       choices: [{ message: { content: 'Hola, soy tu asistente.' } }]
     };
 
-    (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+    //Usamos el casting (as jest.MockedFunction...) para que TS sepa que podemos usar mockResolvedValueOnce
+    (globalThis.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
-    });
+    } as Response); //Forzamos a que lo trate como una respuesta válida de Fetch
 
     const messages = [{ role: 'user', content: 'Hola' }];
     const result = await fetchGroqResponse(messages);
@@ -36,7 +38,7 @@ describe('groqService', () => {
   });
 
   test('debe devolver un mensaje de error si la petición falla', async () => {
-    (globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network Error'));
+    (globalThis.fetch as jest.MockedFunction<typeof fetch>).mockRejectedValueOnce(new Error('Network Error'));
 
     const result = await fetchGroqResponse([]);
     expect(result).toBe('Error de conexión con el asistente.');
