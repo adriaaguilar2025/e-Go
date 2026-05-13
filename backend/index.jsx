@@ -17,6 +17,7 @@ const subscriptionRoutes = require('./routes/subscription');
 const chargingRoutes = require('./routes/charging'); // Importamos la ruta de carga
 const rankingRoutes = require('./routes/ranking');
 const userRoutes = require('./routes/users');
+const friendsRoutes = require('./routes/amics');
 const incidenciaRoutes = require('./routes/incidencias');
 const geocodeRoutes = require('./routes/geocode');
 const { handleWebhook } = require('./controllers/stripeWebhookController');
@@ -73,6 +74,7 @@ app.use('/subscription', subscriptionRoutes);
 app.use('/charging', chargingRoutes); // Rutas para sesiones de carga y puntos
 app.use('/ranking', rankingRoutes);
 app.use('/user', userRoutes);
+app.use('/friends', friendsRoutes);
 app.use('/incidencias', incidenciaRoutes);
 app.use('/geocode', geocodeRoutes);
 

@@ -10,7 +10,7 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 
 const LOGO = require('./_assets/favicon.png'); // Ruta a tu imagen de perfil (el logo de momento)
 const RAINBOW_BASE_COLORS = ['#3b82f6', '#a855f7', '#ec4899', '#f97316', '#facc15', '#3fad17', '#14b8b0', '#3b82f6'];
-const GRADIENT_STEPS = 48; //
+const GRADIENT_STEPS = 48;
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace('#', '');
@@ -72,7 +72,7 @@ export default function PerfilScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
-  const [editedEmail, setEditedEmail] = useState('');
+  const [esAmic, setEsAmic] = useState(false);
   const [rainbowShift, setRainbowShift] = useState(0);
   const queryParams = useLocalSearchParams();
   const userIdParam = queryParams.userId || queryParams.usuari_id;
@@ -93,6 +93,7 @@ export default function PerfilScreen() {
 
   useEffect(() => {
     fetchPerfil();
+    fetchAmics();
   }, [idUser]);
 
   const fetchPerfil = async () => {
@@ -103,11 +104,28 @@ export default function PerfilScreen() {
       const data = await response.json();
       setPerfil(data);
       setEditedUsername(data.username ?? '');
-      setEditedEmail(data.email ?? '');
     } catch (error) {
       console.error("Error cargando perfil:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchAmics = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id=${idUser}`);
+      const data = await response.json();
+      const friendIds = Array.isArray(data)
+        ? data.map((friend: any) => Number(friend?.id)).filter((id) => Number.isInteger(id))
+        : [];
+      setEsAmic(friendIds.includes(user.id));
+      console.log("Amigos del usuario:", friendIds);
+      console.log("ID del usuario actual:", user?.id);
+      console.log("ID del perfil visto:", idUser);
+      console.log("¿Es amigo?", esAmic);
+    } catch (error) {
+      console.error("Error cargando amigos:", error);
     }
   };
 
@@ -118,7 +136,7 @@ export default function PerfilScreen() {
       const response = await fetch(`${getApiUrl()}/user?usuari_id=${idUser}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: editedUsername, email: editedEmail }),
+        body: JSON.stringify({ username: editedUsername}),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -175,16 +193,15 @@ export default function PerfilScreen() {
           </View>
           <View style={styles.profileContent}>
             {renderProfileName()}
-            {perfil?.id === user?.id && (
+            {perfil?.id === user?.id ? (
               <>
+                <Text style={styles.profileEmail}>{perfil?.email ?? 'email@ejemplo.com'}</Text>
                 {!isEditing ? (
                   <>
-                    <Text style={styles.profileEmail}>{perfil?.email ?? 'email@ejemplo.com'}</Text>
                     <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => {
                         setEditedUsername(perfil?.username ?? '');
-                        setEditedEmail(perfil?.email ?? '');
                         setIsEditing(true);
                       }}
                     >
@@ -200,17 +217,31 @@ export default function PerfilScreen() {
                       placeholder="Nombre de usuario"
                       placeholderTextColor="#94a3b8"
                     />
-                    <TextInput
-                      style={styles.input}
-                      value={editedEmail}
-                      onChangeText={setEditedEmail}
-                      placeholder="Email"
-                      placeholderTextColor="#94a3b8"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
                   </>
                 )}
+              </>
+            ) : (
+              <Text style={styles.profileEmail}>{esAmic ? 'Amic' : ''}</Text>
+            )}
+            {perfil?.id === user?.id && isEditing && (
+              <>
+                <TouchableOpacity
+                  style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                  onPress={savePerfil}
+                  disabled={isSaving}
+                >
+                  <Text style={styles.saveButtonText}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setEditedUsername(perfil?.username ?? '');
+                    setIsEditing(false);
+                  }}
+                  disabled={isSaving}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
               </>
             )}
             <Text style={styles.profileSubtitle}>Se unió el {perfil?.created_at ? new Date(perfil.created_at).toLocaleDateString() : 'fecha no disponible'}</Text>
@@ -229,28 +260,6 @@ export default function PerfilScreen() {
                   </View>
                 )}
               </View>
-            )}
-            {perfil?.id === user?.id && isEditing && (
-              <>
-                <TouchableOpacity
-                  style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-                  onPress={savePerfil}
-                  disabled={isSaving}
-                >
-                  <Text style={styles.saveButtonText}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => {
-                    setEditedUsername(perfil?.username ?? '');
-                    setEditedEmail(perfil?.email ?? '');
-                    setIsEditing(false);
-                  }}
-                  disabled={isSaving}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-              </>
             )}
           </View>
         </View>
