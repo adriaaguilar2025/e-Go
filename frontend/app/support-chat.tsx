@@ -9,10 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  StatusBar
+  StatusBar,
+  Keyboard
 } from 'react-native';
 import { useRouter } from 'expo-router';
-// Importamos lo nuevo
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { fetchGroqResponse } from '../services/groqService';
@@ -21,7 +21,7 @@ const ASSISTANT_AVATAR = require('../assets/images/avatar_asistente_IA.png');
 
 function ChatContent() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); //Aquí se detectan los botones del mobil para subir o no la pantalla
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<{role: string, content: string}[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,19 +41,18 @@ function ChatContent() {
 
   return (
     <View style={[styles.mainWrapper, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        //height para no estar debajo de los tres botones de los mobiles
+        behavior="height"
         style={{ flex: 1 }}
+        //Este valor es la altura aproximada de la cabecera + barra de estado
+        keyboardVerticalOffset={Platform.select({ android: 90 })}
       >
         {/* Cabecera */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backAction}>
-            <MaterialIcons name="arrow-back-ios" size={20} color="#10b981" />
-            <Text style={styles.headerTitle}>Salir</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerSubtitle}>Soporte e-Go (Assistente Virtual)</Text>
+          <Text style={styles.headerSubtitle}>Soporte e-Go</Text>
           <Image source={ASSISTANT_AVATAR} style={styles.headerImage} />
         </View>
 
@@ -63,6 +62,8 @@ function ChatContent() {
             data={messages}
             keyExtractor={(_, index) => index.toString()}
             contentContainerStyle={styles.listContent}
+            // Esto hace que al abrir el teclado, si hay muchos mensajes, se desplace al final
+            onContentSizeChange={() => {}}
             renderItem={({ item }) => (
               <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
                 <Text style={item.role === 'user' ? styles.userText : styles.aiText}>{item.content}</Text>
@@ -71,21 +72,22 @@ function ChatContent() {
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <MaterialIcons name="chat-bubble-outline" size={50} color="#cbd5e1" />
-                <Text style={styles.emptyText}>Hola, soy Voltix, tu asistente virtual de e-Go. ¿En qué puedo ayudarte hoy?</Text>
+                <Text style={styles.emptyText}>Hola, soy Voltix, tu asistente virtual de e-Go. ¿En qué puedo ayudarte?</Text>
               </View>
             }
           />
         </View>
 
-        {/* Barra para escribir el mesnaje y enviar */}
-        {/* El input usa insets.bottom para no ser tapado por los botones del móvil */}
-        <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {/* Contenedor de entrada */}
+        {/* Usamos el inset bottom para respetar los botones del Poco, pero con un padding extra */}
+        <View style={[styles.inputWrapper, { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
               value={input}
               onChangeText={setInput}
               placeholder="Escribe aquí..."
+              placeholderTextColor="#94a3b8"
               multiline
             />
             <TouchableOpacity
@@ -102,7 +104,6 @@ function ChatContent() {
   );
 }
 
-//Exportación necesaria para usar el Provider
 export default function SupportChatScreen() {
   return (
     <SafeAreaProvider>
@@ -117,7 +118,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    height: 60, // Altura fija para controlar mejor el offset del teclado
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9'
   },
@@ -128,7 +130,9 @@ const styles = StyleSheet.create({
 
   chatFrame: {
     flex: 1,
-    margin: 10,
+    marginHorizontal: 10,
+    marginTop: 5,
+    marginBottom: 5,
     backgroundColor: '#f8fafc',
     borderRadius: 20,
     borderWidth: 1,
@@ -142,7 +146,13 @@ const styles = StyleSheet.create({
   userText: { color: 'white' },
   aiText: { color: '#1e293b' },
 
-  inputWrapper: { paddingHorizontal: 16, paddingTop: 10, backgroundColor: '#fff' },
+  inputWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9'
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -152,7 +162,7 @@ const styles = StyleSheet.create({
     paddingRight: 5,
     paddingVertical: 5
   },
-  input: { flex: 1, maxHeight: 100, paddingVertical: 8, color: '#1e293b' },
+  input: { flex: 1, maxHeight: 100, paddingVertical: 8, color: '#1e293b', textAlignVertical: 'center' },
   sendButton: { backgroundColor: '#10b981', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   disabledBtn: { backgroundColor: '#cbd5e1' },
   emptyContainer: { alignItems: 'center', marginTop: 50, opacity: 0.5 },
