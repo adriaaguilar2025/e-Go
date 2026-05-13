@@ -8,8 +8,6 @@ import {
   SafeAreaView,
   Platform,
   ScrollView,
-  Keyboard,
-  TouchableWithoutFeedback,
   Alert,
   Modal
 } from 'react-native';
@@ -66,11 +64,11 @@ export default function VehiclesScreen() {
   };
   const styles = useMemo(() => createStyles(theme), [colorScheme, colorblindFriendly]);
 
-  // Estats per guardar els valors del formulari abans de guardar el vehicle
-  const [nom, setNom] = useState((params.potencia as string) || '');
-  const [potencia, setPotencia] = useState((params.potencia as string) || '');
-  const [connectorType, setConnectorType] = useState((params.connectorType as string) || '');
-  const [acDc, setAcDc] = useState((params.ac_dc as string) || '');
+  // Estats per a guardar els valors del formulari
+  const [nom, setNom] = useState('');
+  const [potencia, setPotencia] = useState('');
+  const [connectorType, setConnectorType] = useState('');
+  const [acDc, setAcDc] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
   // Llista de vehicles
@@ -130,7 +128,7 @@ export default function VehiclesScreen() {
           router.navigate({
             pathname: '/',
             params: {// Paràmetres de la cerca
-              minKw: Number(potencia) - 20, // L'òptim és 20 kW menys de la potencia màxima
+              maxKw: Number(potencia),
               ac_dc: acDc,
               connectorType: connectorType
             }
@@ -188,9 +186,7 @@ export default function VehiclesScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       {/* Capçalera */}
       <View style={styles.header}>
-				<Text></Text>
         <Text style={styles.titleHeader}>Garaje</Text>
-        <Text></Text>
       </View>
 
       <ScrollView
@@ -200,13 +196,11 @@ export default function VehiclesScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        {vehicles.map((v) => { // Llistat de vehicles
+        {vehicles.map((v) => {
           return (
             <View key={v.nom} style={styles.infoPanel}>
-				      <Text style={styles.title}>
-				        {v.nom}
-				      </Text>
-              {/* Informació del vahicle */}
+              <Text style={styles.title}>{v.nom}</Text>
+              {/* Informació del vehicle */}
               <View style={styles.infoBadgeRow}>
                 <View style={[styles.badge, { backgroundColor: theme.badgeBg }]}>
                   <MaterialIcons name="bolt" size={14} color={theme.badgeIcon} />
@@ -221,130 +215,127 @@ export default function VehiclesScreen() {
                   <Text style={[styles.badgeText, { color: theme.badgeText }]}>{v.tipus_connexio}</Text>
                 </View>
               </View>
-			
-              <TouchableOpacity style={styles.applyBtn} onPress={() => router.navigate({
-                        pathname: '/',
-                        params: { // Filtre en el mapa
-                            minKw: Number(v.kw) - 20,
-                            ac_dc: v.ac_dc,
-                            connectorType: v.tipus_connexio
-                        }
-                  })} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.applyBtn}
+                onPress={() => router.navigate({
+                  pathname: '/',
+                  params: {
+                    maxKw: Number(v.kw),
+                    ac_dc: v.ac_dc,
+                    connectorType: v.tipus_connexio
+                  }
+                })}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.applyBtnText}>Buscar estaciones</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteCar(v.nom)} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() => deleteCar(v.nom)}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.deleteBtnText}>Eliminar vehículo</Text>
               </TouchableOpacity>
             </View>
           );
         })}
         <View style={styles.lastinfoPanel}>
-        	{/* Això fa que si toques qualsevol espai buit, s'amagui el teclat */}
-        	<TouchableWithoutFeedback onPress={() => Keyboard.dismiss}>
-        	  <View style={{flex: 1}}>
-            
-        	  	<Text style={styles.titleNew}>
-        	  	  Nuevo vehículo
-        	  	</Text>
+          <Text style={styles.titleNew}>Nuevo vehículo</Text>
 
-				      {/* Input Nom */}
-				      <View style={styles.inputGroup}>
-				        <Text style={styles.label}>Nombre</Text>
-				        <TextInput
-				          style={[
-				            styles.input, focusedInput === 'nom' && styles.inputFocused,
-				            Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}
-				          ]}
-				          keyboardType="default"
-				          cursorColor={theme.accent}
-				          value={nom}
-				          onChangeText={setNom}
-				          maxLength={50}
-				          onFocus={() => setFocusedInput('nom')}
-				          onBlur={() => setFocusedInput(null)}
-				        />
-				      </View>
+          {/* Input Nom */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nombre</Text>
+            <TextInput
+              style={[
+                styles.input, focusedInput === 'nom' && styles.inputFocused,
+                Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}
+              ]}
+              keyboardType="default"
+              cursorColor={theme.accent}
+              value={nom}
+              onChangeText={setNom}
+              maxLength={50}
+              onFocus={() => setFocusedInput('nom')}
+              onBlur={() => setFocusedInput(null)}
+            />
+          </View>
 
-				      {/* Input Màxim */}
-				      <View style={styles.inputGroup}>
-				        <Text style={styles.label}>Potencia máxima (kW)</Text>
-				        <TextInput
-				          style={[
-				            styles.input, focusedInput === 'max' && styles.inputFocused,
-				            Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}
-				          ]}
-				          placeholderTextColor={theme.placeholder}
-				          keyboardType="numeric"
-				          cursorColor={theme.accent}
-				          value={potencia}
-				          onChangeText={setPotencia}
-				          maxLength={4}
-				          onFocus={() => setFocusedInput('max')}
-				          onBlur={() => setFocusedInput(null)}
-				        />
-				      </View>
+          {/* Input Màxim */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Potencia máxima (kW)</Text>
+            <TextInput
+              style={[
+                styles.input, focusedInput === 'max' && styles.inputFocused,
+                Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}
+              ]}
+              placeholderTextColor={theme.placeholder}
+              keyboardType="numeric"
+              cursorColor={theme.accent}
+              value={potencia}
+              onChangeText={setPotencia}
+              maxLength={4}
+              onFocus={() => setFocusedInput('max')}
+              onBlur={() => setFocusedInput(null)}
+            />
+          </View>
 
-				      {/*Secció Tipo de corriente*/}
-				      <View style={styles.inputGroup}>
-				        <Text style={styles.label}>Tipo de Corriente</Text>
-				        <View style={{ flexDirection: 'row', gap: 12 }}>
-				          {['AC', 'DC'].map((type) => (
-				            <TouchableOpacity
-				              key={type}
-				              style={[
-				                styles.typeBtn,
-				                acDc === type && styles.typeBtnActive
-				              ]}
-				              // Si ja estava seleccionat i hi tornem a clicar, el desmarquem
-				              onPress={() => setAcDc(acDc === type ? '' : type)}
-				              activeOpacity={0.8}
-				            >
-				              <Text style={[
-				                styles.typeBtnText,
-				                acDc === type && styles.typeBtnTextActive
-				              ]}>
-				                {type === 'AC' ? 'AC' : 'DC'}
-				              </Text>
-				            </TouchableOpacity>
-				          ))}
-				        </View>
-				      </View>
+          {/* Tipus de Corrent */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tipo de Corriente</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {['AC', 'DC'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeBtn,
+                    acDc === type && styles.typeBtnActive
+                  ]}
+                  onPress={() => setAcDc(acDc === type ? '' : type)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.typeBtnText,
+                    acDc === type && styles.typeBtnTextActive
+                  ]}>
+                    {type === 'AC' ? 'AC' : 'DC'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
-				      {/* Secció Tipus de Connector */}
-				      <View style={styles.inputGroup}>
-				        <Text style={styles.label}>Tipo de Conector</Text>
-				        <View style={styles.chipContainer}>
-				          {CONNECTOR_TYPES.map((type) => (
-				            <TouchableOpacity
-				              key={type}
-				              style={[
-				                styles.chip,
-				                connectorType === type && styles.chipActive
-				              ]}
-				              // Si clica el que ja està actiu, el desmarca (el deixa buit)
-				              onPress={() => setConnectorType(connectorType === type ? '' : type)}
-				              activeOpacity={0.7}
-				            >
-				              <Text style={[
-				                styles.chipText,
-				                connectorType === type && styles.chipTextActive
-				              ]}>
-			                  {type}
-			                </Text>
-			              </TouchableOpacity>
-			            ))}
-		          	</View>
-		       	 </View>
-		     	 </View>
-		    	</TouchableWithoutFeedback>
-		    	{/* Guardar vehicle */}
-		    	<View style={styles.footer}>
-		    	  <TouchableOpacity style={styles.applyBtn} onPress={saveCar} activeOpacity={0.8}>
-		    	    <Text style={styles.applyBtnText}>Guardar vehículo</Text>
-		    	  </TouchableOpacity>
-		    	</View>
-		  	</View>
-			</ScrollView> {/*<-- Final de content*/}
+          {/* Tipus de Connector */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tipo de Conector</Text>
+            <View style={styles.chipContainer}>
+              {CONNECTOR_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.chip,
+                    connectorType === type && styles.chipActive
+                  ]}
+                  onPress={() => setConnectorType(connectorType === type ? '' : type)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    connectorType === type && styles.chipTextActive
+                  ]}>
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.applyBtn} onPress={saveCar} activeOpacity={0.8}>
+              <Text style={styles.applyBtnText}>Guardar vehículo</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
 
       {/* --- POP-UP FLOTANT D'ERROR --- */}
       <Modal
@@ -407,7 +398,7 @@ const createStyles = (theme: {
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: theme.surface,
