@@ -1,101 +1,62 @@
 name: SonarQube Analysis
 
-# Aquest workflow només s'executa a la branca 'sonarqube1'
-# (i als PR que apuntin a aquesta branca)
+# Aquest workflow s'executa AUTOMÀTICAMENT quan acaba 'Coverage'
+# i NOMÉS si ha acabat amb èxit. Descarrega els lcov.info dels
+# artifacts i fa l'anàlisi de SonarCloud.
+#
+# IMPORTANT: 'workflow_run' només funciona si aquest fitxer YAML
+# està a la branca per defecte del repositori (normalment 'main').
+# Mentre el desenvolupes a 'sonarqube1' pots activar-lo manualment
+# amb el botó "Run workflow" gràcies al 'workflow_dispatch' de sota.
 on:
-  push:
+  workflow_run:
+    workflows: ["Coverage"]
+    types: [completed]
     branches: ["sonarqube1"]
-  pull_request:
-    branches: ["sonarqube1"]
+  workflow_dispatch:
 
 jobs:
   sonarqube:
-    name: Analitzar codi amb SonarCloud
+    name: Analitzar amb SonarCloud
     runs-on: ubuntu-latest
 
-    # PostgreSQL temporal perquè els tests del backend puguin executar-se
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Si va via workflow_run, només continuem si Coverage va acabar OK
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout del codi
         uses: actions/checkout@v4
         with:
-          # Sonar necessita tot l'historial per a la informació de 'blame'
+          # Si ens dispara workflow_run, agafem el commit que va llançar Coverage
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          # Sonar necessita l'historial complet per a la informació de 'blame'
           fetch-depth: 0
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
+      - name: Descarregar cobertura backend
+        uses: actions/download-artifact@v4
         with:
-          node-version: "20"
+          name: backend-coverage
+          path: backend/coverage
+          # Si venim de workflow_run hem d'indicar la run d'origen
+          run-id: ${{ github.event.workflow_run.id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # =====================================================
-      # BACKEND: instal·lar, preparar BD i generar cobertura
-      # =====================================================
-      - name: Backend - Instal·lar dependències
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Backend - Crear taules a la BD
-        env:
-          PGPASSWORD: test_password
-        run: |
-          for f in ./backend/sql/*.sql; do
-            echo "Executant script: $f"
-            psql -h localhost -U test_user -d test_db -f "$f"
-          done
-
-      - name: Backend - Tests amb cobertura (Jest)
-        working-directory: ./backend
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_NAME: test_db
-          DB_SCHEMA: ego
-          DB_TABLE_USUARIOS: usuarios
-          GOOGLE_CLIENT_ID: test_client_id
-          GOOGLE_CLIENT_SECRET: test_client_secret
-          PENDING_SECRET: test_pending_secret
-        run: npx jest --runInBand --coverage
-
-      # =====================================================
-      # FRONTEND: instal·lar i generar cobertura
-      # =====================================================
-      - name: Frontend - Instal·lar dependències
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Frontend - Tests amb cobertura (Vitest + Jest)
-        working-directory: ./frontend
-        # Si algun test falla no aturem l'anàlisi de Sonar
+      - name: Descarregar cobertura frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          run-id: ${{ github.event.workflow_run.id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        # No fallem si el frontend encara no ha pujat artifact
         continue-on-error: true
-        run: |
-          npx vitest run --coverage
-          npx jest --runInBand --coverage tests/integration tests/unit || true
 
-      # =====================================================
-      # SONARCLOUD: analitzar el codi
-      # =====================================================
       - name: Anàlisi amb SonarCloud
         uses: SonarSource/sonarqube-scan-action@v4
         env:
-          # Token generat a SonarCloud i guardat com a secret a GitHub
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Indiquem on és el fitxer de configuració (a l'arrel)
           projectBaseDir: .
