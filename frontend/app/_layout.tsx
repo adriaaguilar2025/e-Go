@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -23,11 +24,13 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <ThemePreferenceProvider>
-      <ColorblindPreferenceProvider>
-        <RootLayoutContent />
-      </ColorblindPreferenceProvider>
-    </ThemePreferenceProvider>
+    <SafeAreaProvider>
+      <ThemePreferenceProvider>
+        <ColorblindPreferenceProvider>
+          <RootLayoutContent />
+        </ColorblindPreferenceProvider>
+      </ThemePreferenceProvider>
+    </SafeAreaProvider>
   );
 }
 

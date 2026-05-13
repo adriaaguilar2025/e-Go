@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Platform,
   ScrollView,
   Alert,
   Modal
 } from 'react-native';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, Stack } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { getApiUrl } from '@/constants/api';
 import { getSemanticColors } from '@/constants/accessibilityColors';
@@ -30,7 +30,6 @@ interface Vehicle {
 
 export default function VehiclesScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const { colorblindFriendly } = useColorblindPreference();
   const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
@@ -182,7 +181,7 @@ export default function VehiclesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} testID="garage-screen-root">
       <Stack.Screen options={{ headerShown: false }} />
       {/* Capçalera */}
       <View style={styles.header}>
