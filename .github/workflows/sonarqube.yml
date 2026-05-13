@@ -1,0 +1,101 @@
+name: SonarQube Analysis
+
+# Aquest workflow només s'executa a la branca 'sonarqube1'
+# (i als PR que apuntin a aquesta branca)
+on:
+  push:
+    branches: ["sonarqube1"]
+  pull_request:
+    branches: ["sonarqube1"]
+
+jobs:
+  sonarqube:
+    name: Analitzar codi amb SonarCloud
+    runs-on: ubuntu-latest
+
+    # PostgreSQL temporal perquè els tests del backend puguin executar-se
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout del codi
+        uses: actions/checkout@v4
+        with:
+          # Sonar necessita tot l'historial per a la informació de 'blame'
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # =====================================================
+      # BACKEND: instal·lar, preparar BD i generar cobertura
+      # =====================================================
+      - name: Backend - Instal·lar dependències
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Backend - Crear taules a la BD
+        env:
+          PGPASSWORD: test_password
+        run: |
+          for f in ./backend/sql/*.sql; do
+            echo "Executant script: $f"
+            psql -h localhost -U test_user -d test_db -f "$f"
+          done
+
+      - name: Backend - Tests amb cobertura (Jest)
+        working-directory: ./backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_NAME: test_db
+          DB_SCHEMA: ego
+          DB_TABLE_USUARIOS: usuarios
+          GOOGLE_CLIENT_ID: test_client_id
+          GOOGLE_CLIENT_SECRET: test_client_secret
+          PENDING_SECRET: test_pending_secret
+        run: npx jest --runInBand --coverage
+
+      # =====================================================
+      # FRONTEND: instal·lar i generar cobertura
+      # =====================================================
+      - name: Frontend - Instal·lar dependències
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Frontend - Tests amb cobertura (Vitest + Jest)
+        working-directory: ./frontend
+        # Si algun test falla no aturem l'anàlisi de Sonar
+        continue-on-error: true
+        run: |
+          npx vitest run --coverage
+          npx jest --runInBand --coverage tests/integration tests/unit || true
+
+      # =====================================================
+      # SONARCLOUD: analitzar el codi
+      # =====================================================
+      - name: Anàlisi amb SonarCloud
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          # Token generat a SonarCloud i guardat com a secret a GitHub
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Indiquem on és el fitxer de configuració (a l'arrel)
+          projectBaseDir: .
