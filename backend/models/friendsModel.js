@@ -5,11 +5,15 @@ async function getFriends(userId) {
   const result = await pool.query(
     `SELECT
        CASE
-         WHEN usuari_id1 = $1 THEN usuari_id2
-         ELSE usuari_id1
-       END AS id, per_acceptar
-     FROM ${AMIGOS_TABLE}
-     WHERE usuari_id1 = $1 OR usuari_id2 = $1;`,
+         WHEN a.usuari_id1 = $1 THEN a.usuari_id2
+         ELSE a.usuari_id1
+       END AS id, a.per_acceptar, u.username
+     FROM ego.amics a
+     JOIN ego.usuari u ON (u.id = CASE
+         WHEN a.usuari_id1 = $1 THEN a.usuari_id2
+         ELSE a.usuari_id1
+       END)
+     WHERE a.usuari_id1 = $1 OR a.usuari_id2 = $1;`,
     [userId]
   );
   return result.rows;
@@ -20,7 +24,7 @@ async function addFriend(userId1, userId2) {
     `INSERT INTO ${AMIGOS_TABLE} (usuari_id1, usuari_id2, per_acceptar)
      VALUES ( $1, $2, $3 )
      RETURNING usuari_id1, usuari_id2;`,
-    (userId1 < userId2) ? [userId1, userId2, userId1] : [userId2, userId1, userId1]
+    (userId1 < userId2) ? [userId1, userId2, userId2] : [userId2, userId1, userId2]
   );
   return result.rows[0];
 }

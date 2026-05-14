@@ -7,7 +7,7 @@ async function getFriends(req, res) {
     // Agafem els possibles paràmetres de la URL
     const { usuari_id } = req.query;
 
-    const info = await friendsService.getFriends(usuari_id);
+    const info = await friendsService.getFriends(parseInt(usuari_id));
 
     res.json(info);
   } catch (err) {
@@ -24,7 +24,7 @@ async function addFriend(req, res) {
       return res.status(400).json({ error: 'Falta alguno de los IDs de usuario' });
     }
 
-    const added = await friendsService.addFriend(usuari_id1, usuari_id2);
+    const added = await friendsService.addFriend(parseInt(usuari_id1), parseInt(usuari_id2));
     if (!added) {
       return res.status(404).json({ error: 'Usuario/s no encontrado/s' });
     }
@@ -44,7 +44,7 @@ async function removeFriend(req, res) {
       return res.status(400).json({ error: 'Falta alguno de los IDs de usuario' });
     }
 
-    const removed = await friendsService.removeFriend(usuari_id1, usuari_id2);
+    const removed = await friendsService.removeFriend(parseInt(usuari_id1), parseInt(usuari_id2));
     if (!removed) {
       return res.status(404).json({ error: 'Usuario/s no encontrado/s' });
     }
@@ -64,7 +64,7 @@ async function acceptFriend(req, res) {
       return res.status(400).json({ error: 'Falta alguno de los IDs de usuario' });
     }
 
-    const accepted = await friendsService.acceptFriend(usuari_id1, usuari_id2);
+    const accepted = await friendsService.acceptFriend(parseInt(usuari_id1), parseInt(usuari_id2));
     if (!accepted) {
       return res.status(404).json({ error: 'Solicitud de amistad no encontrada' });
     }

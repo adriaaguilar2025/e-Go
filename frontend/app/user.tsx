@@ -78,6 +78,8 @@ export default function PerfilScreen() {
   const [isRejectingRequest, setIsRejectingRequest] = useState(false);
   const [isRemovingFriend, setIsRemovingFriend] = useState(false);
   const [rainbowShift, setRainbowShift] = useState(0);
+  const [amicsList, setAmicsList] = useState<any[]>([]);
+  const [loadingFriendRequests, setLoadingFriendRequests] = useState<{ [key: number]: boolean }>({});
   const queryParams = useLocalSearchParams();
   const userIdParam = queryParams.userId || queryParams.usuari_id;
   const parsedUserId = Number(userIdParam);
@@ -122,6 +124,8 @@ export default function PerfilScreen() {
       const data = await response.json();
       
       if (Array.isArray(data)) {
+        setAmicsList(data);
+        console.log("AmicsList:", data);
         const friendRelation = data.find((friend: any) => Number(friend?.id) === user.id);
         if (friendRelation) {
           // Es amigo: 3 si aceptado, 2 si pendiente de aceptación por el usuario en pantalla, 1 si pendiente de aceptación por el usuario logueado
@@ -132,30 +136,13 @@ export default function PerfilScreen() {
           setEsAmic(0);
         }
       } else {
+        setAmicsList([]);
         setEsAmic(0);
       }
     } catch (error) {
       console.error("Error cargando amigos:", error);
+      setAmicsList([]);
       setEsAmic(0);
-    }
-  };
-
-  const acceptFriend = async () => {
-    if (!user?.id || !idUser) return;
-    setIsAcceptingFriend(true);
-    try {
-      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!response.ok) {
-        throw new Error('Error aceptando solicitud');
-      }
-      setEsAmic(3);
-    } catch (error) {
-      console.error('Error aceptando solicitud:', error);
-    } finally {
-      setIsAcceptingFriend(false);
     }
   };
 
@@ -178,25 +165,6 @@ export default function PerfilScreen() {
     }
   };
 
-  const rejectFriendRequest = async () => {
-    if (!user?.id || !idUser) return;
-    setIsRejectingRequest(true);
-    try {
-      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!response.ok) {
-        throw new Error('Error rechazando solicitud');
-      }
-      setEsAmic(0);
-    } catch (error) {
-      console.error('Error rechazando solicitud:', error);
-    } finally {
-      setIsRejectingRequest(false);
-    }
-  };
-
   const removeFriendAction = async () => {
     if (!user?.id || !idUser) return;
     setIsRemovingFriend(true);
@@ -216,22 +184,63 @@ export default function PerfilScreen() {
     }
   };
 
-  const cancelFriendRequest = async () => {
-    if (!user?.id || !idUser) return;
-    setIsSendingRequest(true);
+  const handleAcceptFriendRequest = async (friendId: number) => {
+    if (!user?.id) return;
+    setLoadingFriendRequests((prev) => ({ ...prev, [friendId]: true }));
     try {
-      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${friendId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error aceptando solicitud');
+      }
+      // Actualizar llista d'amics
+      fetchAmics();
+    } catch (error) {
+      console.error('Error aceptando solicitud:', error);
+    } finally {
+      setLoadingFriendRequests((prev) => ({ ...prev, [friendId]: false }));
+    }
+  };
+
+  const handleRejectFriendRequest = async (friendId: number) => {
+    if (!user?.id) return;
+    setLoadingFriendRequests((prev) => ({ ...prev, [friendId]: true }));
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${friendId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error rechazando solicitud');
+      }
+      // Actualizar llista d'amics
+      fetchAmics();
+    } catch (error) {
+      console.error('Error rechazando solicitud:', error);
+    } finally {
+      setLoadingFriendRequests((prev) => ({ ...prev, [friendId]: false }));
+    }
+  };
+
+  const handleCancelFriendRequest = async (friendId: number) => {
+    if (!user?.id) return;
+    setLoadingFriendRequests((prev) => ({ ...prev, [friendId]: true }));
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${friendId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) {
         throw new Error('Error cancelando solicitud');
       }
-      setEsAmic(0);
+      // Actualizar llista d'amics
+      fetchAmics();
     } catch (error) {
       console.error('Error cancelando solicitud:', error);
     } finally {
-      setIsSendingRequest(false);
+      setLoadingFriendRequests((prev) => ({ ...prev, [friendId]: false }));
     }
   };
 
@@ -276,6 +285,64 @@ export default function PerfilScreen() {
         })}
         {' '}👑
       </Text>
+    );
+  };
+
+  const renderFriendRequests = () => {
+    const receivedRequests = amicsList.filter((friend) => friend.per_acceptar === user?.id);
+    const sentRequests = amicsList.filter((friend) => friend.per_acceptar !== null && friend.per_acceptar !== user?.id);
+
+    return (
+      <>
+        {receivedRequests.length > 0 && (
+          <View style={styles.requestsSection}>
+            <Text style={styles.requestsTitle}>Solicitudes recibidas ({receivedRequests.length})</Text>
+            <View style={styles.requestsList}>
+              {receivedRequests.map((request) => (
+                <View key={request.id} style={styles.requestItem}>
+                  <Text style={styles.requestUsername}>{request.username || `Usuario ${request.id}`}</Text>
+                  <View style={styles.requestButtonGroup}>
+                    <TouchableOpacity
+                      style={[styles.requestAcceptButton, loadingFriendRequests[request.id] && styles.buttonDisabled]}
+                      onPress={() => handleAcceptFriendRequest(request.id)}
+                      disabled={loadingFriendRequests[request.id]}
+                    >
+                      <MaterialIcons name="check" size={16} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.requestRejectButton, loadingFriendRequests[request.id] && styles.buttonDisabled]}
+                      onPress={() => handleRejectFriendRequest(request.id)}
+                      disabled={loadingFriendRequests[request.id]}
+                    >
+                      <MaterialIcons name="close" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {sentRequests.length > 0 && (
+          <View style={styles.requestsSection}>
+            <Text style={styles.requestsTitle}>Solicitudes enviadas ({sentRequests.length})</Text>
+            <View style={styles.requestsList}>
+              {sentRequests.map((request) => (
+                <View key={request.id} style={styles.requestItem}>
+                  <Text style={styles.requestUsername}>{request.username || `Usuario ${request.id}`}</Text>
+                  <TouchableOpacity
+                    style={[styles.requestCancelButton, loadingFriendRequests[request.id] && styles.buttonDisabled]}
+                    onPress={() => handleCancelFriendRequest(request.id)}
+                    disabled={loadingFriendRequests[request.id]}
+                  >
+                    <MaterialIcons name="close" size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </>
     );
   };
 
@@ -347,7 +414,7 @@ export default function PerfilScreen() {
                     <View style={styles.buttonGroup}>
                       <TouchableOpacity
                         style={[styles.acceptButton, isAcceptingFriend && styles.buttonDisabled]}
-                        onPress={acceptFriend}
+                        onPress={() => handleAcceptFriendRequest(idUser)}
                         disabled={isAcceptingFriend || isRejectingRequest}
                       >
                         <MaterialIcons name="check" size={18} color="#fff" />
@@ -355,7 +422,7 @@ export default function PerfilScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.rejectButton, isRejectingRequest && styles.buttonDisabled]}
-                        onPress={rejectFriendRequest}
+                        onPress={() => handleRejectFriendRequest(idUser)}
                         disabled={isRejectingRequest || isAcceptingFriend}
                       >
                         <MaterialIcons name="close" size={18} color="#fff" />
@@ -372,7 +439,7 @@ export default function PerfilScreen() {
                     </View>
                     <TouchableOpacity
                       style={[styles.cancelFriendButton, isSendingRequest && styles.buttonDisabled]}
-                      onPress={cancelFriendRequest}
+                      onPress={() => handleCancelFriendRequest(idUser)}
                       disabled={isSendingRequest}
                     >
                       <MaterialIcons name="close" size={16} color="#fff" />
@@ -443,10 +510,13 @@ export default function PerfilScreen() {
             <Text style={styles.loadingText}>Cargando perfil...</Text>
           </View>
         ) : perfil ? (
-          <View style={[styles.statsCard, styles.centered]}>
-            <Text style={styles.points}>{perfil.punts}</Text>
-            <Text style={styles.ptsLabel}>Puntos</Text>
-          </View>
+          <>
+            <View style={[styles.statsCard, styles.centered]}>
+              <Text style={styles.points}>{perfil.punts}</Text>
+              <Text style={styles.ptsLabel}>Puntos</Text>
+            </View>
+            {perfil?.id === user?.id && renderFriendRequests()}
+          </>
         ) : (
           <Text style={styles.emptyText}>No existe el usuario</Text>
         )}
@@ -769,5 +839,74 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 10,
+  },
+  requestsSection: {
+    marginTop: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  requestsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 12,
+  },
+  requestsList: {
+    gap: 10,
+  },
+  requestItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2563eb',
+  },
+  requestUsername: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  requestDate: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  requestButtonGroup: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  requestAcceptButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  requestRejectButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  requestCancelButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
 });
