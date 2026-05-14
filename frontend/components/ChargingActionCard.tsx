@@ -251,6 +251,9 @@ const createStyles = (isDark: boolean, sem: SemanticColors) => StyleSheet.create
   modalCancelButton: {
     backgroundColor: isDark ? '#334155' : '#f1f5f9',
   },
+  modalConfirmButton: {
+    // Declarat per evitar errors de TS, el fons s'aplica per inline style
+  },
   modalCancelText: {
     color: isDark ? '#cbd5e1' : '#475569',
     fontWeight: '600',
