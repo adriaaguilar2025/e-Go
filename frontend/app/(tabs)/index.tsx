@@ -1433,6 +1433,8 @@ useEffect(() => {
             chargingError={chargingError}
             setChargingError={setChargingError}
             onStartNavigation={handleStartNavigation}
+            onOpenIncidenciaForm={handleOpenIncidenciaForm}
+            onSolvedIncidencia={handleSolvedIncidenciaSubmit}
           />
         )}
 
