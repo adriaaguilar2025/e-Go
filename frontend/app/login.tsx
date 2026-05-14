@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
@@ -39,6 +40,9 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  /** true = ocultar con puntos (secureTextEntry), false = texto legible */
+  const [passwordHidden, setPasswordHidden] = useState(true);
+  const [confirmPasswordHidden, setConfirmPasswordHidden] = useState(true);
 
   function continueWithoutGoogleTemporarily() {
     const now = new Date().toISOString();
@@ -134,6 +138,11 @@ export default function LoginScreen() {
       setAuthMode('local-login');
     }
   }, [openGoogle, mode]);
+
+  useEffect(() => {
+    setPasswordHidden(true);
+    setConfirmPasswordHidden(true);
+  }, [authMode]);
 
   async function registerWithUsername() {
     if (!pendingAuth || !username.trim()) return;
@@ -319,21 +328,61 @@ export default function LoginScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor="#9ca3af"
-              value={password}
-              onChangeText={setPassword}
-            />
-            {authMode === 'local-register' ? (
+            <View style={styles.passwordRow}>
               <TextInput
-                style={styles.input}
-                placeholder="Confirmar contraseña"
+                style={styles.passwordInput}
+                placeholder="Contraseña"
                 placeholderTextColor="#9ca3af"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={passwordHidden}
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="password"
+                autoComplete="password"
               />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setPasswordHidden((h) => !h)}
+                accessibilityRole="button"
+                accessibilityLabel={passwordHidden ? 'Mostrar contraseña' : 'Ocultar contraseña'}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <MaterialIcons
+                  name={passwordHidden ? 'visibility' : 'visibility-off'}
+                  size={22}
+                  color="#6b7280"
+                />
+              </TouchableOpacity>
+            </View>
+            {authMode === 'local-register' ? (
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirmar contraseña"
+                  placeholderTextColor="#9ca3af"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={confirmPasswordHidden}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setConfirmPasswordHidden((h) => !h)}
+                  accessibilityRole="button"
+                  accessibilityLabel={confirmPasswordHidden ? 'Mostrar confirmación' : 'Ocultar confirmación'}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <MaterialIcons
+                    name={confirmPasswordHidden ? 'visibility' : 'visibility-off'}
+                    size={22}
+                    color="#6b7280"
+                  />
+                </TouchableOpacity>
+              </View>
             ) : null}
             <TouchableOpacity style={[styles.primaryButton, { backgroundColor: brandAccent }]} onPress={submitLocalAuth} disabled={loading}>
               {loading ? (
@@ -390,6 +439,30 @@ const styles = StyleSheet.create({
   separatorText: { marginTop: 12, marginBottom: 8, color: '#6b7280', fontSize: 14, fontWeight: '600' },
   mailButton: { marginTop: 0, marginBottom: 4 },
   input: { width: '100%', paddingVertical: 11, paddingHorizontal: 14, fontSize: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, marginBottom: 12 },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    marginBottom: 12,
+    paddingRight: 4,
+    backgroundColor: '#fff',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    fontSize: 16,
+    color: '#111827',
+  },
+  eyeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   errorText: { color: '#dc2626', fontSize: 14, textAlign: 'center', marginBottom: 12 },
   linksRow: { flexDirection: 'row', gap: 16, marginBottom: 18 },
   adminLink: {},

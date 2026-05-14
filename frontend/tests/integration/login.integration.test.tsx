@@ -36,6 +36,14 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+jest.mock('@expo/vector-icons/MaterialIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return function MaterialIcons({ name }: { name: string }) {
+    return React.createElement(Text, { testID: `material-icon-${name}` }, name);
+  };
+});
+
 describe('LoginScreen integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -420,5 +428,25 @@ describe('LoginScreen integration', () => {
     await waitFor(() => {
       expect(getByText('Error al conectar con Google')).toBeTruthy();
     });
+  });
+
+  test('contraseña oculta por defecto (puntos) y ojo alterna visibilidad', () => {
+    const { getByText, getByPlaceholderText, getByLabelText } = render(<LoginScreen />);
+    fireEvent.press(getByText('Mail y contraseña'));
+    const pwd = getByPlaceholderText('Contraseña');
+    expect(pwd.props.secureTextEntry).toBe(true);
+    fireEvent.press(getByLabelText('Mostrar contraseña'));
+    expect(getByPlaceholderText('Contraseña').props.secureTextEntry).toBe(false);
+    fireEvent.press(getByLabelText('Ocultar contraseña'));
+    expect(getByPlaceholderText('Contraseña').props.secureTextEntry).toBe(true);
+  });
+
+  test('confirmar contraseña tiene ojo independiente', () => {
+    const { getByText, getByPlaceholderText, getByLabelText } = render(<LoginScreen />);
+    fireEvent.press(getByText('Mail y contraseña'));
+    fireEvent.press(getByText('¿No tienes cuenta? Regístrate con mail'));
+    expect(getByPlaceholderText('Confirmar contraseña').props.secureTextEntry).toBe(true);
+    fireEvent.press(getByLabelText('Mostrar confirmación'));
+    expect(getByPlaceholderText('Confirmar contraseña').props.secureTextEntry).toBe(false);
   });
 });
