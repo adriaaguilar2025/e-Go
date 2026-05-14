@@ -17,6 +17,7 @@ import { getSemanticColors } from '@/constants/accessibilityColors';
 import { WelcomePremiumModal } from '@/components/WelcomePremiumModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
+import { useTranslation } from 'react-i18next';
 import {
   buildFallbackStatus,
   formatPeriodEnd,
@@ -25,13 +26,9 @@ import {
 
 const STRIPE_SUCCESS_URL = 'https://example.com/stripe/success';
 const STRIPE_CANCEL_URL = 'https://example.com/stripe/cancel';
-const PREMIUM_BENEFITS = [
-  'Sin anuncios',
-  'Acceso ilimitado a funciones',
-  'Soporte prioritario',
-];
 
 export default function PaymentsScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const { colorblindFriendly } = useColorblindPreference();
   const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
@@ -335,25 +332,25 @@ export default function PaymentsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Escoger plan</Text>
-      <Text style={styles.subtitle}>Elige el plan que mejor se adapte a ti</Text>
+      <Text style={styles.title}>{t('payments.title')}</Text>
+      <Text style={styles.subtitle}>{t('payments.subtitle')}</Text>
 
       {loadingStatus ? (
         <ActivityIndicator color={sem.accent} size="large" style={styles.loader} />
       ) : (
         <View style={styles.plansContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tus planes</Text>
-            <Text style={styles.sectionHint}>Puedes cambiar cuando quieras</Text>
+            <Text style={styles.sectionTitle}>{t('payments.yourPlans')}</Text>
+            <Text style={styles.sectionHint}>{t('payments.plansHint')}</Text>
           </View>
 
           <View style={[styles.planCard, styles.freeCard, !isPremium && styles.activeFreeCard]}>
             <View style={styles.headerRow}>
-              <Text style={styles.planName}>FREE</Text>
-              {!isPremium && <Text style={styles.activeFreeChip}>Plan actual</Text>}
+              <Text style={styles.planName}>{t('payments.freeName')}</Text>
+              {!isPremium && <Text style={styles.activeFreeChip}>{t('payments.currentPlan')}</Text>}
             </View>
-            <Text style={styles.planPrice}>0€/mes</Text>
-            <Text style={styles.planDesc}>Mapa, favoritos y funcionalidades base.</Text>
+            <Text style={styles.planPrice}>{t('payments.freePrice')}</Text>
+            <Text style={styles.planDesc}>{t('payments.freeDesc')}</Text>
           </View>
 
           <Animated.View
@@ -398,33 +395,33 @@ export default function PaymentsScreen() {
             )}
             <View style={styles.headerRow}>
               <View>
-                <Text style={styles.premiumEyebrow}>e-Go Premium</Text>
-                <Text style={styles.premiumName}>Premium</Text>
+                <Text style={styles.premiumEyebrow}>{t('payments.premiumEyebrow')}</Text>
+                <Text style={styles.premiumName}>{t('payments.premiumName')}</Text>
               </View>
               {isPremium && (
                 <Animated.View style={{ transform: [{ scale: premiumChipScale }] }}>
-                  <Text style={styles.activePremiumChip}>Activo</Text>
+                  <Text style={styles.activePremiumChip}>{t('common.active')}</Text>
                 </Animated.View>
               )}
             </View>
-            <Text style={styles.premiumPrice}>4,99€/mes</Text>
-            <Text style={styles.premiumDesc}>La experiencia completa de e-Go, sin límites.</Text>
+            <Text style={styles.premiumPrice}>{t('payments.premiumPrice')}</Text>
+            <Text style={styles.premiumDesc}>{t('payments.premiumDesc')}</Text>
 
             <View style={styles.benefitsWrap}>
-              {PREMIUM_BENEFITS.map((benefit) => (
-                <View key={benefit} style={styles.benefitRow}>
+              {(['benefit1', 'benefit2', 'benefit3'] as const).map((key) => (
+                <View key={key} style={styles.benefitRow}>
                   <Text style={styles.benefitCheck}>✓</Text>
-                  <Text style={styles.benefitText}>{benefit}</Text>
+                  <Text style={styles.benefitText}>{t(`payments.${key}`)}</Text>
                 </View>
               ))}
             </View>
 
-            {periodEndLabel && <Text style={styles.periodText}>Renovación: {periodEndLabel}</Text>}
+            {periodEndLabel && <Text style={styles.periodText}>{t('payments.renewal', { date: periodEndLabel })}</Text>}
 
             {isPremium && subStatus?.cancel_at_period_end ? (
               <>
                 <Text style={styles.cancelInfo}>
-                  Tu suscripción está programada para cancelarse al final del periodo.
+                  {t('payments.cancelScheduled')}
                 </Text>
                 <Pressable
                   style={[styles.reactivateButton, reactivating && styles.buttonDisabled]}
@@ -432,7 +429,7 @@ export default function PaymentsScreen() {
                   disabled={reactivating}
                 >
                   <Text style={styles.reactivateButtonText}>
-                    {reactivating ? 'Reactivando...' : 'Reactivar suscripción'}
+                    {reactivating ? t('payments.reactivating') : t('payments.reactivate')}
                   </Text>
                 </Pressable>
               </>
@@ -446,7 +443,7 @@ export default function PaymentsScreen() {
                 disabled={startingCheckout}
               >
                 <Text style={styles.buttonText}>
-                  {startingCheckout ? 'Abriendo Stripe...' : 'Pasar a Premium'}
+                  {startingCheckout ? t('payments.openingStripe') : t('payments.goPremium')}
                 </Text>
               </Pressable>
             ) : (
@@ -457,7 +454,7 @@ export default function PaymentsScreen() {
                   disabled={canceling}
                 >
                   <Text style={styles.secondaryButtonText}>
-                    {canceling ? 'Cancelando...' : 'Cancelar suscripción'}
+                    {canceling ? t('payments.canceling') : t('payments.cancelSub')}
                   </Text>
                 </Pressable>
               )

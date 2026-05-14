@@ -1,6 +1,12 @@
 import '@testing-library/jest-native/extend-expect';
 import { jest } from '@jest/globals';
 
+jest.mock('expo-localization', () => ({
+  getLocales: () => [{ languageCode: 'es', regionCode: 'ES' }],
+}));
+
+import '@/i18n/i18n';
+
 // Debe ir antes de reanimated/bottom-sheet: evita cargar worklets nativos en Jest.
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');

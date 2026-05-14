@@ -7,7 +7,13 @@ import LoginScreen from '@/app/login';
 const mockSetUser = jest.fn();
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
-const mockSignIn = jest.fn<() => Promise<{ idToken: string }>>();
+/** Respuesta simulada de GoogleSignin.signIn (idToken plano o en data, u objeto vacío). */
+type MockGoogleSignInUserInfo = {
+  idToken?: string;
+  data?: { idToken?: string };
+};
+
+const mockSignIn = jest.fn<(..._args: unknown[]) => Promise<MockGoogleSignInUserInfo>>();
 const mockSearchParams: Record<string, string | undefined> = {};
 
 jest.mock('@/contexts/AuthContext', () => ({
@@ -48,7 +54,7 @@ describe('LoginScreen integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Object.keys(mockSearchParams).forEach((k) => delete mockSearchParams[k]);
-    mockSignIn.mockResolvedValue({ idToken: 'google-token' } as { idToken: string });
+    mockSignIn.mockResolvedValue({ idToken: 'google-token' });
     globalThis.fetch = jest.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/auth/google')) {
