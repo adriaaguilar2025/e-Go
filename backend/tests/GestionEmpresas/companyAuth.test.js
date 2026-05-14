@@ -141,4 +141,92 @@ describe('Company auth', () => {
     expect(res.status).toBe(200);
     expect(res.body.company.role).toBe('company');
   });
+
+  test('PATCH /company/profile -> 400 si nombre vacio', async () => {
+    const token = jwt.sign(
+      { sub: 5, user_id: 5, email: 'empresa@example.com', role: 'company' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 5, is_banned: false }] });
+
+    const res = await request(app)
+      .patch('/company/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nombre: '   ' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('PATCH /company/profile -> 200 actualiza nombre', async () => {
+    const token = jwt.sign(
+      { sub: 5, user_id: 5, email: 'empresa@example.com', role: 'company' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 5, is_banned: false }] })
+      .mockResolvedValueOnce({
+        rows: [{ user_id: 5, nombre: 'Nuevo SL', created_at: '2026-01-01T00:00:00.000Z' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: 5, email: 'empresa@example.com', username: 'empresa' }],
+      });
+
+    const res = await request(app)
+      .patch('/company/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nombre: '  Nuevo SL  ' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.company.nombre).toBe('Nuevo SL');
+  });
+
+  test('PUT /company/profile -> 200 actualiza nombre', async () => {
+    const token = jwt.sign(
+      { sub: 5, user_id: 5, email: 'empresa@example.com', role: 'company' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ id: 5, is_banned: false }] })
+      .mockResolvedValueOnce({
+        rows: [{ user_id: 5, nombre: 'Otro SL', created_at: '2026-01-01T00:00:00.000Z' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: 5, email: 'empresa@example.com', username: 'empresa' }],
+      });
+
+    const res = await request(app)
+      .put('/company/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nombre: 'Otro SL' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.company.nombre).toBe('Otro SL');
+  });
+
+  test('PATCH /company/profile -> 200 prioriza user_id del JWT frente a sub', async () => {
+    const token = jwt.sign(
+      { sub: 5, user_id: 8, email: 'empresa@example.com', role: 'company' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ id: 8, is_banned: false }] })
+      .mockResolvedValueOnce({
+        rows: [{ user_id: 8, nombre: 'Nombre OK', created_at: '2026-01-01T00:00:00.000Z' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: 8, email: 'empresa@example.com', username: 'empresa' }],
+      });
+
+    const res = await request(app)
+      .patch('/company/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nombre: 'Nombre OK' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.company.user_id).toBe(8);
+    expect(res.body.company.nombre).toBe('Nombre OK');
+  });
 });

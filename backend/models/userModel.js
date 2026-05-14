@@ -230,6 +230,49 @@ async function backfillConductoresFromUsuarios() {
   return result.rowCount || 0;
 }
 
+/** Actualiza el nombre comercial; companyUserId es empresas.user_id (mismo que usuarios.id). */
+async function updateCompanyNombre(companyUserId, nombre) {
+  const trimmed = String(nombre ?? '').trim();
+  if (!trimmed) {
+    const err = new Error('El nombre no puede estar vacio');
+    err.code = 'BAD_REQUEST';
+    throw err;
+  }
+  const safe = trimmed.slice(0, 255);
+  const id = Number(companyUserId);
+  if (!Number.isFinite(id) || id <= 0) {
+    const err = new Error('Identificador invalido');
+    err.code = 'BAD_REQUEST';
+    throw err;
+  }
+
+  const upd = await pool.query(
+    `UPDATE ${EMPRESAS_TABLE}
+     SET nombre = $1
+     WHERE user_id = $2
+     RETURNING user_id, nombre, created_at`,
+    [safe, id]
+  );
+  if (!upd.rows[0]) return null;
+
+  const emp = upd.rows[0];
+  const usrRes = await pool.query(
+    `SELECT id, email, username FROM ${USUARIOS_TABLE} WHERE id = $1`,
+    [emp.user_id]
+  );
+  const usr = usrRes.rows[0];
+  if (!usr) return null;
+
+  return {
+    id: usr.id,
+    user_id: emp.user_id,
+    email: usr.email,
+    username: usr.username,
+    nombre: emp.nombre,
+    created_at: emp.created_at,
+  };
+}
+
 module.exports = {
   findByEmail,
   findConductorByEmail,
@@ -248,4 +291,5 @@ module.exports = {
   setPasswordHashByUserId,
   ensureConductorForUser,
   backfillConductoresFromUsuarios,
+  updateCompanyNombre,
 };

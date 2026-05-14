@@ -37,6 +37,7 @@ export default function AdminHomeScreen() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [confirmBanUser, setConfirmBanUser] = useState<AdminUser | null>(null);
+  const [usersPanelOpen, setUsersPanelOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -56,7 +57,6 @@ export default function AdminHomeScreen() {
         }
         setAdmin(data.admin);
         await loadMyStations();
-        await loadUsers();
       } catch (err) {
         setError('No se pudo conectar con el servidor');
       } finally {
@@ -64,6 +64,11 @@ export default function AdminHomeScreen() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!usersPanelOpen) return;
+    void loadUsers();
+  }, [usersPanelOpen]);
 
   async function logoutAdmin() {
     await clearPrivilegedSession('admin');
@@ -149,10 +154,6 @@ export default function AdminHomeScreen() {
               <Text style={styles.infoLabel}>Email</Text>
               <Text style={styles.infoValue}>{admin?.email}</Text>
             </View>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoLabel}>Rol</Text>
-              <Text style={styles.infoValue}>{admin?.role}</Text>
-            </View>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => router.push('/admin-station-new' as Href)}
@@ -164,6 +165,18 @@ export default function AdminHomeScreen() {
               onPress={() => router.push('/admin-requests' as Href)}
             >
               <Text style={styles.primaryButtonAltText}>Revisar solicitudes pendientes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryButtonAlt}
+              onPress={() => setUsersPanelOpen((open) => !open)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                usersPanelOpen ? 'Ocultar moderacion de usuarios' : 'Abrir moderacion de usuarios'
+              }
+            >
+              <Text style={styles.primaryButtonAltText}>
+                {usersPanelOpen ? 'Ocultar moderacion' : 'Moderacion de usuarios'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.primaryButton}
@@ -190,6 +203,43 @@ export default function AdminHomeScreen() {
             <TouchableOpacity style={styles.secondaryButton} onPress={logoutAdmin}>
               <Text style={styles.secondaryButtonText}>Cerrar sesion admin</Text>
             </TouchableOpacity>
+
+            {usersPanelOpen ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Usuarios</Text>
+                  <TouchableOpacity onPress={loadUsers} disabled={loadingUsers}>
+                    <Text style={styles.sectionLink}>
+                      {loadingUsers ? 'Actualizando…' : 'Actualizar'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {loadingUsers ? (
+                  <Text style={styles.muted}>Cargando usuarios…</Text>
+                ) : users.length === 0 ? (
+                  <Text style={styles.muted}>No hay usuarios para mostrar.</Text>
+                ) : (
+                  users.map((u) => (
+                    <View key={u.id} style={styles.userRow}>
+                      <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{u.username}</Text>
+                        <Text style={styles.userEmail}>{u.email}</Text>
+                        <Text style={u.is_banned ? styles.userStatusBanned : styles.userStatusActive}>
+                          {u.is_banned ? 'Baneado' : 'Activo'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={u.is_banned ? styles.unbanButton : styles.banButton}
+                        onPress={() => setConfirmBanUser(u)}
+                        disabled={loadingUsers}
+                      >
+                        <Text style={styles.banButtonText}>{u.is_banned ? 'Desbanear' : 'Banear'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </View>
+            ) : null}
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -236,39 +286,6 @@ export default function AdminHomeScreen() {
                     }
                     onDelete={() => setConfirmDeleteId(s.id)}
                   />
-                ))
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Usuarios</Text>
-                <TouchableOpacity onPress={loadUsers} disabled={loadingUsers}>
-                  <Text style={styles.sectionLink}>{loadingUsers ? 'Actualizando…' : 'Actualizar'}</Text>
-                </TouchableOpacity>
-              </View>
-              {loadingUsers ? (
-                <Text style={styles.muted}>Cargando usuarios…</Text>
-              ) : users.length === 0 ? (
-                <Text style={styles.muted}>No hay usuarios para mostrar.</Text>
-              ) : (
-                users.map((u) => (
-                  <View key={u.id} style={styles.userRow}>
-                    <View style={styles.userInfo}>
-                      <Text style={styles.userName}>{u.username}</Text>
-                      <Text style={styles.userEmail}>{u.email}</Text>
-                      <Text style={u.is_banned ? styles.userStatusBanned : styles.userStatusActive}>
-                        {u.is_banned ? 'Baneado' : 'Activo'}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={u.is_banned ? styles.unbanButton : styles.banButton}
-                      onPress={() => setConfirmBanUser(u)}
-                      disabled={loadingUsers}
-                    >
-                      <Text style={styles.banButtonText}>{u.is_banned ? 'Desbanear' : 'Banear'}</Text>
-                    </TouchableOpacity>
-                  </View>
                 ))
               )}
             </View>
@@ -514,6 +531,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 16,

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -40,6 +43,8 @@ type Props = {
 
 export function ManualStationForm(props: Props) {
   const { title, subtitle, submitLabel, loading, error, success, form, onChange, onSubmit, onBack } = props;
+  const scrollRef = useRef<ScrollView>(null);
+  const direccionSectionYRef = useRef(0);
   const [mapOpen, setMapOpen] = useState(false);
   const [provincePickerOpen, setProvincePickerOpen] = useState(false);
   const [municipalityPickerOpen, setMunicipalityPickerOpen] = useState(false);
@@ -56,6 +61,7 @@ export function ManualStationForm(props: Props) {
   const skipAddressSearchRef = useRef(false);
   const manualMunicipalityRef = useRef(false);
   const manualProvinceRef = useRef(false);
+  const [keyboardPad, setKeyboardPad] = useState(0);
   const municipalityOptions = form.provincia ? CATALUNYA_MUNICIPALITIES_BY_PROVINCE[form.provincia] ?? [] : [];
   const filteredMunicipalityOptions = !municipalityQuery.trim()
     ? municipalityOptions
@@ -73,6 +79,17 @@ export function ManualStationForm(props: Props) {
     const ordered = allOptions.filter((item) => nextSelected.includes(item));
     onChange(key, ordered.join(separator));
   }
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (e) => setKeyboardPad(e.endCoordinates.height));
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardPad(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const lat = Number(form.latitud);
@@ -130,8 +147,36 @@ export function ManualStationForm(props: Props) {
     setAddressSuggestions([]);
   }
 
+  function scrollOperationalSectionIntoView() {
+    const run = () => scrollRef.current?.scrollToEnd({ animated: true });
+    requestAnimationFrame(run);
+    setTimeout(run, 200);
+  }
+
+  function scrollDireccionSectionIntoView() {
+    const run = () => {
+      const top = direccionSectionYRef.current;
+      const targetY = Math.max(0, top - 20);
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    };
+    requestAnimationFrame(run);
+    setTimeout(run, 200);
+  }
+
   return (
-    <ScrollView contentContainerStyle={styles.scroll} style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.keyboardRoot}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      enabled={Platform.OS === 'ios'}
+    >
+      <ScrollView
+        ref={scrollRef}
+        style={styles.screen}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 28 + keyboardPad }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator
+      >
       <View style={styles.card}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
@@ -161,13 +206,19 @@ export function ManualStationForm(props: Props) {
             <Text style={form.tipus_velocitat ? styles.selectText : styles.placeholderText}>{form.tipus_velocitat || 'Tipo de velocidad'}</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          onLayout={(e) => {
+            direccionSectionYRef.current = e.nativeEvent.layout.y;
+          }}
+        >
           <Text style={styles.sectionTitle}>Direccion</Text>
           <TextInput
             style={styles.input}
             placeholder="Direccion"
             placeholderTextColor="#9ca3af"
             value={form.adreca}
+            onFocus={scrollDireccionSectionIntoView}
             onChangeText={(v) => {
               skipAddressSearchRef.current = false;
               onChange('adreca', v);
@@ -210,8 +261,22 @@ export function ManualStationForm(props: Props) {
         </View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Operador</Text>
-          <TextInput style={styles.input} placeholder="Promotor/gestor" placeholderTextColor="#9ca3af" value={form.promotor} onChangeText={(v) => onChange('promotor', v)} />
-          <TextInput style={styles.input} placeholder="Acceso" placeholderTextColor="#9ca3af" value={form.acces} onChangeText={(v) => onChange('acces', v)} />
+          <TextInput
+            style={styles.input}
+            placeholder="Promotor/gestor"
+            placeholderTextColor="#9ca3af"
+            value={form.promotor}
+            onChangeText={(v) => onChange('promotor', v)}
+            onFocus={scrollOperationalSectionIntoView}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Acceso"
+            placeholderTextColor="#9ca3af"
+            value={form.acces}
+            onChangeText={(v) => onChange('acces', v)}
+            onFocus={scrollOperationalSectionIntoView}
+          />
         </View>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         {success ? <Text style={styles.successText}>{success}</Text> : null}
@@ -222,6 +287,7 @@ export function ManualStationForm(props: Props) {
           <Text style={styles.secondaryButtonText}>Volver</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
       <Modal visible={mapOpen} animationType="slide" onRequestClose={() => setMapOpen(false)}>
         <View style={styles.mapScreen}>
           <View style={styles.mapHeader}>
@@ -288,12 +354,21 @@ export function ManualStationForm(props: Props) {
       <Modal visible={municipalityPickerOpen} animationType="fade" transparent onRequestClose={() => setMunicipalityPickerOpen(false)}>
         <View style={styles.overlay}><View style={styles.pickerCard}><Text style={styles.pickerTitle}>Selecciona municipio</Text><TextInput style={styles.input} placeholder="Buscar municipio" placeholderTextColor="#9ca3af" value={municipalityQuery} onChangeText={setMunicipalityQuery} /><ScrollView style={styles.pickerList}>{filteredMunicipalityOptions.map((municipality) => <TouchableOpacity key={municipality} style={styles.pickerOption} onPress={() => { manualMunicipalityRef.current = true; onChange('municipi', municipality); setMunicipalityQuery(''); setMunicipalityPickerOpen(false); }}><Text style={styles.pickerOptionText}>{municipality}</Text></TouchableOpacity>)}{!filteredMunicipalityOptions.length ? <Text style={styles.emptyText}>No se han encontrado municipios</Text> : null}</ScrollView><TouchableOpacity style={styles.secondaryButton} onPress={() => { setMunicipalityQuery(''); setMunicipalityPickerOpen(false); }}><Text style={styles.secondaryButtonText}>Cancelar</Text></TouchableOpacity></View></View>
       </Modal>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f5f5f5' }, scroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20, paddingVertical: 32 },
+  keyboardRoot: { flex: 1 },
+  screen: { flex: 1, backgroundColor: '#f5f5f5' },
+  scroll: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
   card: { width: '100%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 18, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
   title: { fontSize: 24, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 6 }, subtitle: { fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 18 },
   section: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f3f4f6' }, sectionTitle: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: '#6b7280', marginBottom: 8 },

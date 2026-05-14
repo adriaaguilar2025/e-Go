@@ -18,7 +18,11 @@ async function requireCompany(req, res, next) {
     if (payload.role !== 'company') {
       return res.status(403).json({ error: 'No autorizado' });
     }
-    const banStatus = await ensureUserNotBanned(payload.sub);
+    let banUid = Number(payload.user_id);
+    if (!Number.isFinite(banUid) || banUid <= 0) {
+      banUid = Number(payload.sub);
+    }
+    const banStatus = await ensureUserNotBanned(banUid);
     if (!banStatus.ok) {
       return res.status(banStatus.status).json({ error: banStatus.error });
     }
