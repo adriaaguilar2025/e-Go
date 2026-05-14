@@ -4,6 +4,8 @@ const friendsController = require('../controllers/friendsController');
 
 // Informació del usuari
 router.get('/', friendsController.getFriends);
-router.put('/', friendsController.addFriend);
+router.post('/', friendsController.addFriend);
+router.put('/', friendsController.acceptFriend);
+router.delete('/', friendsController.removeFriend);
 
 module.exports = router;

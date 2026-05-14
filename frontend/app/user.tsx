@@ -72,7 +72,11 @@ export default function PerfilScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
-  const [esAmic, setEsAmic] = useState(false);
+  const [esAmic, setEsAmic] = useState(0);
+  const [isAcceptingFriend, setIsAcceptingFriend] = useState(false);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [isRejectingRequest, setIsRejectingRequest] = useState(false);
+  const [isRemovingFriend, setIsRemovingFriend] = useState(false);
   const [rainbowShift, setRainbowShift] = useState(0);
   const queryParams = useLocalSearchParams();
   const userIdParam = queryParams.userId || queryParams.usuari_id;
@@ -116,16 +120,118 @@ export default function PerfilScreen() {
     try {
       const response = await fetch(`${getApiUrl()}/friends?usuari_id=${idUser}`);
       const data = await response.json();
-      const friendIds = Array.isArray(data)
-        ? data.map((friend: any) => Number(friend?.id)).filter((id) => Number.isInteger(id))
-        : [];
-      setEsAmic(friendIds.includes(user.id));
-      console.log("Amigos del usuario:", friendIds);
-      console.log("ID del usuario actual:", user?.id);
-      console.log("ID del perfil visto:", idUser);
-      console.log("¿Es amigo?", esAmic);
+      
+      if (Array.isArray(data)) {
+        const friendRelation = data.find((friend: any) => Number(friend?.id) === user.id);
+        if (friendRelation) {
+          // Es amigo: 3 si aceptado, 2 si pendiente de aceptación por el usuario en pantalla, 1 si pendiente de aceptación por el usuario logueado
+          if(friendRelation.per_acceptar === null) setEsAmic(3);
+          else setEsAmic(friendRelation.per_acceptar === user.id ? 1 : 2);    
+        } else {
+          // No es amigo
+          setEsAmic(0);
+        }
+      } else {
+        setEsAmic(0);
+      }
     } catch (error) {
       console.error("Error cargando amigos:", error);
+      setEsAmic(0);
+    }
+  };
+
+  const acceptFriend = async () => {
+    if (!user?.id || !idUser) return;
+    setIsAcceptingFriend(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error aceptando solicitud');
+      }
+      setEsAmic(3);
+    } catch (error) {
+      console.error('Error aceptando solicitud:', error);
+    } finally {
+      setIsAcceptingFriend(false);
+    }
+  };
+
+  const sendFriendRequest = async () => {
+    if (!user?.id || !idUser) return;
+    setIsSendingRequest(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error enviando solicitud');
+      }
+      setEsAmic(2);
+    } catch (error) {
+      console.error('Error enviando solicitud:', error);
+    } finally {
+      setIsSendingRequest(false);
+    }
+  };
+
+  const rejectFriendRequest = async () => {
+    if (!user?.id || !idUser) return;
+    setIsRejectingRequest(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error rechazando solicitud');
+      }
+      setEsAmic(0);
+    } catch (error) {
+      console.error('Error rechazando solicitud:', error);
+    } finally {
+      setIsRejectingRequest(false);
+    }
+  };
+
+  const removeFriendAction = async () => {
+    if (!user?.id || !idUser) return;
+    setIsRemovingFriend(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error eliminando amigo');
+      }
+      setEsAmic(0);
+    } catch (error) {
+      console.error('Error eliminando amigo:', error);
+    } finally {
+      setIsRemovingFriend(false);
+    }
+  };
+
+  const cancelFriendRequest = async () => {
+    if (!user?.id || !idUser) return;
+    setIsSendingRequest(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/friends?usuari_id1=${user.id}&usuari_id2=${idUser}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Error cancelando solicitud');
+      }
+      setEsAmic(0);
+    } catch (error) {
+      console.error('Error cancelando solicitud:', error);
+    } finally {
+      setIsSendingRequest(false);
     }
   };
 
@@ -221,7 +327,74 @@ export default function PerfilScreen() {
                 )}
               </>
             ) : (
-              <Text style={styles.profileEmail}>{esAmic ? 'Amic' : ''}</Text>
+              <>
+                {esAmic === 0 && (
+                  <TouchableOpacity
+                    style={[styles.primaryButton, isSendingRequest && styles.buttonDisabled]}
+                    onPress={sendFriendRequest}
+                    disabled={isSendingRequest}
+                  >
+                    <MaterialIcons name="person-add" size={18} color="#fff" />
+                    <Text style={styles.primaryButtonText}>{isSendingRequest ? 'Enviando...' : 'Enviar solicitud'}</Text>
+                  </TouchableOpacity>
+                )}
+                {esAmic === 1 && (
+                  <View style={styles.pendingRequestContainer}>
+                    <View>
+                      <Text style={styles.pendingRequestText}>Solicitud pendiente</Text>
+                      <Text style={styles.pendingRequestSubtext}>Tienes una solicitud de amistad de este usuario</Text>
+                    </View>
+                    <View style={styles.buttonGroup}>
+                      <TouchableOpacity
+                        style={[styles.acceptButton, isAcceptingFriend && styles.buttonDisabled]}
+                        onPress={acceptFriend}
+                        disabled={isAcceptingFriend || isRejectingRequest}
+                      >
+                        <MaterialIcons name="check" size={18} color="#fff" />
+                        <Text style={styles.acceptButtonText}>{isAcceptingFriend ? 'Aceptando...' : 'Aceptar'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.rejectButton, isRejectingRequest && styles.buttonDisabled]}
+                        onPress={rejectFriendRequest}
+                        disabled={isRejectingRequest || isAcceptingFriend}
+                      >
+                        <MaterialIcons name="close" size={18} color="#fff" />
+                        <Text style={styles.rejectButtonText}>{isRejectingRequest ? 'Rechazando...' : 'Rechazar'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+                {esAmic === 2 && (
+                  <View style={styles.sentRequestContainer}>
+                    <View style={styles.sentRequestContent}>
+                      <MaterialIcons name="mail-outline" size={16} color="#f59e0b" />
+                      <Text style={styles.sentRequestText}>Solicitud enviada</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.cancelFriendButton, isSendingRequest && styles.buttonDisabled]}
+                      onPress={cancelFriendRequest}
+                      disabled={isSendingRequest}
+                    >
+                      <MaterialIcons name="close" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {esAmic === 3 && (
+                  <View style={styles.friendStatusContainer}>
+                    <View style={styles.friendStatusContent}>
+                      <MaterialIcons name="check-circle" size={16} color="#10b981" />
+                      <Text style={styles.friendStatusText}>✓ Amigo</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.deleteButton, isRemovingFriend && styles.buttonDisabled]}
+                      onPress={removeFriendAction}
+                      disabled={isRemovingFriend}
+                    >
+                      <MaterialIcons name="person-remove" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
             )}
             {perfil?.id === user?.id && isEditing && (
               <>
@@ -458,5 +631,143 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     color: '#94a3b8',
     marginTop: 40,
     fontSize: 16,
+  },
+  friendStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  friendStatusText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  pendingRequestContainer: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+    gap: 10,
+  },
+  pendingRequestText: {
+    fontSize: 14,
+    color: '#d97706',
+    fontWeight: '600',
+  },
+  pendingRequestSubtext: {
+    fontSize: 12,
+    color: '#b45309',
+    marginTop: 4,
+  },
+  acceptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  acceptButtonDisabled: {
+    backgroundColor: '#6ee7b7',
+    opacity: 0.7,
+  },
+  acceptButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  sentRequestContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  sentRequestText: {
+    fontSize: 14,
+    color: '#b45309',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  sentRequestContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  friendStatusContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 8,
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  cancelFriendButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  rejectButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  rejectButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonGroup: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
   },
 });

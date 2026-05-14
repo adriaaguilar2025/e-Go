@@ -36,7 +36,49 @@ async function addFriend(req, res) {
   }
 }
 
+async function removeFriend(req, res) {
+  try {
+    const { usuari_id1, usuari_id2 } = req.query;
+
+    if (!usuari_id1 || !usuari_id2) {
+      return res.status(400).json({ error: 'Falta alguno de los IDs de usuario' });
+    }
+
+    const removed = await friendsService.removeFriend(usuari_id1, usuari_id2);
+    if (!removed) {
+      return res.status(404).json({ error: 'Usuario/s no encontrado/s' });
+    }
+
+    res.json(removed);
+  } catch (err) {
+    console.error('Error eliminando amigo:', err);
+    res.status(500).json({ error: 'Error eliminando amigo' });
+  }
+}
+
+async function acceptFriend(req, res) {
+  try {
+    const { usuari_id1, usuari_id2 } = req.query;
+
+    if (!usuari_id1 || !usuari_id2) {
+      return res.status(400).json({ error: 'Falta alguno de los IDs de usuario' });
+    }
+
+    const accepted = await friendsService.acceptFriend(usuari_id1, usuari_id2);
+    if (!accepted) {
+      return res.status(404).json({ error: 'Solicitud de amistad no encontrada' });
+    }
+
+    res.json(accepted);
+  } catch (err) {
+    console.error('Error aceptando solicitud de amistad:', err);
+    res.status(500).json({ error: 'Error aceptando solicitud de amistad' });
+  }
+}
+
 module.exports = {
   getFriends,
-  addFriend
+  addFriend,
+  removeFriend,
+  acceptFriend
 };

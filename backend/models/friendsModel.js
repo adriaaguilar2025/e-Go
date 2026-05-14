@@ -7,7 +7,7 @@ async function getFriends(userId) {
        CASE
          WHEN usuari_id1 = $1 THEN usuari_id2
          ELSE usuari_id1
-       END AS id
+       END AS id, per_acceptar
      FROM ${AMIGOS_TABLE}
      WHERE usuari_id1 = $1 OR usuari_id2 = $1;`,
     [userId]
@@ -17,10 +17,31 @@ async function getFriends(userId) {
 
 async function addFriend(userId1, userId2) {
   const result = await pool.query(
-    `INSERT INTO ${AMIGOS_TABLE} (usuari_id1, usuari_id2)
-     VALUES ( LEAST($1, $2), GREATEST($1, $2) )
+    `INSERT INTO ${AMIGOS_TABLE} (usuari_id1, usuari_id2, per_acceptar)
+     VALUES ( $1, $2, $3 )
      RETURNING usuari_id1, usuari_id2;`,
-    [userId1, userId2]
+    (userId1 < userId2) ? [userId1, userId2, userId1] : [userId2, userId1, userId1]
+  );
+  return result.rows[0];
+}
+  
+async function removeFriend(userId1, userId2) {
+  const result = await pool.query(
+    `DELETE FROM ${AMIGOS_TABLE}
+     WHERE usuari_id1 = $1 AND usuari_id2 = $2
+     RETURNING usuari_id1, usuari_id2;`,
+    (userId1 < userId2) ? [userId1, userId2] : [userId2, userId1]
+  );
+  return result.rows[0];
+}
+
+async function acceptFriend(userId1, userId2) {
+  const result = await pool.query(
+    `UPDATE ${AMIGOS_TABLE}
+     SET per_acceptar = NULL
+     WHERE usuari_id1 = $1 AND usuari_id2 = $2
+     RETURNING usuari_id1, usuari_id2, per_acceptar;`,
+    (userId1 < userId2) ? [userId1, userId2] : [userId2, userId1]
   );
   return result.rows[0];
 }
@@ -28,4 +49,6 @@ async function addFriend(userId1, userId2) {
 module.exports = {
   getFriends,
   addFriend,
+  removeFriend,
+  acceptFriend
 };

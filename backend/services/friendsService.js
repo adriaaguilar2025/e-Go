@@ -12,4 +12,14 @@ async function addFriend(userId1, userId2) {
   return added;
 }
 
-module.exports = { getFriends, addFriend };
+async function removeFriend(userId1, userId2) {
+  const removed = await friendsModel.removeFriend(userId1, userId2);
+  return removed;
+}
+
+async function acceptFriend(userId1, userId2) {
+  const accepted = await friendsModel.acceptFriend(userId1, userId2);
+  return accepted;
+}
+
+module.exports = { getFriends, addFriend, removeFriend, acceptFriend };
