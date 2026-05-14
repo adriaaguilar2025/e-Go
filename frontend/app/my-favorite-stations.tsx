@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
 import { getApiUrl } from '@/constants/api';
 import { getSemanticColors, type SemanticColors } from '@/constants/accessibilityColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Station {
   id: number;
@@ -39,6 +40,9 @@ export default function MyFavoriteStationsScreen() {
   const { colorblindFriendly } = useColorblindPreference();
   const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
   const styles = useMemo(() => createFavoriteStyles(sem), [sem]);
+
+  // Obtenim els marges de l'àrea segura del mòbil
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (user) {
@@ -229,17 +233,17 @@ export default function MyFavoriteStationsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={sem.accent} />
           <Text style={styles.loadingText}>Cargando estaciones...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -324,7 +328,7 @@ export default function MyFavoriteStationsScreen() {
           )}
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
