@@ -17,6 +17,7 @@ import { Colors } from '@/constants/theme';
 import { ChargingTimerDisplay } from './ChargingTimerDisplay';
 import { ChargingActionCard } from './ChargingActionCard';
 import { StartChargingButton } from './StartChargingButton';
+import { StationNearbyEventsCarousel } from './StationNearbyEventsCarousel';
 
 interface StationBottomSheetProps {
   station: any;
@@ -264,6 +265,13 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
             </TouchableOpacity>
           )}
         </View>
+
+        <StationNearbyEventsCarousel
+          key={station?.id ?? 'station'}
+          stationLat={Number.parseFloat(String(station.latitud))}
+          stationLon={Number.parseFloat(String(station.longitud))}
+          isDark={isDark}
+        />
 
         <View style={styles.divider} />
 
