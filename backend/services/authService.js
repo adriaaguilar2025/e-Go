@@ -14,9 +14,16 @@ const AuthError = (code, message) => {
   return err;
 };
 
+function bannedUserError(user) {
+  const err = new Error('Esta cuenta esta baneada');
+  err.code = 'USER_BANNED';
+  err.banned_reason = user?.banned_reason ?? null;
+  return err;
+}
+
 function ensureNotBanned(user) {
   if (user?.is_banned) {
-    throw AuthError('USER_BANNED', 'Esta cuenta esta baneada');
+    throw bannedUserError(user);
   }
 }
 
@@ -40,6 +47,7 @@ async function loginWithGoogle(body) {
   }
   const existingUser = await userModel.findByEmail(email);
   if (existingUser) {
+    ensureNotBanned(existingUser);
     await userModel.ensureConductorForUser(existingUser.id);
     return { user: existingUser, needsUsername: false };
   }

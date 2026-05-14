@@ -33,7 +33,7 @@ async function findByEmail(email) {
 
 async function findConductorByEmail(email) {
   const result = await pool.query(
-    `SELECT u.id, u.email, u.username, u.created_at, u.updated_at
+    `SELECT u.id, u.email, u.username, u.is_banned, u.banned_reason, u.created_at, u.updated_at
      FROM ${USUARIOS_TABLE} u
      JOIN ${CONDUCTORES_TABLE} c ON c.user_id = u.id
      WHERE u.email = $1`,
@@ -58,7 +58,7 @@ async function findByEmailWithPassword(email) {
 async function findConductorByEmailWithPassword(email) {
   const result = await withPasswordColumnRetry(() =>
     pool.query(
-      `SELECT u.id, u.email, u.username, u.password_hash, u.created_at, u.updated_at
+      `SELECT u.id, u.email, u.username, u.password_hash, u.is_banned, u.banned_reason, u.created_at, u.updated_at
        FROM ${USUARIOS_TABLE} u
        JOIN ${CONDUCTORES_TABLE} c ON c.user_id = u.id
        WHERE u.email = $1`,

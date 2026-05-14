@@ -14,7 +14,11 @@ async function googleLogin(req, res) {
       return res.status(401).json({ error: err.message });
     }
     if (err.code === 'USER_BANNED') {
-      return res.status(403).json({ error: err.message });
+      return res.status(403).json({
+        code: 'USER_BANNED',
+        error: err.message,
+        banned_reason: err.banned_reason ?? null,
+      });
     }
     console.error('Error en /auth/google:', err);
     res.status(500).json({
@@ -37,7 +41,11 @@ async function localLogin(req, res) {
       return res.status(401).json({ error: err.message });
     }
     if (err.code === 'USER_BANNED') {
-      return res.status(403).json({ error: err.message });
+      return res.status(403).json({
+        code: 'USER_BANNED',
+        error: err.message,
+        banned_reason: err.banned_reason ?? null,
+      });
     }
     console.error('Error en /auth/local/login:', err);
     res.status(500).json({ error: 'Error en el servidor' });
@@ -84,7 +92,11 @@ async function localRegister(req, res) {
       return res.status(409).json({ error: err.message });
     }
     if (err.code === 'USER_BANNED') {
-      return res.status(403).json({ error: err.message });
+      return res.status(403).json({
+        code: 'USER_BANNED',
+        error: err.message,
+        banned_reason: err.banned_reason ?? null,
+      });
     }
     console.error('Error en /auth/local/register:', err);
     res.status(500).json({ error: 'Error en el servidor' });

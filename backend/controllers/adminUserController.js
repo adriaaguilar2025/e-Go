@@ -1,4 +1,5 @@
 const userModel = require('../models/userModel');
+const { scheduleSubscriptionCancelAtPeriodEnd } = require('../services/stripeSubscriptionCancelAtPeriodEnd');
 
 async function listUsers(req, res) {
   try {
@@ -32,7 +33,18 @@ async function setUserBan(req, res) {
     if (!updated) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-    return res.json({ user: updated });
+
+    let subscription_stripe = null;
+    if (is_banned) {
+      const subResult = await scheduleSubscriptionCancelAtPeriodEnd(userId);
+      subscription_stripe = {
+        ok: subResult.ok,
+        reason: subResult.reason,
+        ...(subResult.error ? { error: subResult.error } : {}),
+      };
+    }
+
+    return res.json({ user: updated, ...(subscription_stripe ? { subscription_stripe } : {}) });
   } catch (err) {
     console.error('Error en PATCH /admin/users/:id/ban:', err);
     return res.status(500).json({ error: 'Error en el servidor' });

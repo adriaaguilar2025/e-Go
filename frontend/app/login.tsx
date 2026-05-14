@@ -14,6 +14,7 @@ import {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiUrl, GOOGLE_WEB_CLIENT_ID } from '@/constants/api';
+import { appFetch } from '@/services/appFetch';
 import { Colors } from '@/constants/theme';
 
 const BRAND_GREEN = Colors.light.tint;
@@ -66,7 +67,7 @@ export default function LoginScreen() {
 
       let res: Response;
       try {
-        res = await fetch(`${getApiUrl()}/auth/google`, {
+        res = await appFetch('/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken }),
@@ -90,7 +91,9 @@ export default function LoginScreen() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al iniciar sesión');
+        if (data?.code !== 'USER_BANNED') {
+          setError(data.error || 'Error al iniciar sesión');
+        }
         return;
       }
 
@@ -138,7 +141,7 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${getApiUrl()}/auth/register`, {
+      const res = await appFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +154,9 @@ export default function LoginScreen() {
         setUser(data.user);
         router.replace('/(tabs)');
       } else {
-        setError(data.error || 'Error al registrarse');
+        if (data?.code !== 'USER_BANNED') {
+          setError(data.error || 'Error al registrarse');
+        }
       }
     } catch (err) {
       setError('No se pudo conectar con el servidor.');
@@ -182,14 +187,16 @@ export default function LoginScreen() {
         authMode === 'local-register'
           ? { email: email.trim(), password, username: localUsername.trim() }
           : { email: email.trim(), password };
-      const res = await fetch(`${getApiUrl()}${endpoint}`, {
+      const res = await appFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'No se pudo iniciar sesión');
+        if (data?.code !== 'USER_BANNED') {
+          setError(data.error || 'No se pudo iniciar sesión');
+        }
         return;
       }
       if (data.user) {

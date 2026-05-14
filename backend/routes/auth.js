@@ -28,11 +28,14 @@ async function loginPrivilegedUser(req, res, { role, relationTable, selectFields
   }
   const email = payload.email;
   const banCheck = await pool.query(
-    `SELECT is_banned FROM ${USUARIOS_TABLE} WHERE email = $1`,
+    `SELECT is_banned, banned_reason FROM ${USUARIOS_TABLE} WHERE email = $1`,
     [email]
   );
   if (banCheck.rows[0]?.is_banned) {
-    return res.status(403).json({ error: 'Esta cuenta esta baneada' });
+    return res.status(403).json({
+      error: 'Esta cuenta esta baneada',
+      banned_reason: banCheck.rows[0].banned_reason ?? null,
+    });
   }
 
   const result = await pool.query(

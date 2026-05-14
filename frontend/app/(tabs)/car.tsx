@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { getApiUrl } from '@/constants/api';
+import { appFetch } from '@/services/appFetch';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Vehicle {
@@ -51,7 +51,7 @@ export default function VehiclesScreen() {
   const fetchVehicles = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`${getApiUrl()}/car?usuari_id=${user.id}`); // vehicles d'un usuari
+      const response = await appFetch(`/car?usuari_id=${user.id}`); // vehicles d'un usuari
       const data = await response.json();
       setVehicles(Array.isArray(data) ? data : []);
       console.log(data);
@@ -79,7 +79,7 @@ export default function VehiclesScreen() {
 	  
     try {
       const method = 'POST';
-      const res = await fetch(`${getApiUrl()}/car`, {
+      const res = await appFetch('/car', {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuari_id: user!.id, v_nom: nom, v_potencia: potencia, v_conector: connectorType, v_corrent: acDc}),
@@ -88,7 +88,7 @@ export default function VehiclesScreen() {
       if (res.ok) {
         try {
           // És fetchvehicles() però fa la cerca després
-          const response = await fetch(`${getApiUrl()}/car?usuari_id=${user!.id}`);
+          const response = await appFetch(`/car?usuari_id=${user!.id}`);
           const data = await response.json();
           setVehicles(Array.isArray(data) ? data : []);
           console.log(data);
@@ -123,7 +123,7 @@ export default function VehiclesScreen() {
 	  
     try {
       const method = 'DELETE';
-      const res = await fetch(`${getApiUrl()}/car`, {
+      const res = await appFetch('/car', {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuari_id: user!.id, v_nom: nomV }),
@@ -132,7 +132,7 @@ export default function VehiclesScreen() {
       if (res.ok) {
         try {
           // És fetchvehicles()
-          const response = await fetch(`${getApiUrl()}/car?usuari_id=${user!.id}`);
+          const response = await appFetch(`/car?usuari_id=${user!.id}`);
           const data = await response.json();
           setVehicles(Array.isArray(data) ? data : []);
           console.log(data);

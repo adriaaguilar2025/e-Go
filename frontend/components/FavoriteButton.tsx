@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'; // Añadido useEffect
 import { TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { getApiUrl } from '@/constants/api';
+import { appFetch } from '@/services/appFetch';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -26,7 +26,7 @@ export function FavoriteButton({ estacio_id, isInitiallyFavorite, onToggle }: Pr
 
     try {
       const method = isFavorite ? 'DELETE' : 'POST';
-      const res = await fetch(`${getApiUrl()}/favorites`, {
+      const res = await appFetch('/favorites', {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuari_id: user.id, estacio_id }),
@@ -36,7 +36,7 @@ export function FavoriteButton({ estacio_id, isInitiallyFavorite, onToggle }: Pr
         const newStatus = !isFavorite;
         setIsFavorite(newStatus);
         if (onToggle) onToggle(newStatus);
-      } else {
+      } else if (res.status !== 403) {
         Alert.alert("Error", "No se pudo actualizar el favorito");
       }
     } catch (e) {

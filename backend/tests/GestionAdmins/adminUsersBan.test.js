@@ -8,9 +8,17 @@ jest.mock('../../models/userModel', () => ({
   setUserBanStatus: jest.fn(),
 }));
 
+jest.mock('../../services/stripeSubscriptionCancelAtPeriodEnd', () => ({
+  scheduleSubscriptionCancelAtPeriodEnd: jest.fn(async () => ({
+    ok: true,
+    reason: 'cancel_at_period_end_set',
+  })),
+}));
+
 const { requireAdmin } = require('../../middleware/requireAdmin');
 const adminUserController = require('../../controllers/adminUserController');
 const userModel = require('../../models/userModel');
+const { scheduleSubscriptionCancelAtPeriodEnd } = require('../../services/stripeSubscriptionCancelAtPeriodEnd');
 
 const app = express();
 app.use(express.json());
@@ -59,6 +67,8 @@ describe('Admin users moderation', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.user.is_banned).toBe(true);
+    expect(scheduleSubscriptionCancelAtPeriodEnd).toHaveBeenCalledWith(12);
+    expect(res.body.subscription_stripe).toEqual({ ok: true, reason: 'cancel_at_period_end_set' });
   });
 
   test('PATCH /admin/users/:id/ban -> 200 desbanea usuario', async () => {
@@ -76,5 +86,6 @@ describe('Admin users moderation', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.user.is_banned).toBe(false);
+    expect(scheduleSubscriptionCancelAtPeriodEnd).not.toHaveBeenCalled();
   });
 });

@@ -14,7 +14,7 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { getApiUrl } from '@/constants/api';
+import { appFetch } from '@/services/appFetch';
 
 interface Station {
   id: number;
@@ -45,7 +45,7 @@ export default function MyFavoriteStationsScreen() {
     if (!user) return;
     try {
       setLoading(true);
-      const response = await fetch(`${getApiUrl()}/favorites?usuari_id=${user.id}`, {
+      const response = await appFetch(`/favorites?usuari_id=${user.id}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -106,7 +106,7 @@ export default function MyFavoriteStationsScreen() {
             setDeleting(true);
             try {
               const deletePromises = Array.from(selectedIds).map((estacio_id) =>
-                fetch(`${getApiUrl()}/favorites`, {
+                appFetch('/favorites', {
                   method: 'DELETE',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ usuari_id: user!.id, estacio_id }),

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { getApiUrl } from '@/constants/api';
+import { appFetch } from '@/services/appFetch';
 import { WelcomePremiumModal } from '@/components/WelcomePremiumModal';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -54,8 +54,7 @@ export default function PaymentsScreen() {
     }
     setLoadingStatus(true);
     try {
-      const api = getApiUrl();
-      const res = await fetch(`${api}/subscription/status?userId=${user.id}`);
+      const res = await appFetch(`/subscription/status?userId=${user.id}`);
       if (!res.ok) throw new Error(`status ${res.status}`);
       const data = (await res.json()) as SubscriptionStatus;
       setSubStatus(data);
@@ -174,11 +173,9 @@ export default function PaymentsScreen() {
   const refreshStatusAfterCheckout = useCallback(
     async (sessionId: string) => {
       if (!user?.id) return;
-      const api = getApiUrl();
-      // El webhook puede tardar unos segundos; confirmamos por sesión y reintentamos.
       for (let attempt = 0; attempt < 6; attempt += 1) {
         try {
-          const confirmRes = await fetch(`${api}/subscription/confirm-checkout-session`, {
+          const confirmRes = await appFetch('/subscription/confirm-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id, sessionId }),
@@ -206,8 +203,7 @@ export default function PaymentsScreen() {
     if (!user?.id || startingCheckout) return;
     setStartingCheckout(true);
     try {
-      const api = getApiUrl();
-      const res = await fetch(`${api}/subscription/create-checkout-session`, {
+      const res = await appFetch('/subscription/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -239,8 +235,7 @@ export default function PaymentsScreen() {
     if (!user?.id || canceling) return;
     setCanceling(true);
     try {
-      const api = getApiUrl();
-      const res = await fetch(`${api}/subscription/cancel`, {
+      const res = await appFetch('/subscription/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -261,8 +256,7 @@ export default function PaymentsScreen() {
     if (!user?.id || reactivating) return;
     setReactivating(true);
     try {
-      const api = getApiUrl();
-      const res = await fetch(`${api}/subscription/reactivate`, {
+      const res = await appFetch('/subscription/reactivate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),

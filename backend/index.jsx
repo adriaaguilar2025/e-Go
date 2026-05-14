@@ -1,5 +1,4 @@
 const path = require('path');
-// Cargamos variables de entorno (Prioriza las de AWS Lambda)
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const express = require('express');
