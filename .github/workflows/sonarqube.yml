@@ -1,9 +1,11 @@
 name: SonarQube Analysis
 
+# Independent del workflow "Coverage": s'executa en push/PR sense esperar-lo ni descarregar artifacts.
+# Mentre no hi hagi fitxers LCOV al repositori en aquest job, Sonar analitzarà codi però sense mètriques de cobertura.
 on:
-  workflow_run:
-    workflows: ["Coverage"]
-    types: [completed]
+  push:
+    branches: ["development", "sonarqube1", "main"]
+  pull_request:
     branches: ["development", "sonarqube1", "main"]
   workflow_dispatch:
 
@@ -12,38 +14,11 @@ jobs:
     name: Analitzar amb SonarCloud
     runs-on: ubuntu-latest
 
-    # Si va via workflow_run, només continuem si Coverage va acabar OK
-    if: >-
-      ${{ github.event_name == 'workflow_dispatch' ||
-          github.event.workflow_run.conclusion == 'success' }}
-
     steps:
       - name: Checkout del codi
         uses: actions/checkout@v4
         with:
-          # Si ens dispara workflow_run, agafem el commit que va llançar Coverage
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
-          # Sonar necessita l'historial complet per a la informació de 'blame'
           fetch-depth: 0
-
-      - name: Descarregar cobertura backend
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-coverage
-          path: backend/coverage
-          # Si venim de workflow_run hem d'indicar la run d'origen
-          run-id: ${{ github.event.workflow_run.id || github.run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Descarregar cobertura frontend
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-coverage
-          path: frontend/coverage
-          run-id: ${{ github.event.workflow_run.id || github.run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        # No fallem si el frontend encara no ha pujat artifact
-        continue-on-error: true
 
       - name: Anàlisi amb SonarCloud
         uses: SonarSource/sonarqube-scan-action@v4
