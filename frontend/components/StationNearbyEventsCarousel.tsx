@@ -303,7 +303,7 @@ export function StationNearbyEventsCarousel({
   useEffect(() => {
     setActiveIndex(0);
     scrollRef.current?.scrollTo({ x: 0, animated: false });
-    void load();
+    load().catch(() => undefined);
   }, [load]);
 
   useEffect(() => {

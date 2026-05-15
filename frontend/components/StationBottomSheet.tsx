@@ -104,7 +104,7 @@ function useStationReviews(stationId: number, userId: number | undefined, userTo
   }, [stationId, userId]);
 
   useEffect(() => {
-    void fetchReviews();
+    fetchReviews().catch(() => undefined);
   }, [fetchReviews]);
 
   const handleToggleLike = useCallback(

@@ -1,3 +1,4 @@
+# Anàlisi estàtic (bugs, smells, seguretat). La cobertura va al workflow "Coverage".
 name: SonarQube Analysis
 
 on:
@@ -28,3 +29,5 @@ jobs:
           args: >
             -Dsonar.javascript.lcov.reportPaths=
             -Dsonar.typescript.lcov.reportPaths=
+            -Dsonar.coverage.exclusions=**/*
+            -Dsonar.qualitygate.wait=false
