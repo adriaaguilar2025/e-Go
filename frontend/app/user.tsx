@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Image, View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { appFetch } from '@/services/appFetch';
 import { getApiUrl } from '@/constants/api';
 import { getSemanticColors, type SemanticColors } from '@/constants/accessibilityColors';
 import { useAuth } from '@/contexts/AuthContext';
@@ -99,7 +100,7 @@ export default function PerfilScreen() {
     if (!user?.id) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`${getApiUrl()}/user?usuari_id=${idUser}`); // dades de l'usuari
+      const response = await appFetch(`/user?usuari_id=${idUser}`); // dades de l'usuari
       const data = await response.json();
       setPerfil(data);
       setEditedUsername(data.username ?? '');
@@ -115,7 +116,7 @@ export default function PerfilScreen() {
     if (!perfil || perfil.id !== user?.id) return;
     setIsSaving(true);
     try {
-      const response = await fetch(`${getApiUrl()}/user?usuari_id=${idUser}`, {
+      const response = await appFetch(`/user?usuari_id=${idUser}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: editedUsername, email: editedEmail }),

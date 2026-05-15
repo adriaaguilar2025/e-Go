@@ -406,7 +406,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     shadowRadius: 2
   },
 
-  formContainer: { backgroundColor: isDark ? '#334155' : '#f8fafc', padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: isDark ? '#475569' : '#f1f5f9' },
+  formContainer: { backgroundColor: isDark ? '#334155' : '#f1f5f9', padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: isDark ? '#475569' : '#e2e8f0' },
   formTitle: { fontSize: 14, fontWeight: '600', color: isDark ? '#cbd5e1' : '#475569', marginBottom: 8 },
   textInput: {
     backgroundColor: isDark ? '#1e293b' : '#fff',

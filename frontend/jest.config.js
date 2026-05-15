@@ -8,6 +8,9 @@ module.exports = {
   collectCoverageFrom: [
     '<rootDir>/app/login.tsx',
     '<rootDir>/**/payments.tsx',
+    '<rootDir>/i18n/i18n.ts',
+    '<rootDir>/i18n/I18nLocaleHydrator.tsx',
+    '<rootDir>/components/LanguageMenuSelector.tsx',
   ],
   coveragePathIgnorePatterns: ['/node_modules/', '\\.test\\.'],
   coverageThreshold: {

@@ -205,6 +205,76 @@ describe('userModel conductor lookups', () => {
     const n = await userModel.backfillConductoresFromUsuarios();
     expect(n).toBe(2);
   });
+
+  test('findByIdWithBanStatus devuelve fila o null', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [{ id: 7, is_banned: true, banned_at: 't', banned_reason: 'x' }],
+    });
+    expect(await userModel.findByIdWithBanStatus(7)).toEqual(
+      expect.objectContaining({ is_banned: true })
+    );
+    pool.query.mockResolvedValueOnce({ rows: [] });
+    expect(await userModel.findByIdWithBanStatus(999)).toBeNull();
+  });
+
+  test('listAllUsersForAdmin devuelve todas las filas', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [
+        { id: 1, email: 'a@test.com', username: 'a', is_banned: false },
+        { id: 2, email: 'b@test.com', username: 'b', is_banned: true },
+      ],
+    });
+    const users = await userModel.listAllUsersForAdmin();
+    expect(users).toHaveLength(2);
+    expect(pool.query.mock.calls[0][0]).toContain('ORDER BY created_at DESC');
+  });
+
+  test('setUserBanStatus actualiza y devuelve usuario o null', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [{ id: 3, email: 'c@test.com', username: 'c', is_banned: true, banned_reason: 'manual' }],
+    });
+    const banned = await userModel.setUserBanStatus(3, { isBanned: true, reason: 'manual' });
+    expect(banned?.is_banned).toBe(true);
+    expect(pool.query.mock.calls[0][1]).toEqual([3, true, 'manual']);
+
+    pool.query.mockResolvedValueOnce({ rows: [] });
+    expect(await userModel.setUserBanStatus(404, { isBanned: false, reason: '' })).toBeNull();
+  });
+
+  test('updateCompanyNombre valida entrada y actualiza', async () => {
+    await expect(userModel.updateCompanyNombre(1, '   ')).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    await expect(userModel.updateCompanyNombre('nope', 'Empresa')).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+
+    pool.query.mockResolvedValueOnce({ rows: [] });
+    expect(await userModel.updateCompanyNombre(5, 'Empresa SA')).toBeNull();
+
+    pool.query
+      .mockResolvedValueOnce({
+        rows: [{ user_id: 5, nombre: 'Empresa SA', created_at: 't' }],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+    expect(await userModel.updateCompanyNombre(5, 'Empresa SA')).toBeNull();
+
+    pool.query
+      .mockResolvedValueOnce({
+        rows: [{ user_id: 5, nombre: 'Empresa SA', created_at: 't' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: 5, email: 'co@test.com', username: 'co' }],
+      });
+    const company = await userModel.updateCompanyNombre(5, 'Empresa SA');
+    expect(company).toEqual(
+      expect.objectContaining({
+        id: 5,
+        email: 'co@test.com',
+        nombre: 'Empresa SA',
+      })
+    );
+  });
 });
 
 describe('userModel withPasswordColumnRetry (42703)', () => {
