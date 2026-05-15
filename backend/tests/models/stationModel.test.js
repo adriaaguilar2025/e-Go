@@ -34,7 +34,7 @@ describe('stationModel.searchStations', () => {
     pool.query.mockResolvedValue({ rows: [{ id: 1, nom: 'X' }] });
   });
 
-  // El HTTP no llama al modelo sin `q` (controller devuelve []); aquí probamos el modelo directamente.
+  // controller devuelve [] si no hay consulta
   test('sin q pero con minKw añade solo filtro de potencia', async () => {
     await searchStations(undefined, { minKw: 22 });
 
