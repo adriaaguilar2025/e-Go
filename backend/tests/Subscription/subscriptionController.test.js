@@ -5,7 +5,11 @@ const controller = require('../../controllers/subscriptionController');
 
 jest.mock('../../models/subscriptionModel');
 jest.mock('../../models/userModel');
-jest.mock('../../lib/stripe');
+jest.mock('../../lib/stripe', () => ({
+  ...jest.requireActual('../../lib/stripe'),
+  getStripe: jest.fn(),
+  isStripeConfigured: jest.fn(),
+}));
 
 function mockRes() {
   const res = {};
@@ -65,7 +69,10 @@ describe('subscriptionController', () => {
 
       expect(res.status).toHaveBeenCalledWith(503);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringMatching(/Stripe no configurado/i) })
+        expect.objectContaining({
+          error: expect.stringMatching(/Stripe no configurado/i),
+          missing_env: expect.any(Array),
+        })
       );
     });
 
@@ -132,6 +139,27 @@ describe('subscriptionController', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Usuario no encontrado' }));
+    });
+
+    test('devuelve 403 cuando el usuario esta baneado', async () => {
+      stripeLib.isStripeConfigured.mockReturnValue(true);
+      userModel.findById.mockResolvedValue({
+        id: 1,
+        email: 'user@test.com',
+        is_banned: true,
+      });
+      const req = { body: { userId: 1, successUrl: 'https://ok', cancelUrl: 'https://cancel' } };
+      const res = mockRes();
+
+      await controller.createCheckoutSession(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'USER_BANNED',
+          error: expect.stringMatching(/baneada/i),
+        })
+      );
     });
 
     test('devuelve 500 cuando stripe lanza error al crear checkout', async () => {
