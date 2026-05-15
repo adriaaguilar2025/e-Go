@@ -280,7 +280,9 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
         <View>
           <View style={styles.eventsSectionHeader}>
             <MaterialIcons name="event" size={22} color={isDark ? '#34d399' : '#10b981'} />
-            <Text style={styles.sectionTitle}>Eventos cercanos</Text>
+            <Text style={styles.sectionTitle} numberOfLines={1}>
+              Eventos cercanos
+            </Text>
           </View>
           <StationNearbyEventsCarousel
             key={station?.id ?? 'station'}
@@ -427,7 +429,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   // Secció Valoracions corregida

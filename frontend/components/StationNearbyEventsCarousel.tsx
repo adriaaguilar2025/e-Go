@@ -14,7 +14,7 @@ import { Image } from 'expo-image';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { Colors } from '@/constants/theme';
-import { getEventosApiToken, EVENTOS_RADIO_KM_DEFAULT } from '@/constants/eventosApi';
+import { getEventosApiToken, EVENTOS_RADIO_KM_DEFAULT, formatRadioKmForUi } from '@/constants/eventosApi';
 import {
   fetchEventosCercaDeEstacion,
   getEventoMapCoordinates,
@@ -79,7 +79,11 @@ export function StationNearbyEventsCarousel({
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchEventosCercaDeEstacion(stationLat, stationLon, EVENTOS_RADIO_KM_DEFAULT);
+      const data = await fetchEventosCercaDeEstacion(
+        stationLat,
+        stationLon,
+        EVENTOS_RADIO_KM_DEFAULT
+      );
       setEvents(Array.isArray(data.results) ? data.results : []);
     } catch (e) {
       setEvents([]);
@@ -180,7 +184,7 @@ export function StationNearbyEventsCarousel({
       <View style={rootStyle}>
         {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
         <Text style={styles.hint}>
-          No hay eventos en un radio de {EVENTOS_RADIO_KM_DEFAULT} km.
+          No hay eventos en un radio de {formatRadioKmForUi(EVENTOS_RADIO_KM_DEFAULT)}.
         </Text>
       </View>
     );

@@ -1,4 +1,4 @@
-import { buildEventosNearbyUrl, getEventosApiBaseUrl, getEventosApiToken, EVENTOS_RADIO_KM_DEFAULT } from '@/constants/eventosApi';
+import { buildEventosNearbyUrl, getEventosApiToken, EVENTOS_RADIO_KM_DEFAULT } from '@/constants/eventosApi';
 
 export interface EventoExterno {
   id: number;
@@ -103,26 +103,10 @@ export async function fetchEventosCercaDeEstacion(
   radioKm: number = EVENTOS_RADIO_KM_DEFAULT
 ): Promise<EventosPaginated> {
   const url = buildEventosNearbyUrl(lat, lon, radioKm);
-  if (__DEV__) {
-    const token = getEventosApiToken();
-    console.log('[Eventos] base URL:', getEventosApiBaseUrl());
-    console.log('[Eventos] full request URL:', url);
-    console.log('[Eventos] token configured:', token.length > 0, token.length ? `(length ${token.length})` : '');
-  }
   const res = await fetch(url, { headers: authHeaders() });
-  if (__DEV__) {
-    console.log('[Eventos] response status:', res.status, res.ok ? 'OK' : 'FAIL');
-  }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    if (__DEV__) {
-      console.log('[Eventos] error body (truncated):', body.slice(0, 300));
-    }
     throw new Error(`Eventos ${res.status}: ${body.slice(0, 160)}`);
   }
-  const json = (await res.json()) as EventosPaginated;
-  if (__DEV__) {
-    console.log('[Eventos] results count:', json?.count ?? json?.results?.length ?? 0);
-  }
-  return json;
+  return (await res.json()) as EventosPaginated;
 }

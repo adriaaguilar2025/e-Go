@@ -35,7 +35,6 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
-// --- 2. Mock para el Bottom Sheet de tus compañeros ---
 jest.mock('@gorhom/bottom-sheet', () => {
   const reactNative = require('react-native');
   return {
