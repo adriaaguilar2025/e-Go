@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   NativeSyntheticEvent,
   NativeScrollEvent,
   ScrollView,
@@ -13,28 +14,52 @@ import { Image } from 'expo-image';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { Colors } from '@/constants/theme';
-import { getEventosApiToken } from '@/constants/eventosApi';
-import { fetchEventosCercaDeEstacion, type EventoExterno } from '@/services/externalEventosService';
+import { getEventosApiToken, EVENTOS_RADIO_KM_DEFAULT } from '@/constants/eventosApi';
+import {
+  fetchEventosCercaDeEstacion,
+  getEventoMapCoordinates,
+  type EventoExterno,
+} from '@/services/externalEventosService';
 
-const ARROW_SLOT = 40;
+const ARROW_SLOT = 32;
+/** Fracció de l’àrea de scroll que ocupa cada targeta (la resta fa “peek” del següent). */
+const CARD_WIDTH_FRACTION = 0.72;
+const CARD_GAP = 12;
 
 interface StationNearbyEventsCarouselProps {
   stationLat: number;
   stationLon: number;
   isDark: boolean;
+  /** Marca l’event al mapa, tanca el panell d’estació i prepara ruta amb origen a l’estació. */
+  onFocusEventOnMap?: (
+    eventLat: number,
+    eventLon: number,
+    title: string,
+    stationOriginLat: number,
+    stationOriginLon: number
+  ) => void;
+  /** When true, omit title (parent renders section header like Valoraciones). */
+  embedInSection?: boolean;
 }
 
 export function StationNearbyEventsCarousel({
   stationLat,
   stationLon,
   isDark,
+  onFocusEventOnMap,
+  embedInSection = false,
 }: StationNearbyEventsCarouselProps) {
   const scrollRef = useRef<ScrollView>(null);
-  const [slideWidth, setSlideWidth] = useState(0);
+  /** Amplada del contenidor del ScrollView (entre fletxes). */
+  const [viewportWidth, setViewportWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [events, setEvents] = useState<EventoExterno[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const cardWidth =
+    viewportWidth > 0 ? Math.max(160, Math.floor(viewportWidth * CARD_WIDTH_FRACTION)) : 0;
+  const snapInterval = cardWidth > 0 ? cardWidth + CARD_GAP : 0;
 
   const styles = useMemo(() => createStyles(isDark), [isDark]);
 
@@ -54,7 +79,7 @@ export function StationNearbyEventsCarousel({
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchEventosCercaDeEstacion(stationLat, stationLon, 0.25);
+      const data = await fetchEventosCercaDeEstacion(stationLat, stationLon, EVENTOS_RADIO_KM_DEFAULT);
       setEvents(Array.isArray(data.results) ? data.results : []);
     } catch (e) {
       setEvents([]);
@@ -71,40 +96,58 @@ export function StationNearbyEventsCarousel({
   }, [load]);
 
   useEffect(() => {
-    if (slideWidth > 0) {
+    if (snapInterval > 0) {
       scrollRef.current?.scrollTo({ x: 0, animated: false });
       setActiveIndex(0);
     }
-  }, [slideWidth]);
+  }, [snapInterval]);
 
   const onScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (slideWidth <= 0) return;
+      if (snapInterval <= 0) return;
       const x = e.nativeEvent.contentOffset.x;
-      const idx = Math.round(x / slideWidth);
+      const idx = Math.round(x / snapInterval);
       setActiveIndex(Math.min(Math.max(0, idx), Math.max(0, events.length - 1)));
     },
-    [slideWidth, events.length]
+    [snapInterval, events.length]
   );
 
   const goPrev = () => {
-    if (activeIndex <= 0 || slideWidth <= 0) return;
+    if (activeIndex <= 0 || snapInterval <= 0) return;
     const next = activeIndex - 1;
-    scrollRef.current?.scrollTo({ x: next * slideWidth, animated: true });
+    scrollRef.current?.scrollTo({ x: next * snapInterval, animated: true });
     setActiveIndex(next);
   };
 
   const goNext = () => {
-    if (activeIndex >= events.length - 1 || slideWidth <= 0) return;
+    if (activeIndex >= events.length - 1 || snapInterval <= 0) return;
     const next = activeIndex + 1;
-    scrollRef.current?.scrollTo({ x: next * slideWidth, animated: true });
+    scrollRef.current?.scrollTo({ x: next * snapInterval, animated: true });
     setActiveIndex(next);
   };
 
+  const handleEventCardPress = (item: EventoExterno) => {
+    if (!onFocusEventOnMap) return;
+    const coords = getEventoMapCoordinates(item, stationLat, stationLon);
+    if (!coords) {
+      Alert.alert('Evento', 'No hay coordenadas para este evento en el mapa.');
+      return;
+    }
+    onFocusEventOnMap(
+      coords.latitude,
+      coords.longitude,
+      item.titulo,
+      stationLat,
+      stationLon
+    );
+  };
+
+  const rootStyle = embedInSection ? styles.sectionEmbed : styles.section;
+
   if (loading) {
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Eventos cercanos</Text>
+      <View style={rootStyle}>
+        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
         <View style={styles.loadingBox}>
           <ActivityIndicator color={isDark ? '#34d399' : '#10b981'} />
         </View>
@@ -114,8 +157,8 @@ export function StationNearbyEventsCarousel({
 
   if (error === 'token') {
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Eventos cercanos</Text>
+      <View style={rootStyle}>
+        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
         <Text style={styles.hint}>
           Configura EXPO_PUBLIC_EVENTOS_API_TOKEN en el .env del frontend y reinicia Metro.
         </Text>
@@ -125,8 +168,8 @@ export function StationNearbyEventsCarousel({
 
   if (error) {
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Eventos cercanos</Text>
+      <View style={rootStyle}>
+        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
         <Text style={styles.errorSmall}>{error}</Text>
       </View>
     );
@@ -134,16 +177,18 @@ export function StationNearbyEventsCarousel({
 
   if (events.length === 0) {
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Eventos cercanos</Text>
-        <Text style={styles.hint}>No hay eventos en un radio de 250 m.</Text>
+      <View style={rootStyle}>
+        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
+        <Text style={styles.hint}>
+          No hay eventos en un radio de {EVENTOS_RADIO_KM_DEFAULT} km.
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Eventos cercanos</Text>
+    <View style={rootStyle}>
+      {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
       <View style={styles.panel}>
         <View style={styles.carouselRow}>
           <TouchableOpacity
@@ -161,22 +206,34 @@ export function StationNearbyEventsCarousel({
 
           <View
             style={styles.slideColumn}
-            onLayout={(e) => setSlideWidth(Math.floor(e.nativeEvent.layout.width))}
+            onLayout={(e) => setViewportWidth(Math.floor(e.nativeEvent.layout.width))}
           >
-            {slideWidth > 0 ? (
+            {viewportWidth > 0 && cardWidth > 0 ? (
               <ScrollView
                 ref={scrollRef}
                 horizontal
-                pagingEnabled
+                pagingEnabled={false}
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled
                 decelerationRate="fast"
+                snapToInterval={snapInterval}
+                snapToAlignment="start"
+                disableIntervalMomentum
                 onMomentumScrollEnd={onScrollEnd}
                 scrollEventThrottle={16}
-                style={{ width: slideWidth }}
+                style={{ width: viewportWidth }}
+                contentContainerStyle={{
+                  paddingRight: Math.max(CARD_GAP, viewportWidth - cardWidth),
+                }}
               >
                 {events.map((item) => (
-                  <View key={item.id} style={[styles.slide, { width: slideWidth }]}>
+                  <TouchableOpacity
+                    key={item.id}
+                    activeOpacity={0.85}
+                    disabled={!onFocusEventOnMap}
+                    onPress={() => handleEventCardPress(item)}
+                    style={[styles.slideCard, { width: cardWidth, marginRight: CARD_GAP }]}
+                  >
                     {item.imagen_url ? (
                       <Image
                         source={{ uri: item.imagen_url }}
@@ -185,7 +242,7 @@ export function StationNearbyEventsCarousel({
                       />
                     ) : (
                       <View style={[styles.slideImage, styles.slideImagePlaceholder]}>
-                        <MaterialIcons name="event" size={48} color={isDark ? '#64748b' : '#94a3b8'} />
+                        <MaterialIcons name="event" size={40} color={isDark ? '#64748b' : '#94a3b8'} />
                       </View>
                     )}
                     <Text style={styles.eventTitle} numberOfLines={3}>
@@ -196,7 +253,10 @@ export function StationNearbyEventsCarousel({
                         ? `${item.distancia_km.toFixed(2)} km`
                         : '—'}
                     </Text>
-                  </View>
+                    {onFocusEventOnMap ? (
+                      <Text style={styles.tapHint}>Toca para ver en el mapa</Text>
+                    ) : null}
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             ) : (
@@ -227,7 +287,7 @@ export function StationNearbyEventsCarousel({
         </View>
         {events.length > 1 ? (
           <Text style={styles.pageHint}>
-            {activeIndex + 1} / {events.length}
+            Desliza para ver más · {activeIndex + 1} / {events.length}
           </Text>
         ) : null}
       </View>
@@ -238,6 +298,7 @@ export function StationNearbyEventsCarousel({
 const createStyles = (isDark: boolean) =>
   StyleSheet.create({
     section: { marginBottom: 8 },
+    sectionEmbed: { marginBottom: 0 },
     sectionTitle: {
       fontSize: 16,
       fontWeight: '700',
@@ -267,15 +328,19 @@ const createStyles = (isDark: boolean) =>
       paddingVertical: 8,
     },
     arrowBtnDisabled: { opacity: 0.45 },
-    slide: {
-      paddingHorizontal: 6,
+    slideCard: {
       alignItems: 'stretch',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDark ? '#334155' : '#e2e8f0',
+      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+      padding: 8,
     },
     slideImage: {
       width: '100%',
-      height: 120,
-      borderRadius: 10,
-      backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+      height: 100,
+      borderRadius: 8,
+      backgroundColor: isDark ? '#0f172a' : '#f1f5f9',
     },
     slideImagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
     eventTitle: {
@@ -290,6 +355,12 @@ const createStyles = (isDark: boolean) =>
       fontSize: 13,
       color: isDark ? '#94a3b8' : '#64748b',
       fontWeight: '600',
+    },
+    tapHint: {
+      marginTop: 6,
+      fontSize: 11,
+      color: isDark ? '#64748b' : '#94a3b8',
+      fontStyle: 'italic',
     },
     pageHint: {
       textAlign: 'center',

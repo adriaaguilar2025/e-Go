@@ -36,6 +36,14 @@ interface StationBottomSheetProps {
   onStartNavigation: (coords: {latitude: number, longitude: number}) => void;
   onOpenIncidenciaForm: () => void;
   onSolvedIncidencia: () => void;
+  /** En tocar un event del carrusel: mostrar marcador al mapa i ruta des de l’estació. */
+  onFocusEventOnMap?: (
+    eventLat: number,
+    eventLon: number,
+    title: string,
+    stationOriginLat: number,
+    stationOriginLon: number
+  ) => void;
 }
 
 export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
@@ -43,7 +51,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
   userLocation, isCharging, elapsedSeconds, distanceToStation,
   onStartCharging, onFinishCharging, onCancelCharging,
   chargingError, setChargingError, onStartNavigation,
-  onOpenIncidenciaForm, onSolvedIncidencia
+  onOpenIncidenciaForm, onSolvedIncidencia, onFocusEventOnMap,
 }) => {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['25%', '50%', '85%'], []);
@@ -210,14 +218,14 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
             </View>
           )}
 
-          {!isCharging && userLocation && (
+          {!isCharging && (
             <View style={styles.chargingButtonContainer}>
               <StartChargingButton
                 stationId={station.id}
                 stationLat={parseFloat(station.latitud)}
                 stationLon={parseFloat(station.longitud)}
-                userLat={userLocation.coords.latitude}
-                userLon={userLocation.coords.longitude}
+                userLat={userLocation?.coords.latitude ?? 0}
+                userLon={userLocation?.coords.longitude ?? 0}
                 isCharging={isCharging}
                 onStartCharging={onStartCharging}
                 onError={(msg) => {
@@ -266,12 +274,23 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
           )}
         </View>
 
-        <StationNearbyEventsCarousel
-          key={station?.id ?? 'station'}
-          stationLat={Number.parseFloat(String(station.latitud))}
-          stationLon={Number.parseFloat(String(station.longitud))}
-          isDark={isDark}
-        />
+        <View style={styles.divider} />
+
+        {/* --- EVENTOS CERCANS --- */}
+        <View>
+          <View style={styles.eventsSectionHeader}>
+            <MaterialIcons name="event" size={22} color={isDark ? '#34d399' : '#10b981'} />
+            <Text style={styles.sectionTitle}>Eventos cercanos</Text>
+          </View>
+          <StationNearbyEventsCarousel
+            key={station?.id ?? 'station'}
+            stationLat={Number.parseFloat(String(station.latitud))}
+            stationLon={Number.parseFloat(String(station.longitud))}
+            isDark={isDark}
+            onFocusEventOnMap={onFocusEventOnMap}
+            embedInSection
+          />
+        </View>
 
         <View style={styles.divider} />
 
@@ -370,9 +389,31 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   contentContainer: { padding: 20, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   title: { fontSize: 20, fontWeight: '700', color: isDark ? Colors.dark.text : Colors.light.text, flex: 1, marginRight: 10 },
-  badgesRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  badge: { backgroundColor: isDark ? '#334155' : '#ecfdf5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  badgeText: { color: isDark ? '#94a3b8' : '#047857', fontWeight: '600', fontSize: 12 },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+    alignItems: 'flex-start',
+  },
+  badge: {
+    backgroundColor: isDark ? '#334155' : '#ecfdf5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    maxWidth: '100%',
+    alignSelf: 'flex-start',
+  },
+  badgeText: {
+    color: isDark ? '#94a3b8' : '#047857',
+    fontWeight: '600',
+    fontSize: 12,
+    flexShrink: 1,
+    minWidth: 0,
+  },
   infoPromotor: { fontSize: 12, color: isDark ? '#94a3b8' : '#94a3b8', fontStyle: 'italic', marginBottom: 16 },
   actionsContainer: { gap: 12, marginTop: 10 },
   chargingButtonContainer: { marginTop: 4 },
@@ -381,6 +422,13 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   errorMessage: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#450a0a' : '#fee2e2', padding: 12, borderRadius: 8, gap: 8 },
   errorText: { color: isDark ? '#fca5a5' : '#ef4444', fontSize: 14, flex: 1 },
   divider: { height: 1, backgroundColor: isDark ? '#334155' : '#e2e8f0', marginVertical: 24 },
+
+  eventsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
 
   // Secció Valoracions corregida
   reviewsHeaderContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

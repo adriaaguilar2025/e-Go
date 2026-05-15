@@ -1,5 +1,5 @@
 // Inicio (primera pestaña). Sin sesión: bienvenida + Google. Con sesión: menú 3 barras + PANTALLA PRINCIPAL.
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { MapView, Marker } from '../_components/MapWrapper';
 import TopBar, { MapSearchListItem } from '../../components/TopBar';
 
@@ -227,16 +227,57 @@ export default function InicioScreen() {
   const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
   //Estado para saber el punto  marcado por el usuario (lo uso para cunado un conductor quiere ir a un sitio que no es un punto de carga y lo selecciona en el mapa)
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  /** Si ve d’un event: ruta “Cómo llegar” amb origen a l’estació (no demanar GPS). */
+  const [routeOriginPreset, setRouteOriginPreset] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
   //Estado para saber las coordenadas que ocupan la ruta
   const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
   //Estado para saber si estamos seleccionando nosotros mismos el origen de la ruta
   const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
+
+  const handleFocusEventOnMap = useCallback(
+    (
+      eventLat: number,
+      eventLon: number,
+      title: string,
+      originLat: number,
+      originLon: number
+    ) => {
+      setRouteOriginPreset({ latitude: originLat, longitude: originLon });
+      setSelectedLocation({ latitude: eventLat, longitude: eventLon });
+      setSelectedLocationLabel(title);
+      setSelectedStation(null);
+      setIsNavigating(false);
+      setRouteCoords([]);
+      setRouteDestination(null);
+      setRouteInfo(null);
+      requestAnimationFrame(() => {
+        if (mapRef.current && typeof mapRef.current.fitToCoordinates === 'function') {
+          mapRef.current.fitToCoordinates(
+            [
+              { latitude: originLat, longitude: originLon },
+              { latitude: eventLat, longitude: eventLon },
+            ],
+            { edgePadding: { top: 100, right: 50, bottom: 280, left: 50 }, animated: true }
+          );
+        }
+      });
+    },
+    []
+  );
 
   //Funcion para empezar la navegacion
   const handleStartNavigation = (coordenadas: {latitude: number, longitude: number}) => {
       setRouteCoords([]);
       setRouteInfo(null);
       setRouteDestination(coordenadas);
+      if (routeOriginPreset) {
+        setRouteOrigin(routeOriginPreset);
+        setRouteOriginPreset(null);
+        setSelectedLocationLabel(null);
+        setIsNavigating(true);
+        return;
+      }
       //Preguntamos al usuario el origen
       Alert.alert(
         "Iniciar ruta",
@@ -269,7 +310,7 @@ export default function InicioScreen() {
   };
   // Función para manejar el inicio de una sesión de carga
   const handleStartCharging = async (): Promise<boolean> => {
-    if (!user || !selectedStation || !userLocation) {
+    if (!user || !selectedStation) {
       setChargingError('Faltan datos necesarios para iniciar la carga');
       return false;
     }
@@ -1255,6 +1296,8 @@ useEffect(() => {
                 latitude: e.nativeEvent.coordinate.latitude,
                 longitude: e.nativeEvent.coordinate.longitude,
               });
+              setRouteOriginPreset(null);
+              setSelectedLocationLabel(null);
               //Limpiamos la ruta
               setIsNavigating(false);
               setRouteCoords([]);
@@ -1294,6 +1337,8 @@ useEffect(() => {
 
                 setSelectedStation(est);
                 setSelectedLocation(null); //Limpiamos el punto manual si seleccionan una estación
+                setRouteOriginPreset(null);
+                setSelectedLocationLabel(null);
                 setRouteCoords([]);
                 setIsNavigating(false);
                 setRouteInfo(null);
@@ -1307,7 +1352,7 @@ useEffect(() => {
                   key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} //Soluciona el problema de que no se borren al clicar en otro sitio
                   coordinate={selectedLocation}
                   pinColor={sem.mapCustomLocation}
-                  title="Ubicación seleccionada"
+                  title={selectedLocationLabel || 'Ubicación seleccionada'}
                 />
             )}
 
@@ -1396,6 +1441,8 @@ useEffect(() => {
                     setRouteInfo(null);
                     setRouteCoords([]);
                     setSelectedLocation(null);
+                    setRouteOriginPreset(null);
+                    setSelectedLocationLabel(null);
                     setSelectedStation(null);
                   }}
                 >
@@ -1435,6 +1482,7 @@ useEffect(() => {
             onStartNavigation={handleStartNavigation}
             onOpenIncidenciaForm={handleOpenIncidenciaForm}
             onSolvedIncidencia={handleSolvedIncidenciaSubmit}
+            onFocusEventOnMap={handleFocusEventOnMap}
           />
         )}
 
@@ -1445,12 +1493,16 @@ useEffect(() => {
 
             <View style={styles.infoTitleRow}>
               <MaterialIcons name="place" size={24} color={sem.mapCustomLocation} />
-              <Text style={styles.infoTitle} numberOfLines={1}>
-                Ubicación seleccionada
+              <Text style={styles.infoTitle} numberOfLines={2}>
+                {selectedLocationLabel || 'Ubicación seleccionada'}
               </Text>
 
               <TouchableOpacity
-                onPress={() => setSelectedLocation(null)}
+                onPress={() => {
+                  setSelectedLocation(null);
+                  setRouteOriginPreset(null);
+                  setSelectedLocationLabel(null);
+                }}
                 style={styles.infoCloseBtn}
               >
                 <MaterialIcons name="close" size={20} color="#94a3b8" />
@@ -2116,38 +2168,47 @@ const createStyles = (isDark: boolean, sem: SemanticColors) => StyleSheet.create
   activeFiltersBadge: {
     position: 'absolute',
     bottom: 20,
+    left: 12,
     right: 12,
     zIndex: 10,
     backgroundColor: isDark ? '#1e293b' : '#fff',
-    flexDirection: 'row', // La columna de text a l'esquerra, la X a la dreta
-    alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderRadius: 16,
-    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)', // width, height, blur, color amb opacitat
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)',
     elevation: 4,
     borderWidth: 1,
     borderColor: isDark ? '#334155' : '#e2e8f0',
   },
   filtersColumn: {
     flexDirection: 'column',
-    gap: 6, // Espai vertical entre el llamp i el connector
+    gap: 6,
+    flex: 1,
+    minWidth: 0,
   },
   filterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6, // Espai horitzontal entre la icona i el text
+    alignItems: 'flex-start',
+    gap: 6,
   },
 activeFiltersText: {
     fontSize: 14,
     fontWeight: '700',
     color: isDark ? '#f1f5f9' : '#1f2937',
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   clearFilterButton: {
     marginLeft: 12,
     paddingLeft: 12,
-    borderLeftWidth: 1, // Posa una línia fineta que separa els filtres de la X
+    borderLeftWidth: 1,
     borderLeftColor: isDark ? '#334155' : '#e2e8f0',
+    flexShrink: 0,
+    alignSelf: 'flex-start',
+    paddingTop: 2,
   },
 
   // --- Estilos de los componentes de rutas de navegacion ---
