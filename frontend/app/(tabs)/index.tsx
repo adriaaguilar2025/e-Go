@@ -1571,7 +1571,7 @@ useEffect(() => {
                 style={styles.menuClose}
                 hitSlop={12}
               >
-                <MaterialIcons name="close" size={24} color="#1f2937" />
+                <MaterialIcons name="close" size={24} color={isDark ? '#fff' : '#1f2937'} />
               </TouchableOpacity>
             </View>
 
@@ -1586,7 +1586,7 @@ useEffect(() => {
               }}
               activeOpacity={0.7}
             >
-              <MaterialIcons name="person" size={22} color="#1f2937" />
+              <MaterialIcons name="person" size={22} color={isDark ? '#fff' : '#1f2937'} />
               <Text style={styles.menuItemText}>Mi perfil</Text>
             </TouchableOpacity>
 
@@ -1608,7 +1608,7 @@ useEffect(() => {
               }}
               activeOpacity={0.7}
             >
-              <MaterialIcons name="filter-list" size={22} color="#1f2937" />
+              <MaterialIcons name="filter-list" size={22} color={isDark ? '#fff' : '#1f2937'} />
               <Text style={styles.menuItemText}>Añadir Filtros</Text>
             </TouchableOpacity>
 
@@ -1688,7 +1688,7 @@ useEffect(() => {
               }}
               activeOpacity={0.7}
             >
-              <MaterialIcons name="logout" size={22} color="#1f2937" />
+              <MaterialIcons name="logout" size={22} color={isDark ? '#fff' : '#1f2937'} />
               <Text style={styles.menuItemText}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </Pressable>
