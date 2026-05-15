@@ -30,8 +30,17 @@ module.exports = {
   coveragePathIgnorePatterns: [
     '/node_modules/',
     String.raw`\.test\.`,
-    'MapWrapper\\.web\\.tsx',
+    String.raw`MapWrapper\.web\.tsx`,
   ],
   coverageReporters: ['text', 'lcov', 'html'],
   coverageDirectory: 'coverage/jest',
+  // Mateixos límits que backend/jest.config.js
+  coverageThreshold: {
+    global: {
+      branches: 75,
+      lines: 80,
+      statements: 80,
+      functions: 80,
+    },
+  },
 };

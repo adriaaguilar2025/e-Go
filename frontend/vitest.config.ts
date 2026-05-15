@@ -8,24 +8,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
       reportsDirectory: './coverage/vitest',
-      include: [
-        'app/**/*.{ts,tsx}',
-        'components/**/*.{ts,tsx}',
-        'services/**/*.{ts,tsx}',
-        'constants/**/*.{ts,tsx}',
-        'utils/**/*.{ts,tsx}',
-        'contexts/**/*.{ts,tsx}',
-        'hooks/**/*.{ts,tsx}',
-        'i18n/**/*.{ts,tsx}',
-        'features/**/*.{ts,tsx}',
-        'screens/**/*.{ts,tsx}',
-      ],
-      exclude: [
-        '**/*.test.*',
-        '**/node_modules/**',
-        '**/dist/**',
-        'app/_components/MapWrapper.web.tsx',
-      ],
+      // Vitest només executa tests a features/; el global del frontend el marca Jest.
+      include: ['features/**/*.{ts,tsx}'],
+      exclude: ['**/*.test.*', '**/node_modules/**', '**/dist/**'],
+      thresholds: {
+        statements: 80,
+        branches: 75,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
 });
