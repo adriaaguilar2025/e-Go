@@ -4,6 +4,8 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
 
+import { useTranslation } from 'react-i18next';
+
 import { FavoriteButton } from './FavoriteButton';
 import { StarRating } from './StarRating';
 import { getStationReviews, addStationReview, deleteStationReview, updateStationReview, toggleReviewLike, Review } from '@/services/reviewsApiService';
@@ -44,6 +46,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
   chargingError, setChargingError, onStartNavigation,
   onOpenIncidenciaForm, onSolvedIncidencia
 }) => {
+  const { t } = useTranslation();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['25%', '50%', '85%'], []);
   const { user } = useAuth();
@@ -79,7 +82,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
 
   const handleToggleLike = async (review: Review) => {
     if (!user) {
-      Alert.alert('Inicia sesión', 'Debes iniciar sesión para valorar los comentarios.');
+      Alert.alert(t('stationSheet.likeLoginTitle'), t('stationSheet.likeLoginBody'));
       return;
     }
     const originalReviews = [...reviews];
@@ -101,7 +104,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
   };
 
   const handleSubmitReview = async () => {
-    if (rating === 0) return Alert.alert('Error', 'Por favor, selecciona una puntuación.');
+    if (rating === 0) return Alert.alert(t('stationSheet.ratingRequiredTitle'), t('stationSheet.ratingRequiredBody'));
     setIsSubmitting(true);
     try {
       const token = user?.token || '';
@@ -116,21 +119,21 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
       setIsFormVisible(false);
       await fetchReviews();
     } catch (error) {
-      Alert.alert('Error', 'Ha habido un problema guardando la valoración.');
+      Alert.alert(t('common.error'), t('stationSheet.saveReviewError'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteReview = (reviewId: number) => {
-    Alert.alert('Eliminar valoración', '¿Estás seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => {
+    Alert.alert(t('stationSheet.deleteReviewTitle'), t('stationSheet.deleteReviewBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => {
           try {
             await deleteStationReview(reviewId, user?.token || '');
             await fetchReviews();
           } catch (error) {
-            Alert.alert('Error', 'No se ha podido eliminar.');
+            Alert.alert(t('common.error'), t('stationSheet.deleteReviewError'));
           }
       }}
     ]);
@@ -191,7 +194,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
         </View>
 
         {station.promotor && (
-          <Text style={styles.infoPromotor}>Gestor: {station.promotor}</Text>
+          <Text style={styles.infoPromotor}>{t('stationSheet.manager', { name: station.promotor })}</Text>
         )}
 
         {/* --- ACCIONS (CÀRREGA + INCIDÈNCIES) --- */}
@@ -221,7 +224,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
                 onStartCharging={onStartCharging}
                 onError={(msg) => {
                   setChargingError(msg);
-                  Alert.alert('Error', msg);
+                  Alert.alert(t('common.error'), msg);
                 }}
               />
             </View>
@@ -241,7 +244,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
                 onPress={onSolvedIncidencia}
               >
                 <MaterialIcons name="check-circle" size={20} color="#fff" />
-                <Text style={styles.routeButtonText}>Reportar incidencia solucionada</Text>
+                <Text style={styles.routeButtonText}>{t('home.reportSolvedIncident')}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -249,7 +252,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
                 onPress={onOpenIncidenciaForm}
               >
                 <MaterialIcons name="report-problem" size={20} color="#fff" />
-                <Text style={styles.routeButtonText}>Reportar incidencia</Text>
+                <Text style={styles.routeButtonText}>{t('home.reportIncident')}</Text>
               </TouchableOpacity>
             )
           )}
@@ -260,7 +263,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
               onPress={() => onStartNavigation({ latitude: parseFloat(station.latitud), longitude: parseFloat(station.longitud) })}
             >
               <MaterialIcons name="directions" size={20} color="#fff" />
-              <Text style={styles.routeButtonText}>Cómo llegar</Text>
+              <Text style={styles.routeButtonText}>{t('stationSheet.howToArrive')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -270,7 +273,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
         {/* --- RESSENYES --- */}
         <View style={styles.reviewsHeaderContainer}>
           <View style={styles.reviewsHeaderLeft}>
-            <Text style={styles.sectionTitle}>Valoraciones</Text>
+            <Text style={styles.sectionTitle}>{t('stationSheet.reviews')}</Text>
             {averageRating && (
               <View style={styles.averageContainer}>
                 <Text style={styles.averageText}>{averageRating}</Text>
@@ -292,11 +295,11 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
 
         {isFormVisible && user && (
           <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>{editingReviewId ? 'Edita tu opinión' : 'Deja tu opinión'}</Text>
+            <Text style={styles.formTitle}>{editingReviewId ? t('stationSheet.editReview') : t('stationSheet.leaveReview')}</Text>
             <StarRating rating={rating} onRatingChange={setRating} disabled={false} size={32} />
             <TextInput
               style={styles.textInput}
-              placeholder="Escribe tu comentario..."
+              placeholder={t('stationSheet.commentPlaceholder')}
               placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
               value={comment}
               onChangeText={setComment}
@@ -304,22 +307,22 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
               numberOfLines={3}
             />
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmitReview} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Publicar</Text>}
+              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>{t('common.publish')}</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={{marginTop: 12}} onPress={cancelForm}>
-                <Text style={{color: isDark ? '#94a3b8' : '#6b7280', textAlign: 'center'}}>Cancelar</Text>
+                <Text style={{color: isDark ? '#94a3b8' : '#6b7280', textAlign: 'center'}}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {!user && !isFormVisible && (
-          <Text style={styles.loginPrompt}>Inicia sesión para dejar una valoración.</Text>
+          <Text style={styles.loginPrompt}>{t('stationSheet.loginToReview')}</Text>
         )}
 
         {loadingReviews ? (
           <ActivityIndicator style={{marginTop: 20}} color={isDark ? '#fff' : '#10b981'} />
         ) : reviews.length === 0 ? (
-          <Text style={styles.noReviewsText}>Aún no hay valoraciones. ¡Sé el primero!</Text>
+          <Text style={styles.noReviewsText}>{t('stationSheet.noReviews')}</Text>
         ) : (
           reviews.map((review) => (
             <View key={review.id} style={styles.reviewCard}>
@@ -328,7 +331,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
                   <Text style={styles.reviewerName}>{review.username}</Text>
                   <Text style={styles.reviewDate}>
                     • {new Date(review.data_publicacio).toLocaleDateString()}
-                    {review.data_actualitzacio !== review.data_publicacio && ' (Editado)'}
+                    {review.data_actualitzacio !== review.data_publicacio && t('stationSheet.edited')}
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.likeButtonHeader} onPress={() => handleToggleLike(review)}>
@@ -340,8 +343,8 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
               {review.comentari ? <Text style={styles.reviewComment}>{review.comentari}</Text> : null}
               {user?.id === review.usuari_id && (
                 <View style={styles.reviewActions}>
-                  <TouchableOpacity onPress={() => startEditing(review)}><Text style={styles.actionTextBlue}>Editar</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteReview(review.id)}><Text style={styles.actionTextRed}>Eliminar</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => startEditing(review)}><Text style={styles.actionTextBlue}>{t('common.edit')}</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteReview(review.id)}><Text style={styles.actionTextRed}>{t('common.delete')}</Text></TouchableOpacity>
                 </View>
               )}
             </View>
