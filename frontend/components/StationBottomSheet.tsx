@@ -290,7 +290,6 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
             stationLon={Number.parseFloat(String(station.longitud))}
             isDark={isDark}
             onFocusEventOnMap={onFocusEventOnMap}
-            embedInSection
           />
         </View>
 

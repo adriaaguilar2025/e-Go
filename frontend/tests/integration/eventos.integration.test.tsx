@@ -270,6 +270,222 @@ describe('StationNearbyEventsCarousel - Integración', () => {
     expect(onFocusEventOnMap).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
+
+  // las flechas anterior y siguiente actualizan el indicador de página
+  test('TC7: flechas anterior y siguiente actualizan el indicador de página', async () => {
+    installFetchMock([
+      { id: 1, titulo: 'Evento A', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+      { id: 2, titulo: 'Evento B', imagen_url: null, distancia_km: 0.2, lat: 41.4, lon: 2.18 },
+    ]);
+
+    const { getByLabelText, getByTestId, getByText } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByText(/1 \/ 2/)).toBeTruthy());
+
+    fireEvent.press(getByLabelText('Siguiente evento'));
+    await waitFor(() => expect(getByText(/2 \/ 2/)).toBeTruthy());
+
+    fireEvent.press(getByLabelText('Evento anterior'));
+    await waitFor(() => expect(getByText(/1 \/ 2/)).toBeTruthy());
+  });
+
+  // el scroll horizontal actualiza el indicador de página
+  test('TC8: scroll horizontal actualiza el índice activo', async () => {
+    installFetchMock([
+      { id: 1, titulo: 'Scroll A', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+      { id: 2, titulo: 'Scroll B', imagen_url: null, distancia_km: 0.2, lat: 41.4, lon: 2.18 },
+    ]);
+
+    const { getByTestId, getByText } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByText(/1 \/ 2/)).toBeTruthy());
+
+    const cardWidth = Math.max(160, Math.floor(320 * 0.72));
+    const snapInterval = cardWidth + 12;
+
+    fireEvent.scroll(getByTestId('eventos-carousel-scroll'), {
+      nativeEvent: {
+        contentOffset: { x: snapInterval, y: 0 },
+        contentSize: { width: 800, height: 200 },
+        layoutMeasurement: { width: 320, height: 200 },
+      },
+    });
+    fireEvent(getByTestId('eventos-carousel-scroll'), 'momentumScrollEnd', {
+      nativeEvent: {
+        contentOffset: { x: snapInterval, y: 0 },
+        contentSize: { width: 800, height: 200 },
+        layoutMeasurement: { width: 320, height: 200 },
+      },
+    });
+
+    await waitFor(() => expect(getByText(/2 \/ 2/)).toBeTruthy());
+  });
+
+  // si las coordenadas de la estación no son finitas, no se llama a la API
+  test('TC9: coordenadas de estación inválidas no llaman a la API', async () => {
+    const { mock: invalidCoordsFetch } = installFetchMock([
+      { id: 1, titulo: 'No debería cargar', imagen_url: null, distancia_km: 0.1, lat: 41, lon: 2 },
+    ]);
+
+    const { getByText } = render(
+      <StationNearbyEventsCarousel stationLat={Number.NaN} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => {
+      expect(getByText('No hay eventos en un radio de 1 km.')).toBeTruthy();
+    });
+    expect(invalidCoordsFetch).not.toHaveBeenCalled();
+  });
+
+  // si hay un solo evento, no se puede deslizar
+  test('TC10: un solo evento no muestra hint de deslizar', async () => {
+    installFetchMock([
+      { id: 1, titulo: 'Único evento', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+    ]);
+
+    const { getByText, getByTestId, queryByText } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByText('Único evento')).toBeTruthy());
+    expect(queryByText(/Desliza para ver más/)).toBeNull();
+  });
+
+  // si no hay callback al mapa, las tarjetas no tienen enlace al mapa
+  test('TC11: sin onFocusEventOnMap no muestra hint de tocar en el mapa', async () => {
+    installFetchMock([
+      { id: 1, titulo: 'Solo lectura', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+    ]);
+
+    const { getByText, getByTestId, queryByText } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByText('Solo lectura')).toBeTruthy());
+    expect(queryByText('Toca para ver en el mapa')).toBeNull();
+  });
+
+  // si el evento tiene imagen_url, se usa la imagen en lugar del placeholder
+  test('TC12: evento con imagen_url renderiza el componente Image', async () => {
+    installFetchMock([
+      {
+        id: 1,
+        titulo: 'Con foto',
+        imagen_url: 'https://example.com/foto.jpg',
+        distancia_km: 0.1,
+        lat: 41.39,
+        lon: 2.17,
+      },
+    ]);
+
+    const { getByTestId } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByTestId('evento-imagen')).toBeTruthy());
+  });
+
+  // en el último evento, la flecha siguiente no avanza
+  test('TC13: en el último evento la flecha siguiente no avanza', async () => {
+    installFetchMock([
+      { id: 1, titulo: 'Primero', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+      { id: 2, titulo: 'Último', imagen_url: null, distancia_km: 0.2, lat: 41.4, lon: 2.18 },
+    ]);
+
+    const { getByLabelText, getByTestId, getByText } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    fireEvent.press(getByLabelText('Siguiente evento'));
+    await waitFor(() => expect(getByText(/2 \/ 2/)).toBeTruthy());
+
+    fireEvent.press(getByLabelText('Siguiente evento'));
+    expect(getByText(/2 \/ 2/)).toBeTruthy();
+  });
+
+  // mientras la petición está en vuelo se muestra el indicador de carga
+  test('TC14: muestra estado de carga antes de recibir eventos', async () => {
+    let resolveFetch!: (value: Response) => void;
+    globalThis.fetch = jest.fn<typeof fetch>(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        })
+    );
+
+    const { getByTestId, UNSAFE_queryByType } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    const { ActivityIndicator } = require('react-native');
+    await waitFor(() => expect(UNSAFE_queryByType(ActivityIndicator)).toBeTruthy());
+
+    resolveFetch(
+      asResponse({
+        ok: true,
+        json: async () =>
+          eventosPayload([
+            { id: 1, titulo: 'Tras carga', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+          ]),
+      })
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+  });
+
+  // con isDark=true se usan colores oscuros
+  test('TC15: renderiza correctamente con tema oscuro', async () => {
+    installFetchMock([
+      { id: 1, titulo: 'Noche', imagen_url: null, distancia_km: 0.1, lat: 41.39, lon: 2.17 },
+    ]);
+
+    const { getByText, getByTestId } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByText('Noche')).toBeTruthy());
+  });
+
+  // si distancia_km no es numérica, se muestra un guión
+  test('TC16: distancia no numérica muestra guión', async () => {
+    installFetchMock([
+      {
+        id: 1,
+        titulo: 'Sin km',
+        imagen_url: null,
+        distancia_km: 'x' as unknown as number,
+        lat: 41.39,
+        lon: 2.17,
+      },
+    ]);
+
+    const { getByText, getByTestId } = render(
+      <StationNearbyEventsCarousel stationLat={stationLat} stationLon={stationLon} isDark={false} />
+    );
+
+    await waitFor(() => expect(getByTestId('eventos-carousel-viewport')).toBeTruthy());
+    layoutCarouselViewport(getByTestId);
+    await waitFor(() => expect(getByText('—')).toBeTruthy());
+  });
+
 });
 
 describe('StationBottomSheet - Integración Eventos cercanos', () => {
@@ -319,7 +535,7 @@ describe('StationBottomSheet - Integración Eventos cercanos', () => {
   });
 
   // El panel integra la sección con cabecera y dispara la misma petición que el carrusel.
-  test('TC7: muestra sección Eventos cercanos y carga la API externa', async () => {
+  test('TC-P1: muestra sección Eventos cercanos y carga la API externa', async () => {
     const { getByText, getByTestId } = render(<StationBottomSheet {...defaultProps} />);
 
     await waitFor(() => expect(getByText('Eventos cercanos')).toBeTruthy());
@@ -337,7 +553,7 @@ describe('StationBottomSheet - Integración Eventos cercanos', () => {
   });
 
   // al cambiar de estación, se vuelve a pedir eventos con las nuevas coordenadas.
-  test('TC8: al cambiar estación vuelve a pedir eventos', async () => {
+  test('TC-P2: al cambiar estación vuelve a pedir eventos', async () => {
     const stationB = { ...mockStation, id: 99, latitud: '40.0', longitud: '3.0' };
 
     const { getByText, getByTestId, rerender } = render(<StationBottomSheet {...defaultProps} />);
@@ -374,7 +590,7 @@ describe('StationBottomSheet - Integración Eventos cercanos', () => {
   });
 
   // Integración con el mapa: callback del panel hacia index (simulado).
-  test('TC9: onFocusEventOnMap del panel recibe datos al pulsar evento', async () => {
+  test('TC-P3: onFocusEventOnMap del panel recibe datos al pulsar evento', async () => {
     const onFocusEventOnMap = jest.fn();
     const { getByText, getByTestId } = render(
       <StationBottomSheet {...defaultProps} onFocusEventOnMap={onFocusEventOnMap} />

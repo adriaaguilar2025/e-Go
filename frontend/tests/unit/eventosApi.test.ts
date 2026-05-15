@@ -7,8 +7,52 @@ import {
   getEventosApiBaseUrl,
   getEventosApiToken,
   normalizeEventosApiBaseUrl,
+  normalizeEventosApiTokenString,
 } from '@/constants/eventosApi';
 
+describe('normalizeEventosApiTokenString', () => {
+  test('cadena vacía o solo espacios devuelve token vacío', () => {
+    expect(normalizeEventosApiTokenString(undefined)).toBe('');
+    expect(normalizeEventosApiTokenString('')).toBe('');
+    expect(normalizeEventosApiTokenString('   ')).toBe('');
+  });
+
+  test('elimina prefijo Token y espacios sobrantes', () => {
+    expect(normalizeEventosApiTokenString('Token abc123')).toBe('abc123');
+    expect(normalizeEventosApiTokenString('token   xyz')).toBe('xyz');
+    expect(normalizeEventosApiTokenString('  Token  secret  ')).toBe('secret');
+  });
+
+  // Cubre líneas 6-7: comillas + segundo replace de Token dentro del valor.
+  test('quita comillas y Token anidado dentro de las comillas', () => {
+    expect(normalizeEventosApiTokenString('"mytoken"')).toBe('mytoken');
+    expect(normalizeEventosApiTokenString("'mytoken'")).toBe('mytoken');
+    expect(normalizeEventosApiTokenString('"Token nested"')).toBe('nested');
+    expect(normalizeEventosApiTokenString("'Token nested'")).toBe('nested');
+  });
+
+  test('deja intacto un token ya limpio', () => {
+    expect(normalizeEventosApiTokenString('plain-secret-42')).toBe('plain-secret-42');
+  });
+
+  // Sin comilla de cierre no entra en la rama de slice; el valor se devuelve tras quitar solo Token inicial.
+  test('comilla inicial sin cierre no recorta como par comillas', () => {
+    expect(normalizeEventosApiTokenString('"orphan')).toBe('"orphan');
+  });
+});
+
+describe('normalizeEventosApiBaseUrl', () => {
+  test('URL por defecto sin barra final', () => {
+    expect(normalizeEventosApiBaseUrl(undefined)).toBe('http://13.38.238.95/api/external/eventos');
+    expect(normalizeEventosApiBaseUrl('')).toBe('http://13.38.238.95/api/external/eventos');
+  });
+
+  test('recorta barras finales de la URL configurada', () => {
+    expect(normalizeEventosApiBaseUrl('https://api.example.com/v1/eventos///')).toBe(
+      'https://api.example.com/v1/eventos'
+    );
+  });
+});
 
 describe('getEventosApiToken', () => {
   const envKey = 'EXPO_PUBLIC_EVENTOS_API_TOKEN';
@@ -43,6 +87,11 @@ describe('formatRadioKmForUi', () => {
   test('enteros en español (coma decimal no aplica)', () => {
     expect(formatRadioKmForUi(1)).toBe('1 km');
     expect(formatRadioKmForUi(5)).toBe('5 km');
+  });
+
+  test('decimales con coma como separador', () => {
+    expect(formatRadioKmForUi(0.25)).toBe('0,25 km');
+    expect(formatRadioKmForUi(1.5)).toBe('1,5 km');
   });
 });
 

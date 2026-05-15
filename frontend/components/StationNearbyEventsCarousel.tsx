@@ -38,8 +38,6 @@ interface StationNearbyEventsCarouselProps {
     stationOriginLat: number,
     stationOriginLon: number
   ) => void;
-  /** When true, omit title (parent renders section header like Valoraciones). */
-  embedInSection?: boolean;
 }
 
 export function StationNearbyEventsCarousel({
@@ -47,7 +45,6 @@ export function StationNearbyEventsCarousel({
   stationLon,
   isDark,
   onFocusEventOnMap,
-  embedInSection = false,
 }: StationNearbyEventsCarouselProps) {
   const scrollRef = useRef<ScrollView>(null);
   /** Amplada del contenidor del ScrollView (entre fletxes). */
@@ -146,12 +143,9 @@ export function StationNearbyEventsCarousel({
     );
   };
 
-  const rootStyle = embedInSection ? styles.sectionEmbed : styles.section;
-
   if (loading) {
     return (
-      <View style={rootStyle}>
-        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
+      <View style={styles.root}>
         <View style={styles.loadingBox}>
           <ActivityIndicator color={isDark ? '#34d399' : '#10b981'} />
         </View>
@@ -161,8 +155,7 @@ export function StationNearbyEventsCarousel({
 
   if (error === 'token') {
     return (
-      <View style={rootStyle}>
-        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
+      <View style={styles.root}>
         <Text style={styles.hint}>
           Configura EXPO_PUBLIC_EVENTOS_API_TOKEN en el .env del frontend y reinicia Metro.
         </Text>
@@ -172,8 +165,7 @@ export function StationNearbyEventsCarousel({
 
   if (error) {
     return (
-      <View style={rootStyle}>
-        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
+      <View style={styles.root}>
         <Text style={styles.errorSmall}>{error}</Text>
       </View>
     );
@@ -181,8 +173,7 @@ export function StationNearbyEventsCarousel({
 
   if (events.length === 0) {
     return (
-      <View style={rootStyle}>
-        {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
+      <View style={styles.root}>
         <Text style={styles.hint}>
           No hay eventos en un radio de {formatRadioKmForUi(EVENTOS_RADIO_KM_DEFAULT)}.
         </Text>
@@ -191,8 +182,7 @@ export function StationNearbyEventsCarousel({
   }
 
   return (
-    <View style={rootStyle}>
-      {!embedInSection ? <Text style={styles.sectionTitle}>Eventos cercanos</Text> : null}
+    <View style={styles.root}>
       <View style={styles.panel}>
         <View style={styles.carouselRow}>
           <TouchableOpacity
@@ -215,6 +205,7 @@ export function StationNearbyEventsCarousel({
           >
             {viewportWidth > 0 && cardWidth > 0 ? (
               <ScrollView
+                testID="eventos-carousel-scroll"
                 ref={scrollRef}
                 horizontal
                 pagingEnabled={false}
@@ -302,14 +293,7 @@ export function StationNearbyEventsCarousel({
 
 const createStyles = (isDark: boolean) =>
   StyleSheet.create({
-    section: { marginBottom: 8 },
-    sectionEmbed: { marginBottom: 0 },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: isDark ? Colors.dark.text : Colors.light.text,
-      marginBottom: 10,
-    },
+    root: { marginBottom: 0 },
     panel: {
       borderRadius: 14,
       borderWidth: 1,
