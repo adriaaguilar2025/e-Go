@@ -27,6 +27,9 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { useAuth } from '@/contexts/AuthContext';
 import { useCharging } from '@/contexts/ChargingContext';
 import { getApiUrl, GOOGLE_WEB_CLIENT_ID } from '@/constants/api';
+import { appFetch } from '@/services/appFetch';
+import { ChargingTimerDisplay } from '../../components/ChargingTimerDisplay';
+import { ChargingActionCard } from '../../components/ChargingActionCard';
 import { ChargingResultModal } from '../../components/ChargingResultModal';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
@@ -554,9 +557,8 @@ export default function InicioScreen() {
       if (ac_dc) queryParams.push(`ac_dc=${ac_dc}`);
 
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-      const url = `${getApiUrl()}/stations${queryString}`;
 
-      const response = await fetch(url);
+      const response = await appFetch(`/stations${queryString}`);
       const data = await response.json();
 
       setEstaciones(Array.isArray(data) ? data : []);
@@ -573,7 +575,7 @@ export default function InicioScreen() {
 const fetchUserFavorites = async () => {
   if (!user?.id) return;
   try {
-    const response = await fetch(`${getApiUrl()}/favorites?usuari_id=${user.id}`);
+    const response = await appFetch(`/favorites?usuari_id=${user.id}`);
     const data = await response.json();
 
     // Verificamos si data existe y es un array antes de hacer el map
@@ -657,7 +659,8 @@ useEffect(() => {
         // Ajuntem tots els paràmetres amb un "&"
         const queryString = queryParams.join('&');
 
-        const response = await fetch(`${getApiUrl()}/stations/search?${queryString}`);
+        // CANVIA AQUESTA URL PER LA TEVA RUTA DE CERCA DEL BACKEND!
+        const response = await appFetch(`/stations/search?${queryString}`);
         const data = await response.json();
 
         // --- APLIQUEM EL FILTRE DE FAVORITS LOCALMENT ---
@@ -765,7 +768,7 @@ useEffect(() => {
 
       let res: Response;
       try {
-        res = await fetch(`${getApiUrl()}/auth/google`, {
+        res = await appFetch('/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken }),
@@ -789,7 +792,9 @@ useEffect(() => {
       const data = await res.json();
 
       if (!res.ok) {
-        setAuthError(data.error || 'Error al iniciar sesión');
+        if (data?.code !== 'USER_BANNED') {
+          setAuthError(data.error || 'Error al iniciar sesión');
+        }
         return;
       }
 
@@ -831,7 +836,7 @@ useEffect(() => {
     setAuthLoadingGoogle(true);
     setAuthError('');
     try {
-      const res = await fetch(`${getApiUrl()}/auth/register`, {
+      const res = await appFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -846,7 +851,9 @@ useEffect(() => {
         setPendingAuth(null);
         setWelcomeUsername('');
       } else {
-        setAuthError(data.error || 'Error al registrarse');
+        if (data?.code !== 'USER_BANNED') {
+          setAuthError(data.error || 'Error al registrarse');
+        }
       }
     } catch (_e) {
       setAuthError('No se pudo conectar con el servidor.');
@@ -864,7 +871,7 @@ useEffect(() => {
     setAuthLoadingGoogle(true);
     setAuthError('');
     try {
-      const res = await fetch(`${getApiUrl()}/auth/local/login`, {
+      const res = await appFetch('/auth/local/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -874,7 +881,9 @@ useEffect(() => {
       });
       const data = await res.json()
       if (!res.ok) {
-        setAuthError(data.error || 'No se pudo iniciar sesión');
+        if (data?.code !== 'USER_BANNED') {
+          setAuthError(data.error || 'No se pudo iniciar sesión');
+        }
         return;
       }
       if (data.user) {

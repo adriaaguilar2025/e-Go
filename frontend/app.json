@@ -25,6 +25,7 @@
     "android": {
       "usesCleartextTraffic": true,
       "package": "com.ego2.app",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./app/_assets/favicon.png",
