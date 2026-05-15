@@ -19,6 +19,7 @@ module.exports = {
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/_layout.tsx',
+    '!app/_components/MapWrapper.web.tsx',
   ],
 
   coverageReporters: ['text', 'lcov', 'html'],
