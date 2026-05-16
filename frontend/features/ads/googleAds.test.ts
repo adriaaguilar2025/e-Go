@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { clearHarnessStores, getHarness, invokeHandler } from './googleAds.testHelpers';
+import {
+  clearHarnessStores,
+  getHarness,
+  getMobileAdsTestInstance,
+  invokeHandler,
+} from './googleAds.testHelpers';
 
 const { mockPlatform } = vi.hoisted(() => ({
   mockPlatform: { OS: 'android' as string },
@@ -90,7 +95,7 @@ describe('googleAds (vitest)', () => {
   });
 
   test('initializeGoogleAds configura SDK y precarga anuncios', async () => {
-    const mobileAdsInstance = (mobileAds as unknown as ReturnType<typeof vi.fn>)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
 
@@ -105,7 +110,7 @@ describe('googleAds (vitest)', () => {
 
   test('initializeGoogleAds no hace nada si plataforma no soportada', async () => {
     mockPlatform.OS = 'web';
-    const mobileAdsInstance = (mobileAds as unknown as ReturnType<typeof vi.fn>)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
 
@@ -114,7 +119,7 @@ describe('googleAds (vitest)', () => {
 
   test('initializeGoogleAds no hace nada si anuncios desactivados', async () => {
     process.env.EXPO_PUBLIC_ADS_ENABLED = 'false';
-    const mobileAdsInstance = (mobileAds as unknown as ReturnType<typeof vi.fn>)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
 
@@ -122,7 +127,7 @@ describe('googleAds (vitest)', () => {
   });
 
   test('initializeGoogleAds solo corre una vez', async () => {
-    const mobileAdsInstance = (mobileAds as unknown as ReturnType<typeof vi.fn>)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
     await initializeGoogleAds();
@@ -133,7 +138,9 @@ describe('googleAds (vitest)', () => {
   test('preload interstitial cubre LOADED y ERROR', async () => {
     await initializeGoogleAds();
     const { interstitialAd } = getHarness();
-    const createMock = InterstitialAd.createForAdRequest as ReturnType<typeof vi.fn>;
+    const createMock = InterstitialAd.createForAdRequest as unknown as {
+      mock: { calls: unknown[] };
+    };
 
     invokeHandler(interstitialAd, 'loaded');
     const createsAfterLoaded = createMock.mock.calls.length;
@@ -146,7 +153,9 @@ describe('googleAds (vitest)', () => {
   test('preload rewarded cubre LOADED y ERROR', async () => {
     await initializeGoogleAds();
     const { rewardedAd } = getHarness();
-    const createMock = RewardedAd.createForAdRequest as ReturnType<typeof vi.fn>;
+    const createMock = RewardedAd.createForAdRequest as unknown as {
+      mock: { calls: unknown[] };
+    };
 
     invokeHandler(rewardedAd, 'rewarded_loaded');
     const createsAfterLoaded = createMock.mock.calls.length;
@@ -182,7 +191,9 @@ describe('googleAds (vitest)', () => {
   test('preload interstitial CLOSED vuelve a precargar', async () => {
     await initializeGoogleAds();
     const { interstitialAd } = getHarness();
-    const createMock = InterstitialAd.createForAdRequest as ReturnType<typeof vi.fn>;
+    const createMock = InterstitialAd.createForAdRequest as unknown as {
+      mock: { calls: unknown[] };
+    };
     const createsBefore = createMock.mock.calls.length;
 
     invokeHandler(interstitialAd, 'closed');
@@ -194,7 +205,9 @@ describe('googleAds (vitest)', () => {
   test('preload rewarded CLOSED vuelve a precargar', async () => {
     await initializeGoogleAds();
     const { rewardedAd } = getHarness();
-    const createMock = RewardedAd.createForAdRequest as ReturnType<typeof vi.fn>;
+    const createMock = RewardedAd.createForAdRequest as unknown as {
+      mock: { calls: unknown[] };
+    };
     const createsBefore = createMock.mock.calls.length;
 
     invokeHandler(rewardedAd, 'closed');

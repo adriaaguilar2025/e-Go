@@ -2,42 +2,17 @@ import { Platform } from 'react-native';
 import mobileAds, { InterstitialAd, RewardedAd } from 'react-native-google-mobile-ads';
 
 import {
+  clearHarnessStores,
+  getHarness,
+  getMobileAdsTestInstance,
+  invokeHandler,
+} from '@/features/ads/googleAds.testHelpers';
+import {
   initializeGoogleAds,
   resetGoogleAdsModuleForTests,
   showFullscreenAd,
   showInterstitialAd,
 } from '@/features/ads/googleAds';
-
-type ListenerStore = Record<string, Array<(...args: unknown[]) => void>>;
-
-type AdTestHarness = {
-  interstitialStore: ListenerStore;
-  rewardedStore: ListenerStore;
-  interstitialAd: { load: jest.Mock; show: jest.Mock; addAdEventListener: jest.Mock };
-  rewardedAd: { load: jest.Mock; show: jest.Mock; addAdEventListener: jest.Mock };
-};
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __adTestHarness: AdTestHarness | undefined;
-}
-
-function getHarness(): AdTestHarness {
-  const harness = globalThis.__adTestHarness;
-  if (!harness) throw new Error('Ad test harness no inicializado');
-  return harness;
-}
-
-function invokeHandler(
-  ad: { addAdEventListener: jest.Mock },
-  event: string,
-  which: 'first' | 'last' = 'first'
-): void {
-  const calls = ad.addAdEventListener.mock.calls.filter((entry) => entry[0] === event);
-  if (!calls.length) throw new Error(`No listener for ${event}`);
-  const call = which === 'last' ? calls[calls.length - 1] : calls[0];
-  call[1]();
-}
 
 describe('features/ads/googleAds', () => {
   const originalPlatform = Platform.OS;
@@ -48,12 +23,7 @@ describe('features/ads/googleAds', () => {
     delete process.env.EXPO_PUBLIC_ADS_ENABLED;
     resetGoogleAdsModuleForTests();
     jest.clearAllMocks();
-    for (const key of Object.keys(getHarness().interstitialStore)) {
-      delete getHarness().interstitialStore[key];
-    }
-    for (const key of Object.keys(getHarness().rewardedStore)) {
-      delete getHarness().rewardedStore[key];
-    }
+    clearHarnessStores();
   });
 
   afterEach(() => {
@@ -63,7 +33,7 @@ describe('features/ads/googleAds', () => {
   });
 
   test('initializeGoogleAds configura SDK y precarga anuncios', async () => {
-    const mobileAdsInstance = (mobileAds as unknown as jest.Mock)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
 
@@ -78,7 +48,7 @@ describe('features/ads/googleAds', () => {
 
   test('initializeGoogleAds no hace nada si plataforma no soportada', async () => {
     Platform.OS = 'web';
-    const mobileAdsInstance = (mobileAds as unknown as jest.Mock)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
 
@@ -87,7 +57,7 @@ describe('features/ads/googleAds', () => {
 
   test('initializeGoogleAds no hace nada si anuncios desactivados', async () => {
     process.env.EXPO_PUBLIC_ADS_ENABLED = 'false';
-    const mobileAdsInstance = (mobileAds as unknown as jest.Mock)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
 
@@ -95,7 +65,7 @@ describe('features/ads/googleAds', () => {
   });
 
   test('initializeGoogleAds solo corre una vez', async () => {
-    const mobileAdsInstance = (mobileAds as unknown as jest.Mock)();
+    const mobileAdsInstance = getMobileAdsTestInstance(mobileAds);
 
     await initializeGoogleAds();
     await initializeGoogleAds();
