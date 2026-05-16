@@ -21,6 +21,7 @@ jest.mock('@/services/incidenciaAdminService', () => ({
 import AdminIncidenciasScreen from '@/app/admin-incidencias';
 import {
   listPendingIncidencias,
+  listHistoryIncidencias,
   validateIncidencia,
   rejectIncidencia,
   resolveIncidencia,
@@ -59,6 +60,7 @@ describe('AdminIncidenciasScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn() as any);
+    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
   });
 
   test('shows loading state initially', () => {
