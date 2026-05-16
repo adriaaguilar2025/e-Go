@@ -2,21 +2,21 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
-const mockPush = jest.fn();
-const mockSetUser = jest.fn();
-const mockGetPrivilegedToken = jest.fn();
-const mockPrivilegedFetch = jest.fn();
-const mockClearPrivilegedSession = jest.fn();
-const mockListAdminStations = jest.fn();
-const mockDeleteAdminStation = jest.fn();
+const mockReplace = jest.fn<any>();
+const mockPush = jest.fn<any>();
+const mockSetUser = jest.fn<any>();
+const mockGetPrivilegedToken = jest.fn<any>();
+const mockPrivilegedFetch = jest.fn<any>();
+const mockClearPrivilegedSession = jest.fn<any>();
+const mockListAdminStations = jest.fn<any>();
+const mockDeleteAdminStation = jest.fn<any>();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: mockPush }),
 }));
 
 jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ setUser: mockSetUser, user: null, logout: jest.fn(), isLoading: false }),
+  useAuth: () => ({ setUser: mockSetUser, user: null, logout: jest.fn<any>(), isLoading: false }),
 }));
 
 jest.mock('@/contexts/ColorblindPreferenceContext', () => ({

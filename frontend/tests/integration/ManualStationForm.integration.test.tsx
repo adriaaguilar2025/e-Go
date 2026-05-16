@@ -28,8 +28,8 @@ jest.mock('@/app/_components/MapWrapper', () => ({
 }));
 
 jest.mock('@/services/geoService', () => ({
-  searchGeoAddress: jest.fn(),
-  reverseGeoAddress: jest.fn(),
+  searchGeoAddress: jest.fn<any>(),
+  reverseGeoAddress: jest.fn<any>(),
 }));
 
 jest.mock('@/constants/api', () => ({
@@ -48,8 +48,8 @@ import { FormState, initialStationFormState } from '@/components/stations/types'
 import { searchGeoAddress, reverseGeoAddress } from '@/services/geoService';
 
 function ControlledForm({
-  onSubmit = jest.fn() as any,
-  onBack = jest.fn() as any,
+  onSubmit = jest.fn<any>() as any,
+  onBack = jest.fn<any>() as any,
   initialForm = initialStationFormState,
   loading = false,
   error = '',
@@ -86,8 +86,8 @@ describe('ManualStationForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    (searchGeoAddress as jest.Mock).mockResolvedValue([]);
-    (reverseGeoAddress as jest.Mock).mockResolvedValue(null);
+    (searchGeoAddress as jest.Mock<any>).mockResolvedValue([]);
+    (reverseGeoAddress as jest.Mock<any>).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -117,14 +117,14 @@ describe('ManualStationForm', () => {
   });
 
   test('submit button calls onSubmit', () => {
-    const onSubmit = jest.fn();
+    const onSubmit = jest.fn<any>();
     const { getByText } = render(<ControlledForm onSubmit={onSubmit as any} />);
     fireEvent.press(getByText('Guardar'));
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   test('back button calls onBack', () => {
-    const onBack = jest.fn();
+    const onBack = jest.fn<any>();
     const { getByText } = render(<ControlledForm onBack={onBack as any} />);
     fireEvent.press(getByText('Volver'));
     expect(onBack).toHaveBeenCalledTimes(1);
@@ -267,7 +267,7 @@ describe('ManualStationForm', () => {
   });
 
   test('address input triggers geo search after debounce', async () => {
-    (searchGeoAddress as jest.Mock).mockResolvedValue([
+    (searchGeoAddress as jest.Mock<any>).mockResolvedValue([
       { formattedAddress: 'Calle Test 1', lat: 41.4, lng: 2.2, municipi: 'Barcelona', provincia: 'Barcelona' },
     ]);
     const { getByPlaceholderText, findByText } = render(<ControlledForm />);
@@ -284,7 +284,7 @@ describe('ManualStationForm', () => {
   });
 
   test('clicking geo suggestion applies address', async () => {
-    (searchGeoAddress as jest.Mock).mockResolvedValue([
+    (searchGeoAddress as jest.Mock<any>).mockResolvedValue([
       { formattedAddress: 'Calle Test 1, Barcelona', lat: 41.4, lng: 2.2, municipi: 'Barcelona', provincia: 'Barcelona' },
     ]);
     const { getByPlaceholderText, findByText, getByText } = render(<ControlledForm />);
@@ -298,7 +298,7 @@ describe('ManualStationForm', () => {
   });
 
   test('map press sets picked coordinates', async () => {
-    (reverseGeoAddress as jest.Mock).mockResolvedValue({
+    (reverseGeoAddress as jest.Mock<any>).mockResolvedValue({
       formattedAddress: 'Test Addr', lat: 41.5, lng: 2.1, municipi: 'Test', provincia: 'Barcelona',
     });
     const { getByText, getByTestId } = render(<ControlledForm />);
@@ -311,7 +311,7 @@ describe('ManualStationForm', () => {
   });
 
   test('map press with no reverse result shows message', async () => {
-    (reverseGeoAddress as jest.Mock).mockResolvedValue(null);
+    (reverseGeoAddress as jest.Mock<any>).mockResolvedValue(null);
     const { getByText, getByTestId, findByText } = render(<ControlledForm />);
     fireEvent.press(getByText('Seleccionar en el mapa'));
     fireEvent.press(getByTestId('map-press'));
@@ -351,7 +351,7 @@ describe('ManualStationForm', () => {
   });
 
   test('geo search error is handled silently', async () => {
-    (searchGeoAddress as jest.Mock).mockRejectedValue(new Error('Network error'));
+    (searchGeoAddress as jest.Mock<any>).mockRejectedValue(new Error('Network error'));
     const { getByPlaceholderText } = render(<ControlledForm />);
     fireEvent.changeText(getByPlaceholderText('Direccion'), 'Calle error');
     act(() => { jest.advanceTimersByTime(400); });

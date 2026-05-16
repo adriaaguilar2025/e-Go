@@ -2,7 +2,7 @@
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockBack = jest.fn();
+const mockBack = jest.fn<any>();
 const mockLocalSearchParams: Record<string, string> = {};
 
 jest.mock('expo-router', () => ({
@@ -20,8 +20,8 @@ jest.mock('@/app/_components/MapWrapper', () => ({
 }));
 
 jest.mock('@/services/geoService', () => ({
-  searchGeoAddress: jest.fn().mockResolvedValue([]),
-  reverseGeoAddress: jest.fn().mockResolvedValue(null),
+  searchGeoAddress: jest.fn<any>().mockResolvedValue([]),
+  reverseGeoAddress: jest.fn<any>().mockResolvedValue(null),
 }));
 
 jest.mock('@/constants/catalunyaMunicipalities.json', () => ({
@@ -32,8 +32,8 @@ jest.mock('@/constants/catalunyaMunicipalities.json', () => ({
 }));
 
 jest.mock('@/services/stationModeration', () => ({
-  createAdminStation: jest.fn(),
-  updateAdminStation: jest.fn(),
+  createAdminStation: jest.fn<any>(),
+  updateAdminStation: jest.fn<any>(),
 }));
 
 import AdminStationNewScreen from '@/app/admin-station-new';
@@ -69,7 +69,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit creates station and shows success', async () => {
-      (createAdminStation as jest.Mock).mockResolvedValue(makeMockResponse(true, { id: 1 }));
+      (createAdminStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(true, { id: 1 }));
       const { getByText } = render(<AdminStationNewScreen />);
       fireEvent.press(getByText('Crear estacion'));
       await waitFor(() => {
@@ -79,7 +79,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit shows error from API', async () => {
-      (createAdminStation as jest.Mock).mockResolvedValue(makeMockResponse(false, { error: 'Campos requeridos' }));
+      (createAdminStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, { error: 'Campos requeridos' }));
       const { getByText } = render(<AdminStationNewScreen />);
       fireEvent.press(getByText('Crear estacion'));
       await waitFor(() => {
@@ -88,7 +88,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit shows fallback error when API error is empty', async () => {
-      (createAdminStation as jest.Mock).mockResolvedValue(makeMockResponse(false, {}));
+      (createAdminStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, {}));
       const { getByText } = render(<AdminStationNewScreen />);
       fireEvent.press(getByText('Crear estacion'));
       await waitFor(() => {
@@ -97,7 +97,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit shows NO_SESSION error', async () => {
-      (createAdminStation as jest.Mock).mockRejectedValue(new Error('NO_SESSION'));
+      (createAdminStation as jest.Mock<any>).mockRejectedValue(new Error('NO_SESSION'));
       const { getByText } = render(<AdminStationNewScreen />);
       fireEvent.press(getByText('Crear estacion'));
       await waitFor(() => {
@@ -106,7 +106,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit shows generic network error', async () => {
-      (createAdminStation as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (createAdminStation as jest.Mock<any>).mockRejectedValue(new Error('Network error'));
       const { getByText } = render(<AdminStationNewScreen />);
       fireEvent.press(getByText('Crear estacion'));
       await waitFor(() => {
@@ -115,7 +115,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('typing in name input clears previous error', async () => {
-      (createAdminStation as jest.Mock).mockResolvedValue(makeMockResponse(false, { error: 'Error previo' }));
+      (createAdminStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, { error: 'Error previo' }));
       const { getByText, getByPlaceholderText, queryByText } = render(<AdminStationNewScreen />);
       fireEvent.press(getByText('Crear estacion'));
       await waitFor(() => expect(getByText('Error previo')).toBeTruthy());
@@ -158,7 +158,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit updates station and shows success', async () => {
-      (updateAdminStation as jest.Mock).mockResolvedValue(makeMockResponse(true, { id: 42 }));
+      (updateAdminStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(true, { id: 42 }));
       const { getByText } = render(<AdminStationNewScreen />);
       await waitFor(() => expect(getByText('Guardar cambios')).toBeTruthy());
       fireEvent.press(getByText('Guardar cambios'));
@@ -169,7 +169,7 @@ describe('AdminStationNewScreen', () => {
     });
 
     test('submit shows error from API in edit mode', async () => {
-      (updateAdminStation as jest.Mock).mockResolvedValue(makeMockResponse(false, { error: 'Sin permisos' }));
+      (updateAdminStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, { error: 'Sin permisos' }));
       const { getByText } = render(<AdminStationNewScreen />);
       await waitFor(() => expect(getByText('Guardar cambios')).toBeTruthy());
       fireEvent.press(getByText('Guardar cambios'));

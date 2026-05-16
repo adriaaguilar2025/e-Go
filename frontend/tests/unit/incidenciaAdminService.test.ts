@@ -19,7 +19,7 @@ function makeRes(ok: boolean, data: unknown) {
 }
 
 describe('incidenciaAdminService', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); });
 
   describe('listPendingIncidencias', () => {
     test('returns incidencias array on success', async () => {

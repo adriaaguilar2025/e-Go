@@ -19,7 +19,7 @@ function makeRes(status: number, ok: boolean, data: unknown) {
 }
 
 describe('companyProfile', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); });
 
   describe('fetchCompanyProfile', () => {
     test('returns company on success', async () => {

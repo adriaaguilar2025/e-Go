@@ -3,11 +3,11 @@ import { Alert } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
-const mockGetPrivilegedToken = jest.fn();
-const mockPrivilegedFetch = jest.fn();
-const mockListAdminUsers = jest.fn();
-const mockSetUserBanStatus = jest.fn();
+const mockReplace = jest.fn<any>();
+const mockGetPrivilegedToken = jest.fn<any>();
+const mockPrivilegedFetch = jest.fn<any>();
+const mockListAdminUsers = jest.fn<any>();
+const mockSetUserBanStatus = jest.fn<any>();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
@@ -160,7 +160,7 @@ describe('AdminUsersScreen', () => {
   });
 
   test('confirms ban calls setUserBanStatus', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn() as any);
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn<any>() as any);
     mockGetPrivilegedToken.mockResolvedValue('token123');
     mockPrivilegedFetch.mockResolvedValue(mockAdminMe);
     mockListAdminUsers.mockResolvedValue([mockUser]);

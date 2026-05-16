@@ -3,19 +3,19 @@ import { Alert } from 'react-native';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
-const mockPush = jest.fn();
+const mockReplace = jest.fn<any>();
+const mockPush = jest.fn<any>();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: mockPush }),
 }));
 
 jest.mock('@/services/incidenciaAdminService', () => ({
-  listPendingIncidencias: jest.fn(),
-  listHistoryIncidencias: jest.fn(),
-  validateIncidencia: jest.fn(),
-  rejectIncidencia: jest.fn(),
-  resolveIncidencia: jest.fn(),
+  listPendingIncidencias: jest.fn<any>(),
+  listHistoryIncidencias: jest.fn<any>(),
+  validateIncidencia: jest.fn<any>(),
+  rejectIncidencia: jest.fn<any>(),
+  resolveIncidencia: jest.fn<any>(),
 }));
 
 import AdminIncidenciasScreen from '@/app/admin-incidencias';
@@ -55,22 +55,22 @@ const mockIncRejected = { ...mockInc, id: 3, rebutjada: true };
 const mockIncResolved = { ...mockInc, id: 4, validada: true, resolta: true };
 
 describe('AdminIncidenciasScreen', () => {
-  let alertSpy: jest.SpyInstance;
+  let alertSpy: jest.SpiedFunction<typeof Alert.alert>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn() as any);
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn<any>() as any);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
   });
 
   test('shows loading state initially', () => {
-    (listPendingIncidencias as jest.Mock).mockReturnValue(new Promise(() => {}));
+    (listPendingIncidencias as jest.Mock<any>).mockReturnValue(new Promise(() => {}));
     const { getByText } = render(<AdminIncidenciasScreen />);
     expect(getByText(/Cargando/)).toBeTruthy();
   });
 
   test('shows incidencia card after loading', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { getByText, findByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     expect(getByText(/testuser/)).toBeTruthy();
@@ -80,25 +80,25 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('shows empty message when no incidencias', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText } = render(<AdminIncidenciasScreen />);
     await findByText('No hay incidencias pendientes.');
   });
 
   test('shows error text when load fails', async () => {
-    (listPendingIncidencias as jest.Mock).mockRejectedValue(new Error('Load failed'));
+    (listPendingIncidencias as jest.Mock<any>).mockRejectedValue(new Error('Load failed'));
     const { findByText } = render(<AdminIncidenciasScreen />);
     await findByText('Load failed');
   });
 
   test('shows error string when load throws non-Error', async () => {
-    (listPendingIncidencias as jest.Mock).mockRejectedValue('network error');
+    (listPendingIncidencias as jest.Mock<any>).mockRejectedValue('network error');
     const { findByText } = render(<AdminIncidenciasScreen />);
     await findByText('Error cargando incidencias');
   });
 
   test('back button navigates to admin-home', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText('No hay incidencias pendientes.');
     fireEvent.press(getByText('Volver al panel admin'));
@@ -106,7 +106,7 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('refresh button reloads incidencias', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText('No hay incidencias pendientes.');
     fireEvent.press(getByText('Actualizar'));
@@ -114,8 +114,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('Validar button calls validateIncidencia and shows alert', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (validateIncidencia as jest.Mock).mockResolvedValue({ pointsAwarded: null });
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (validateIncidencia as jest.Mock<any>).mockResolvedValue({ pointsAwarded: null });
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Validar'));
@@ -126,8 +126,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('Validar shows premium points in alert', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (validateIncidencia as jest.Mock).mockResolvedValue({
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (validateIncidencia as jest.Mock<any>).mockResolvedValue({
       pointsAwarded: { points: 10, isPremium: true },
     });
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
@@ -142,8 +142,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('Validar shows non-premium points in alert', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (validateIncidencia as jest.Mock).mockResolvedValue({
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (validateIncidencia as jest.Mock<any>).mockResolvedValue({
       pointsAwarded: { points: 5, isPremium: false },
     });
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
@@ -158,8 +158,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('Validar shows error alert on failure', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (validateIncidencia as jest.Mock).mockRejectedValue(new Error('Validate error'));
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (validateIncidencia as jest.Mock<any>).mockRejectedValue(new Error('Validate error'));
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Validar'));
@@ -169,7 +169,7 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('Rechazar button opens modal', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { findByText, getByText, getByPlaceholderText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Rechazar'));
@@ -177,7 +177,7 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('reject modal can be cancelled', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { findByText, getByText, queryByPlaceholderText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Rechazar'));
@@ -188,8 +188,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('reject modal submits rejectIncidencia', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (rejectIncidencia as jest.Mock).mockResolvedValue(undefined);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (rejectIncidencia as jest.Mock<any>).mockResolvedValue(undefined);
     const { findByText, getByText, getByPlaceholderText, getAllByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Rechazar'));
@@ -204,8 +204,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('reject without reason passes undefined', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (rejectIncidencia as jest.Mock).mockResolvedValue(undefined);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (rejectIncidencia as jest.Mock<any>).mockResolvedValue(undefined);
     const { findByText, getByText, getAllByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Rechazar'));
@@ -217,8 +217,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('reject shows error alert on failure', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (rejectIncidencia as jest.Mock).mockRejectedValue(new Error('Reject error'));
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (rejectIncidencia as jest.Mock<any>).mockRejectedValue(new Error('Reject error'));
     const { findByText, getByText, getAllByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Rechazar'));
@@ -230,8 +230,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('Marcar resuelta calls resolveIncidencia', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockIncValidated]);
-    (resolveIncidencia as jest.Mock).mockResolvedValue(undefined);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockIncValidated]);
+    (resolveIncidencia as jest.Mock<any>).mockResolvedValue(undefined);
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText('Validada');
     fireEvent.press(getByText('Marcar resuelta'));
@@ -242,8 +242,8 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('resolve shows error alert on failure', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockIncValidated]);
-    (resolveIncidencia as jest.Mock).mockRejectedValue(new Error('Resolve error'));
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockIncValidated]);
+    (resolveIncidencia as jest.Mock<any>).mockRejectedValue(new Error('Resolve error'));
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText('Validada');
     fireEvent.press(getByText('Marcar resuelta'));
@@ -253,19 +253,19 @@ describe('AdminIncidenciasScreen', () => {
   });
 
   test('rejected incidencia shows Rechazada badge', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockIncRejected]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockIncRejected]);
     const { findByText } = render(<AdminIncidenciasScreen />);
     await findByText('Rechazada');
   });
 
   test('resolved incidencia shows Resuelta badge', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockIncResolved]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockIncResolved]);
     const { findByText } = render(<AdminIncidenciasScreen />);
     await findByText('Resuelta');
   });
 
   test('details modal shows incidencia info', async () => {
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Ver detalles'));
@@ -276,7 +276,7 @@ describe('AdminIncidenciasScreen', () => {
 
   test('incidencia with arxiu shows image container', async () => {
     const incWithImg = { ...mockInc, arxiu: 'https://example.com/img.jpg' };
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([incWithImg]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([incWithImg]);
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estacion/);
     fireEvent.press(getByText('Ver detalles'));
@@ -287,7 +287,7 @@ describe('AdminIncidenciasScreen', () => {
 
   test('incidencia with motiu_rebuig shows motivo row', async () => {
     const incRejectedWithMotiu = { ...mockIncRejected, motiu_rebuig: 'No aplica' };
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([incRejectedWithMotiu]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([incRejectedWithMotiu]);
     const { findByText, getByText } = render(<AdminIncidenciasScreen />);
     await findByText('Rechazada');
     fireEvent.press(getByText('Ver detalles'));
@@ -298,7 +298,7 @@ describe('AdminIncidenciasScreen', () => {
 
   test('incidencia without estacio_nom shows fallback', async () => {
     const incNoName = { ...mockInc, estacio_nom: null, estacio_municipi: null };
-    (listPendingIncidencias as jest.Mock).mockResolvedValue([incNoName]);
+    (listPendingIncidencias as jest.Mock<any>).mockResolvedValue([incNoName]);
     const { findByText } = render(<AdminIncidenciasScreen />);
     await findByText(/Estaci/);
   });

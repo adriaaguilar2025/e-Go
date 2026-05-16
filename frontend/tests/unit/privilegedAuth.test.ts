@@ -59,21 +59,21 @@ describe('privilegedAuth', () => {
 
   describe('getPrivilegedToken', () => {
     test('admin: returns the stored admin token', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('my-admin-token');
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('my-admin-token');
       const token = await getPrivilegedToken('admin');
       expect(token).toBe('my-admin-token');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith(PRIVILEGED_STORAGE_KEYS.adminToken);
     });
 
     test('company: returns the stored company token', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('my-company-token');
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('my-company-token');
       const token = await getPrivilegedToken('company');
       expect(token).toBe('my-company-token');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith(PRIVILEGED_STORAGE_KEYS.companyToken);
     });
 
     test('returns null if no token stored', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce(null);
       const token = await getPrivilegedToken('admin');
       expect(token).toBeNull();
     });
@@ -82,19 +82,19 @@ describe('privilegedAuth', () => {
   describe('getPrivilegedUser', () => {
     test('returns parsed user object', async () => {
       const user = { id: 1, email: 'admin@test.com' };
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(user));
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce(JSON.stringify(user));
       const result = await getPrivilegedUser('admin');
       expect(result).toEqual(user);
     });
 
     test('returns null if no value stored', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce(null);
       const result = await getPrivilegedUser('admin');
       expect(result).toBeNull();
     });
 
     test('returns null if stored value is invalid JSON', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('not-valid-json{');
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('not-valid-json{');
       const result = await getPrivilegedUser('admin');
       expect(result).toBeNull();
     });
@@ -102,13 +102,13 @@ describe('privilegedAuth', () => {
 
   describe('privilegedFetch', () => {
     test('throws NO_SESSION if no token in storage', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce(null);
       await expect(privilegedFetch('admin', '/some/path')).rejects.toThrow('NO_SESSION');
     });
 
     test('calls fetch with Bearer token and correct URL', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('tok-abc');
-      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({ ok: true } as Response);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('tok-abc');
+      (globalThis.fetch as jest.Mock<any>).mockResolvedValueOnce({ ok: true } as Response);
 
       await privilegedFetch('admin', '/admin/incidencias/pending');
 
@@ -116,23 +116,23 @@ describe('privilegedAuth', () => {
         'http://test.api/admin/incidencias/pending',
         expect.objectContaining({ headers: expect.any(Headers) })
       );
-      const callArgs = (globalThis.fetch as jest.Mock).mock.calls[0] as [string, RequestInit & { headers: Headers }];
+      const callArgs = (globalThis.fetch as jest.Mock<any>).mock.calls[0] as [string, RequestInit & { headers: Headers }];
       expect(callArgs[1].headers.get('Authorization')).toBe('Bearer tok-abc');
     });
 
     test('sets Content-Type when body is provided and no Content-Type set', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('tok-abc');
-      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({ ok: true } as Response);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('tok-abc');
+      (globalThis.fetch as jest.Mock<any>).mockResolvedValueOnce({ ok: true } as Response);
 
       await privilegedFetch('admin', '/path', { method: 'POST', body: '{"key":"val"}' });
 
-      const callArgs = (globalThis.fetch as jest.Mock).mock.calls[0] as [string, RequestInit & { headers: Headers }];
+      const callArgs = (globalThis.fetch as jest.Mock<any>).mock.calls[0] as [string, RequestInit & { headers: Headers }];
       expect(callArgs[1].headers.get('Content-Type')).toBe('application/json');
     });
 
     test('does not override Content-Type if already set', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('tok-abc');
-      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({ ok: true } as Response);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('tok-abc');
+      (globalThis.fetch as jest.Mock<any>).mockResolvedValueOnce({ ok: true } as Response);
 
       await privilegedFetch('admin', '/path', {
         method: 'POST',
@@ -140,17 +140,17 @@ describe('privilegedAuth', () => {
         headers: { 'Content-Type': 'text/plain' },
       });
 
-      const callArgs = (globalThis.fetch as jest.Mock).mock.calls[0] as [string, RequestInit & { headers: Headers }];
+      const callArgs = (globalThis.fetch as jest.Mock<any>).mock.calls[0] as [string, RequestInit & { headers: Headers }];
       expect(callArgs[1].headers.get('Content-Type')).toBe('text/plain');
     });
 
     test('no Content-Type when no body', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('tok-abc');
-      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({ ok: true } as Response);
+      (AsyncStorage.getItem as jest.Mock<any>).mockResolvedValueOnce('tok-abc');
+      (globalThis.fetch as jest.Mock<any>).mockResolvedValueOnce({ ok: true } as Response);
 
       await privilegedFetch('admin', '/path');
 
-      const callArgs = (globalThis.fetch as jest.Mock).mock.calls[0] as [string, RequestInit & { headers: Headers }];
+      const callArgs = (globalThis.fetch as jest.Mock<any>).mock.calls[0] as [string, RequestInit & { headers: Headers }];
       expect(callArgs[1].headers.get('Content-Type')).toBeNull();
     });
   });

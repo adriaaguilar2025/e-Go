@@ -2,7 +2,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockBack = jest.fn();
+const mockBack = jest.fn<any>();
 const mockLocalSearchParams: Record<string, string> = {};
 
 jest.mock('expo-router', () => ({
@@ -20,8 +20,8 @@ jest.mock('@/app/_components/MapWrapper', () => ({
 }));
 
 jest.mock('@/services/geoService', () => ({
-  searchGeoAddress: jest.fn().mockResolvedValue([]),
-  reverseGeoAddress: jest.fn().mockResolvedValue(null),
+  searchGeoAddress: jest.fn<any>().mockResolvedValue([]),
+  reverseGeoAddress: jest.fn<any>().mockResolvedValue(null),
 }));
 
 jest.mock('@/constants/catalunyaMunicipalities.json', () => ({
@@ -32,16 +32,16 @@ jest.mock('@/constants/catalunyaMunicipalities.json', () => ({
 }));
 
 jest.mock('@/services/stationModeration', () => ({
-  requestCreateCompanyStation: jest.fn(),
-  requestUpdateCompanyStation: jest.fn(),
+  requestCreateCompanyStation: jest.fn<any>(),
+  requestUpdateCompanyStation: jest.fn<any>(),
 }));
 
 jest.mock('@/services/companyProfile', () => ({
-  fetchCompanyProfile: jest.fn(),
+  fetchCompanyProfile: jest.fn<any>(),
 }));
 
 jest.mock('@/services/privilegedAuth', () => ({
-  getPrivilegedUser: jest.fn(),
+  getPrivilegedUser: jest.fn<any>(),
 }));
 
 import CompanyStationNewScreen from '@/app/company-station-new';
@@ -59,8 +59,8 @@ describe('CompanyStationNewScreen', () => {
     for (const key of Object.keys(mockLocalSearchParams)) {
       delete mockLocalSearchParams[key];
     }
-    (getPrivilegedUser as jest.Mock).mockResolvedValue(null);
-    (fetchCompanyProfile as jest.Mock).mockResolvedValue({ nombre: null });
+    (getPrivilegedUser as jest.Mock<any>).mockResolvedValue(null);
+    (fetchCompanyProfile as jest.Mock<any>).mockResolvedValue({ nombre: null });
   });
 
   describe('Create mode', () => {
@@ -77,7 +77,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('pre-fills promotor from stored user', async () => {
-      (getPrivilegedUser as jest.Mock).mockResolvedValue({ nombre: 'Mi Empresa' });
+      (getPrivilegedUser as jest.Mock<any>).mockResolvedValue({ nombre: 'Mi Empresa' });
       const { getByPlaceholderText } = render(<CompanyStationNewScreen />);
       await waitFor(() => {
         expect(getByPlaceholderText('Promotor/gestor').props.value).toBe('Mi Empresa');
@@ -85,8 +85,8 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('pre-fills promotor from company profile when not stored', async () => {
-      (getPrivilegedUser as jest.Mock).mockResolvedValue(null);
-      (fetchCompanyProfile as jest.Mock).mockResolvedValue({ nombre: 'Profile Empresa' });
+      (getPrivilegedUser as jest.Mock<any>).mockResolvedValue(null);
+      (fetchCompanyProfile as jest.Mock<any>).mockResolvedValue({ nombre: 'Profile Empresa' });
       const { getByPlaceholderText } = render(<CompanyStationNewScreen />);
       await waitFor(() => {
         expect(getByPlaceholderText('Promotor/gestor').props.value).toBe('Profile Empresa');
@@ -94,7 +94,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('does not override promotor if already filled', async () => {
-      (getPrivilegedUser as jest.Mock).mockResolvedValue({ nombre: 'Mi Empresa' });
+      (getPrivilegedUser as jest.Mock<any>).mockResolvedValue({ nombre: 'Mi Empresa' });
       const { getByPlaceholderText } = render(<CompanyStationNewScreen />);
       fireEvent.changeText(getByPlaceholderText('Promotor/gestor'), 'Otro promotor');
       await waitFor(() => {
@@ -103,7 +103,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('submit creates station request and shows success', async () => {
-      (requestCreateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(true, { id: 5 }));
+      (requestCreateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(true, { id: 5 }));
       const { getByText } = render(<CompanyStationNewScreen />);
       fireEvent.press(getByText('Enviar solicitud de alta'));
       await waitFor(() => {
@@ -113,7 +113,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('shows error from API on create', async () => {
-      (requestCreateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(false, { error: 'Datos invalidos' }));
+      (requestCreateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, { error: 'Datos invalidos' }));
       const { getByText } = render(<CompanyStationNewScreen />);
       fireEvent.press(getByText('Enviar solicitud de alta'));
       await waitFor(() => {
@@ -122,7 +122,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('shows fallback error when API error field is empty', async () => {
-      (requestCreateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(false, {}));
+      (requestCreateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, {}));
       const { getByText } = render(<CompanyStationNewScreen />);
       fireEvent.press(getByText('Enviar solicitud de alta'));
       await waitFor(() => {
@@ -131,7 +131,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('shows NO_SESSION error', async () => {
-      (requestCreateCompanyStation as jest.Mock).mockRejectedValue(new Error('NO_SESSION'));
+      (requestCreateCompanyStation as jest.Mock<any>).mockRejectedValue(new Error('NO_SESSION'));
       const { getByText } = render(<CompanyStationNewScreen />);
       fireEvent.press(getByText('Enviar solicitud de alta'));
       await waitFor(() => {
@@ -140,7 +140,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('shows generic network error', async () => {
-      (requestCreateCompanyStation as jest.Mock).mockRejectedValue(new Error('timeout'));
+      (requestCreateCompanyStation as jest.Mock<any>).mockRejectedValue(new Error('timeout'));
       const { getByText } = render(<CompanyStationNewScreen />);
       fireEvent.press(getByText('Enviar solicitud de alta'));
       await waitFor(() => {
@@ -149,7 +149,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('typing clears previous error', async () => {
-      (requestCreateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(false, { error: 'Error previo' }));
+      (requestCreateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, { error: 'Error previo' }));
       const { getByText, getByPlaceholderText, queryByText } = render(<CompanyStationNewScreen />);
       fireEvent.press(getByText('Enviar solicitud de alta'));
       await waitFor(() => expect(getByText('Error previo')).toBeTruthy());
@@ -158,8 +158,8 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('after successful create, resets form keeping company name', async () => {
-      (getPrivilegedUser as jest.Mock).mockResolvedValue({ nombre: 'Mi Empresa' });
-      (requestCreateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(true, { id: 5 }));
+      (getPrivilegedUser as jest.Mock<any>).mockResolvedValue({ nombre: 'Mi Empresa' });
+      (requestCreateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(true, { id: 5 }));
       const { getByText, getByPlaceholderText } = render(<CompanyStationNewScreen />);
       await waitFor(() => expect(getByPlaceholderText('Promotor/gestor').props.value).toBe('Mi Empresa'));
       fireEvent.changeText(getByPlaceholderText('Nombre de la estacion'), 'Estacion Temp');
@@ -205,7 +205,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('submit updates station request and shows success', async () => {
-      (requestUpdateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(true, { id: 10 }));
+      (requestUpdateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(true, { id: 10 }));
       const { getByText } = render(<CompanyStationNewScreen />);
       await waitFor(() => expect(getByText('Enviar solicitud de edicion')).toBeTruthy());
       fireEvent.press(getByText('Enviar solicitud de edicion'));
@@ -216,7 +216,7 @@ describe('CompanyStationNewScreen', () => {
     });
 
     test('shows error from API in edit mode', async () => {
-      (requestUpdateCompanyStation as jest.Mock).mockResolvedValue(makeMockResponse(false, { error: 'Sin permiso' }));
+      (requestUpdateCompanyStation as jest.Mock<any>).mockResolvedValue(makeMockResponse(false, { error: 'Sin permiso' }));
       const { getByText } = render(<CompanyStationNewScreen />);
       await waitFor(() => expect(getByText('Enviar solicitud de edicion')).toBeTruthy());
       fireEvent.press(getByText('Enviar solicitud de edicion'));
@@ -239,8 +239,8 @@ describe('CompanyStationNewScreen', () => {
 
   describe('resolveCompanyNombre fallback', () => {
     test('handles fetchCompanyProfile error silently', async () => {
-      (getPrivilegedUser as jest.Mock).mockResolvedValue(null);
-      (fetchCompanyProfile as jest.Mock).mockRejectedValue(new Error('Network'));
+      (getPrivilegedUser as jest.Mock<any>).mockResolvedValue(null);
+      (fetchCompanyProfile as jest.Mock<any>).mockRejectedValue(new Error('Network'));
       const { getByPlaceholderText } = render(<CompanyStationNewScreen />);
       await waitFor(() => {
         expect(getByPlaceholderText('Promotor/gestor').props.value).toBe('');

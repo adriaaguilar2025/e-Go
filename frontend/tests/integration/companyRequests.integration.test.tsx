@@ -2,8 +2,8 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
-const mockListCompanyRequests = jest.fn();
+const mockReplace = jest.fn<any>();
+const mockListCompanyRequests = jest.fn<any>();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),

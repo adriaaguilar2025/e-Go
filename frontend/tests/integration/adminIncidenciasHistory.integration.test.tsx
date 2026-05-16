@@ -3,17 +3,17 @@ import { Alert } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
+const mockReplace = jest.fn<any>();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
 }));
 
 jest.mock('@/services/incidenciaAdminService', () => ({
-  listHistoryIncidencias: jest.fn(),
-  validateIncidencia: jest.fn(),
-  rejectIncidencia: jest.fn(),
-  resolveIncidencia: jest.fn(),
+  listHistoryIncidencias: jest.fn<any>(),
+  validateIncidencia: jest.fn<any>(),
+  rejectIncidencia: jest.fn<any>(),
+  resolveIncidencia: jest.fn<any>(),
 }));
 
 import AdminIncidenciasHistoryScreen from '@/app/admin-incidencias-history';
@@ -50,34 +50,34 @@ const mockInc = {
 const mockValidatedInc = { ...mockInc, id: 2, validada: true, estacio_nom: 'Estacion V' };
 
 describe('AdminIncidenciasHistoryScreen', () => {
-  let alertSpy: jest.SpyInstance;
+  let alertSpy: jest.SpiedFunction<typeof Alert.alert>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn() as any);
-    (global as any).alert = jest.fn();
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn<any>() as any);
+    (global as any).alert = jest.fn<any>();
   });
 
   test('shows loading state initially', () => {
-    (listHistoryIncidencias as jest.Mock).mockReturnValue(new Promise(() => {}));
+    (listHistoryIncidencias as jest.Mock<any>).mockReturnValue(new Promise(() => {}));
     const { queryByText } = render(<AdminIncidenciasHistoryScreen />);
     expect(queryByText('No hay incidencias en el historico.')).toBeNull();
   });
 
   test('shows empty message when no incidencias', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
   });
 
   test('shows incidencia list after loading', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { findByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/Estacion Historia/);
   });
 
   test('shows title and back button', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     expect(getByText(/Hist/)).toBeTruthy();
@@ -85,7 +85,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('back button navigates to admin-home', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     fireEvent.press(getByText('Volver al panel admin'));
@@ -93,27 +93,27 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('shows error text when load fails', async () => {
-    (listHistoryIncidencias as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+    (listHistoryIncidencias as jest.Mock<any>).mockRejectedValue(new Error('Fetch failed'));
     const { findByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText('Fetch failed');
   });
 
   test('shows apply filters button', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     expect(getByText('Aplicar filtros')).toBeTruthy();
   });
 
   test('shows clear filters button', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     expect(getByText(/Limpiar/)).toBeTruthy();
   });
 
   test('apply filters calls listHistoryIncidencias again', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     fireEvent.press(getByText('Aplicar filtros'));
@@ -123,7 +123,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('last week shortcut sets date range', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     fireEvent.press(getByText(/semana/));
@@ -131,7 +131,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('last month shortcut sets date range', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     fireEvent.press(getByText(/mes/));
@@ -139,8 +139,8 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('validate button calls validateIncidencia', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([mockInc]);
-    (validateIncidencia as jest.Mock).mockResolvedValue({
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
+    (validateIncidencia as jest.Mock<any>).mockResolvedValue({
       incidencia: { ...mockInc, validada: true },
       pointsAwarded: null,
     });
@@ -153,8 +153,8 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('resolve button calls resolveIncidencia', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([mockValidatedInc]);
-    (resolveIncidencia as jest.Mock).mockResolvedValue({ ...mockValidatedInc, resolta: true });
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([mockValidatedInc]);
+    (resolveIncidencia as jest.Mock<any>).mockResolvedValue({ ...mockValidatedInc, resolta: true });
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/Estacion V/);
     fireEvent.press(getByText('Marcar resuelta'));
@@ -164,7 +164,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('shows pending incidencia with Validar and Rechazar', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/Estacion Historia/);
     expect(getByText('Validar')).toBeTruthy();
@@ -172,14 +172,14 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('shows validated incidencia with Marcar resuelta', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([mockValidatedInc]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([mockValidatedInc]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/Estacion V/);
     expect(getByText('Marcar resuelta')).toBeTruthy();
   });
 
   test('reject button opens modal', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([mockInc]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([mockInc]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/Estacion Historia/);
     fireEvent.press(getByText('Rechazar'));
@@ -187,7 +187,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('tipo filter toggles on press', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     fireEvent.press(getByText('Averiada'));
@@ -195,7 +195,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
   });
 
   test('estado filter toggles on press', async () => {
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue([]);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
     const { findByText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
     fireEvent.press(getByText('Validada'));
@@ -204,7 +204,7 @@ describe('AdminIncidenciasHistoryScreen', () => {
 
   test('shows more button when hasMore is true', async () => {
     const manyIncs = Array.from({ length: 21 }, (_, i) => ({ ...mockInc, id: i + 1, estacio_nom: `Est ${i + 1}` }));
-    (listHistoryIncidencias as jest.Mock).mockResolvedValue(manyIncs);
+    (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue(manyIncs);
     const { findByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/Cargar/);
   });

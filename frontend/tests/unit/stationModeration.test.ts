@@ -40,7 +40,7 @@ const baseForm = {
 };
 
 describe('stationModeration', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); });
 
   describe('Admin station CRUD', () => {
     test('listAdminStations: fetches admin stations', async () => {

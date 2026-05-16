@@ -2,8 +2,8 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
-const mockPush = jest.fn();
+const mockReplace = jest.fn<any>();
+const mockPush = jest.fn<any>();
 const mockSearchParams: Record<string, string | undefined> = {};
 
 jest.mock('expo-router', () => ({
@@ -12,13 +12,13 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('expo-auth-session', () => ({
-  useAuthRequest: jest.fn(() => [{ codeVerifier: 'verifier' }, null, jest.fn()]),
+  useAuthRequest: jest.fn(() => [{ codeVerifier: 'verifier' }, null, jest.fn<any>()]),
   useAutoDiscovery: jest.fn(() => ({})),
   makeRedirectUri: jest.fn(() => 'test://redirect'),
 }));
 
 jest.mock('expo-web-browser', () => ({
-  maybeCompleteAuthSession: jest.fn(),
+  maybeCompleteAuthSession: jest.fn<any>(),
 }));
 
 jest.mock('@/constants/api', () => ({
@@ -30,7 +30,7 @@ jest.mock('@/contexts/ColorblindPreferenceContext', () => ({
   useColorblindPreference: () => ({ colorblindFriendly: false }),
 }));
 
-const mockSavePrivilegedSession = jest.fn();
+const mockSavePrivilegedSession = jest.fn<any>();
 jest.mock('@/services/privilegedAuth', () => ({
   savePrivilegedSession: (...args: any[]) => mockSavePrivilegedSession(...args),
 }));
@@ -43,7 +43,7 @@ describe('CompanyLoginScreen', () => {
     jest.clearAllMocks();
     Object.keys(mockSearchParams).forEach((k) => delete mockSearchParams[k]);
     mockSavePrivilegedSession.mockResolvedValue(undefined);
-    globalThis.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+    globalThis.fetch = jest.fn<any>() as jest.MockedFunction<typeof fetch>;
   });
 
   test('renders title and email input', () => {
@@ -181,8 +181,8 @@ describe('CompanyLoginScreen', () => {
 
   describe('Google Native sign-in (handleLogin)', () => {
     test('successful Google sign-in calls API with idToken and navigates', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockResolvedValue({ data: { idToken: 'google-id-token' } });
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockResolvedValue({ data: { idToken: 'google-id-token' } });
       (globalThis.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -201,16 +201,16 @@ describe('CompanyLoginScreen', () => {
     });
 
     test('Google sign-in with no idToken shows error', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockResolvedValue({});
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockResolvedValue({});
       const { getByText, findByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
       await findByText('No se pudo obtener el token de Google');
     });
 
     test('Google sign-in API failure shows error', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockResolvedValue({ data: { idToken: 'token' } });
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockResolvedValue({ data: { idToken: 'token' } });
       (globalThis.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
         ok: false,
         json: async () => ({ error: 'Sin acceso empresa' }),
@@ -221,8 +221,8 @@ describe('CompanyLoginScreen', () => {
     });
 
     test('Google sign-in API network error shows server error', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockResolvedValue({ data: { idToken: 'token' } });
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockResolvedValue({ data: { idToken: 'token' } });
       (globalThis.fetch as jest.MockedFunction<typeof fetch>).mockRejectedValue(new Error('network fail'));
       const { getByText, findByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
@@ -230,8 +230,8 @@ describe('CompanyLoginScreen', () => {
     });
 
     test('Google sign-in cancelled - no error shown', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockRejectedValue({ code: statusCodes.SIGN_IN_CANCELLED });
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockRejectedValue({ code: statusCodes.SIGN_IN_CANCELLED });
       const { getByText, queryByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
       await waitFor(() => expect(GoogleSignin.signIn).toHaveBeenCalled());
@@ -239,16 +239,16 @@ describe('CompanyLoginScreen', () => {
     });
 
     test('Google sign-in IN_PROGRESS shows error', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockRejectedValue({ code: statusCodes.IN_PROGRESS });
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockRejectedValue({ code: statusCodes.IN_PROGRESS });
       const { getByText, findByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
       await findByText('Ya hay un inicio de sesion en curso');
     });
 
     test('Google sign-in unknown error shows the error message', async () => {
-      (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(true);
-      (GoogleSignin.signIn as jest.Mock).mockRejectedValue(new Error('Google crash'));
+      (GoogleSignin.hasPlayServices as jest.Mock<any>).mockResolvedValue(true);
+      (GoogleSignin.signIn as jest.Mock<any>).mockRejectedValue(new Error('Google crash'));
       const { getByText, findByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
       await findByText('Google crash');

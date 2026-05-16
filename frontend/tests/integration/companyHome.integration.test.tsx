@@ -2,15 +2,15 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
-const mockReplace = jest.fn();
-const mockPush = jest.fn();
-const mockGetPrivilegedToken = jest.fn();
-const mockClearPrivilegedSession = jest.fn();
-const mockFetchCompanyProfile = jest.fn();
-const mockMergeStoredCompanyUser = jest.fn();
-const mockUpdateCompanyNombreOnServer = jest.fn();
-const mockListCompanyStations = jest.fn();
-const mockRequestDeleteCompanyStation = jest.fn();
+const mockReplace = jest.fn<any>();
+const mockPush = jest.fn<any>();
+const mockGetPrivilegedToken = jest.fn<any>();
+const mockClearPrivilegedSession = jest.fn<any>();
+const mockFetchCompanyProfile = jest.fn<any>();
+const mockMergeStoredCompanyUser = jest.fn<any>();
+const mockUpdateCompanyNombreOnServer = jest.fn<any>();
+const mockListCompanyStations = jest.fn<any>();
+const mockRequestDeleteCompanyStation = jest.fn<any>();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: mockPush }),

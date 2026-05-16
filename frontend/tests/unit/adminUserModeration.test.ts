@@ -13,7 +13,7 @@ function makeRes(ok: boolean, data: unknown) {
 }
 
 describe('adminUserModeration', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); });
 
   describe('listAdminUsers', () => {
     test('returns users array on success', async () => {
