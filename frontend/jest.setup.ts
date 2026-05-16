@@ -140,8 +140,8 @@ jest.mock('react-native-google-mobile-ads', () => {
   globalThis.__adTestHarness = harness;
 
   const mobileAdsInstance = {
-    initialize: jest.fn().mockResolvedValue(undefined),
-    setRequestConfiguration: jest.fn().mockResolvedValue(undefined),
+    initialize: jest.fn(async () => {}),
+    setRequestConfiguration: jest.fn(async () => {}),
   };
 
   return {
