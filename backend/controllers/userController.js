@@ -25,6 +25,7 @@ async function updateUser(req, res) {
     if (!usuari_id) {
       return res.status(400).json({ error: 'Falta usuari_id' });
     }
+    if (await respondIfBannedUserId(res, usuari_id)) return;
     if (!username) {
       return res.status(400).json({ error: 'Falta el campo username' });
     }

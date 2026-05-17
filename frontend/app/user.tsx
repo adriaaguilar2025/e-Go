@@ -402,7 +402,7 @@ export default function PerfilScreen() {
             </View>
             <View style={styles.profileContent}>
               {renderProfileName()}
-              {perfil?.id === user?.id && (
+              {perfil?.id === user?.id ? (
                 <>
                   <Text style={styles.profileEmail}>{perfil?.email ?? 'email@ejemplo.com'}</Text>
                   {!isEditing ? (
@@ -539,6 +539,7 @@ export default function PerfilScreen() {
             )}
             </View>
           </View>
+        </ViewShot>  
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -546,15 +547,15 @@ export default function PerfilScreen() {
               <Text style={styles.loadingText}>Cargando perfil...</Text>
             </View>
           ) : perfil ? (
+            <>
             <View style={[styles.statsCard, styles.centered]}>
               <Text style={styles.points}>{perfil.punts}</Text>
               <Text style={styles.ptsLabel}>Puntos</Text>
             </View>
-          </ViewShot>
-          {perfil?.id === user?.id && renderFriendRequests()}
+            {perfil?.id === user?.id && renderFriendRequests()}
+            </>
           ) : (
             <Text style={styles.emptyText}>No existe el usuario</Text>
-          </ViewShot>
           )}
 
 
