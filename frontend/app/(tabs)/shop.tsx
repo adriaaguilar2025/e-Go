@@ -39,7 +39,6 @@ export default function ShopScreen() {
   }, [user]);
 
   const loadShopData = async () => {
-    // Si por algún motivo no hay usuario, cancelamos
     if (!user?.id) return;
 
     try {
@@ -50,19 +49,23 @@ export default function ShopScreen() {
       const skinsData = await skinsRes.json();
       setSkins(skinsData);
 
-      // 2. Cargamos el inventario del usuario
+      // 2. Cargamos el inventario Y LOS PUNTOS desde tu backend
       const inventoryRes = await fetch(`${API_URL}/skins/conductor/${user.id}`);
-      const inventoryData = await inventoryRes.json();
+      const data = await inventoryRes.json();
       
-      // Extraemos IDs (nos aseguramos de que sea un array por si da error)
-      const ownedIds = Array.isArray(inventoryData) ? inventoryData.map((item: any) => item.id) : [];
-      const equippedSkin = Array.isArray(inventoryData) ? inventoryData.find((item: any) => item.equipada === true) : null;
+      // Como ahora el backend devuelve { inventari: [...], punts: X }
+      const miInventario = data.inventari || [];
+      const misPuntos = data.punts || 0;
+      
+      // Extraemos los IDs de las skins
+      const ownedIds = miInventario.map((item: any) => item.id);
+      const equippedSkin = miInventario.find((item: any) => item.equipada === true);
       
       setOwnedSkins(ownedIds.length > 0 ? ownedIds : [1]);
       if (equippedSkin) setActiveSkinId(equippedSkin.id);
 
-      // 3. Forzamos a TS a aceptar punts, o le ponemos 0 por defecto
-      setUserPoints((user as any)?.punts || 0);
+      // 3. ACTUALIZAMOS CON LOS PUNTOS REALES DE LA BASE DE DATOS
+      setUserPoints(misPuntos);
 
     } catch (error) {
       console.error("Error cargando tienda:", error);

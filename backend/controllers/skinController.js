@@ -3,7 +3,7 @@ const { pool } = require('../lib/db'); // Ajusta la ruta a tu archivo de DB
 // 1. Obtener todas las skins de la tienda
 const getAllSkins = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM skins ORDER BY preu_punts ASC');
+    const result = await pool.query('SELECT * FROM ego.skins ORDER BY preu_punts ASC');
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching skins:', error);
@@ -11,17 +11,27 @@ const getAllSkins = async (req, res) => {
   }
 };
 
-// 2. Obtener el inventario de un conductor específico
+// 2. Obtener el inventario de un conductor específico y sus puntos reales
 const getUserSkins = async (req, res) => {
   const { id } = req.params; // ID del conductor
   try {
-    const result = await pool.query(`
+    // a. Obtener las skins que ya tiene
+    const skinsResult = await pool.query(`
       SELECT s.id, s.nom, s.descripcio, s.arxiu_asset, cs.equipada, cs.data_obtencio
-      FROM skins s
-      JOIN conductor_skins cs ON s.id = cs.skin_id
+      FROM ego.skins s
+      JOIN ego.conductor_skins cs ON s.id = cs.skin_id
       WHERE cs.conductor_id = $1
     `, [id]);
-    res.json(result.rows);
+    
+    // b. Obtener sus puntos actuales
+    const pointsResult = await pool.query('SELECT punts FROM ego.conductor WHERE user_id = $1', [id]);
+    const puntsReals = pointsResult.rowCount > 0 ? pointsResult.rows[0].punts : 0;
+
+    // c. Enviamos ambas cosas juntas al móvil
+    res.json({
+      inventari: skinsResult.rows,
+      punts: puntsReals
+    });
   } catch (error) {
     console.error('Error fetching user skins:', error);
     res.status(500).json({ error: 'Error obtenint l\'inventari del conductor' });
@@ -35,12 +45,12 @@ const buySkin = async (req, res) => {
 
   try {
     // a. Obtener precio de la skin
-    const skinRes = await pool.query('SELECT preu_punts FROM skins WHERE id = $1', [skin_id]);
+    const skinRes = await pool.query('SELECT preu_punts FROM ego.skins WHERE id = $1', [skin_id]);
     if (skinRes.rowCount === 0) return res.status(404).json({ error: 'Skin no trobada' });
     const precio = skinRes.rows[0].preu_punts;
 
     // b. Obtener puntos del conductor
-    const userRes = await pool.query('SELECT punts FROM conductor WHERE user_id = $1', [id]);
+    const userRes = await pool.query('SELECT punts FROM ego.conductor WHERE user_id = $1', [id]);
     if (userRes.rowCount === 0) return res.status(404).json({ error: 'Conductor no trobat' });
     let misPuntos = userRes.rows[0].punts || 0;
 
@@ -53,11 +63,11 @@ const buySkin = async (req, res) => {
     await pool.query('BEGIN');
     
     // Restamos los puntos
-    await pool.query('UPDATE conductor SET punts = punts - $1 WHERE user_id = $2', [precio, id]);
+    await pool.query('UPDATE ego.conductor SET punts = punts - $1 WHERE user_id = $2', [precio, id]);
     
     // Añadimos a la tabla conductor_skins (data_obtencio debería rellenarse sola si le pusiste DEFAULT CURRENT_TIMESTAMP)
     await pool.query(
-        'INSERT INTO conductor_skins (conductor_id, skin_id, equipada, data_obtencio) VALUES ($1, $2, FALSE, NOW())', 
+        'INSERT INTO ego.conductor_skins (conductor_id, skin_id, equipada, data_obtencio) VALUES ($1, $2, FALSE, NOW())', 
         [id, skin_id]
     );
     
@@ -84,11 +94,11 @@ const equipSkin = async (req, res) => {
     await pool.query('BEGIN');
     
     // a. Desequipar todas las skins de este conductor
-    await pool.query('UPDATE conductor_skins SET equipada = FALSE WHERE conductor_id = $1', [id]);
+    await pool.query('UPDATE ego.conductor_skins SET equipada = FALSE WHERE conductor_id = $1', [id]);
     
     // b. Equipar la skin seleccionada
     const result = await pool.query(
-        'UPDATE conductor_skins SET equipada = TRUE WHERE conductor_id = $1 AND skin_id = $2', 
+        'UPDATE ego.conductor_skins SET equipada = TRUE WHERE conductor_id = $1 AND skin_id = $2', 
         [id, skin_id]
     );
     

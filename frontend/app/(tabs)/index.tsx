@@ -44,7 +44,7 @@ import {
   calculateDistanceInMeters
 } from '@/services/chargingLocationService';
 import { startChargingSession as apiStartCharging } from '@/services/chargingApiService';
-
+import { getSkinImage } from '@/utils/skinsMapping';
 //Importamos el mapa de direcciones
 import MapViewDirections from 'react-native-maps-directions';
 import { Polyline } from 'react-native-maps';
@@ -106,6 +106,7 @@ export default function InicioScreen() {
   const ac_dc = params.ac_dc as string | undefined;
   const autoSelectStationId = params.autoSelectStationId as string | undefined;
   const [pendingAutoStart, setPendingAutoStart] = useState(false);
+  const [activeSkinAsset, setActiveSkinAsset] = useState<string>('cotxe_basic');
 
   const { user, setUser, logout, isLoading: authLoading } = useAuth();
   const {
@@ -482,10 +483,13 @@ export default function InicioScreen() {
   // Pedir permiso y obtener ubicación del usuario (Seguro para Web y Móvil)
   useEffect(() => {
     if (!user) return;
-    //metida dentro pq solo se usa una vez
+    
+    // Variable para guardar el "escuchador" del GPS
+    let locationSubscriber: Location.LocationSubscription | null = null;
+
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { //alerta para informar el proque de la necesidad de ubi
+      if (status !== 'granted') {
         Alert.alert(
           t('charging.locationPermissionTitle'),
           t('charging.locationPermissionBody')
@@ -493,19 +497,37 @@ export default function InicioScreen() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({});
-      setUserLocation(location);
+      // 1. Obtenemos la posición inicial rápida para centrar el mapa
+      const initialLocation = await Location.getCurrentPositionAsync({});
+      setUserLocation(initialLocation);
 
-      // Animar mapa a la ubicación del usuario comprobando compatibilidad
-      if (location && mapRef.current) {
+      if (initialLocation && mapRef.current) {
         if (typeof mapRef.current.animateToRegion === 'function') {
           mapRef.current.animateToRegion(
-            { ...location.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
+            { ...initialLocation.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
             1000
           );
         }
       }
+
+      locationSubscriber = await Location.watchPositionAsync(
+        { 
+          accuracy: Location.Accuracy.High, 
+          timeInterval: 2000, // Actualiza cada 2 segundos
+          distanceInterval: 2 // Actualiza si te mueves 2 metros
+        },
+        (newLocation) => {
+          setUserLocation(newLocation);
+        }
+      );
     })();
+
+    // 3. Limpiamos la suscripción si el componente se desmonta (ahorra batería)
+    return () => {
+      if (locationSubscriber) {
+        locationSubscriber.remove();
+      }
+    };
   }, [user]);
 
 // --- AUTO-SELECCIONAR ESTACIÓ I PREPARAR CÀRREGA ---
@@ -574,6 +596,24 @@ export default function InicioScreen() {
 
     }
   };
+  // CARGAR LA SKIN QUE TIENE EQUIPADA EL USUARIO
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchEquippedSkin = async () => {
+      try {
+        const res = await appFetch(`/skins/conductor/${user.id}`);
+        const data = await res.json();
+        const miInventario = data.inventari || [];
+        const equippedSkin = miInventario.find((item: any) => item.equipada === true);
+        if (equippedSkin) {
+          setActiveSkinAsset(equippedSkin.arxiu_asset);
+        }
+      } catch (e) {
+        console.log("No s'ha pogut carregar la skin pel mapa", e);
+      }
+    };
+    fetchEquippedSkin();
+  }, [user]);
 
 const fetchUserFavorites = async () => {
   if (!user?.id) return;
@@ -1281,35 +1321,31 @@ useEffect(() => {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          key={`map-${displayedStations.length}-${isNavigating}`}  //TRUCO VITAL: Fuerza al mapa a pintarse cuando llegan los datos o cuando se acaba la navegación (para borrar el recorrido de esta)
+          key={`map-${displayedStations.length}-${isNavigating}`} 
           style={StyleSheet.absoluteFillObject}
           initialRegion={region}
-          showsUserLocation={true}
+          showsUserLocation={true} 
+          showsMyLocationButton={true} 
           showsUserHeading={true}
-          //Al clicar en el mapa cogemos el punto exacto donde ha hecho clic y quitamos si habia una estación seleccionada
           onPress={(e: any) => {
-            if (isSelectingOrigin) {//Si estamos seleccionando un punto de origen para la ruta solo hacemos el cuerpo del if
-                  setRouteOrigin(e.nativeEvent.coordinate); //Guardamos donde ha tocado como origen
-                  setIsSelectingOrigin(false); //Salimos del modo selección
-                  setIsNavigating(true); //Iniciamos la navegación
-                  return; //Cortamos la ejecución aquí
+            if (isSelectingOrigin) {
+                  setRouteOrigin(e.nativeEvent.coordinate);
+                  setIsSelectingOrigin(false);
+                  setIsNavigating(true);
+                  return;
             }
-            if (isNavigating) {//Esto permite que si clicamos a un punto del mapa cuando estamos navegando en una ruta esto sea ignorado (para salir de la navegación hay un boton especifico)
+            if (isNavigating) {
                 return
             }
 
-            //Verificamos que el toque provenga del mapa y tenga coordenadas
             if (e.nativeEvent.coordinate) {
-              //Limpiamos cualquier estación seleccionada previamente
               setSelectedStation(null);
-              //Guardamos la nueva ubicación libre
               setSelectedLocation({
                 latitude: e.nativeEvent.coordinate.latitude,
                 longitude: e.nativeEvent.coordinate.longitude,
               });
               setRouteOriginPreset(null);
               setSelectedLocationLabel(null);
-              //Limpiamos la ruta
               setIsNavigating(false);
               setRouteCoords([]);
               setRouteDestination(null);
@@ -1333,9 +1369,7 @@ useEffect(() => {
                     : sem.mapOk
               }
               onPress={(e: any) => {
-                e.stopPropagation(); //Evita que el toque pase al mapa y cierre el panel
-
-                //Si estamos eligiendo origen, interceptamos el clic en la estación
+                e.stopPropagation(); 
                 if (isSelectingOrigin) {
                   setRouteOrigin({
                     latitude: parseFloat(est.latitud),
@@ -1343,11 +1377,11 @@ useEffect(() => {
                   });
                   setIsSelectingOrigin(false);
                   setIsNavigating(true);
-                  return; //Cortamos aquí
+                  return;
                 }
 
                 setSelectedStation(est);
-                setSelectedLocation(null); //Limpiamos el punto manual si seleccionan una estación
+                setSelectedLocation(null); 
                 setRouteOriginPreset(null);
                 setSelectedLocationLabel(null);
                 setRouteCoords([]);
@@ -1357,64 +1391,89 @@ useEffect(() => {
             />
           ))}
 
-            {/*Marcador de la ubicacion clicada por el usuario con un clic manualmente */}
-              {!isNavigating && selectedLocation && !selectedStation && (
-                <Marker
-                  key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} //Soluciona el problema de que no se borren al clicar en otro sitio
-                  coordinate={selectedLocation}
-                  pinColor={sem.mapCustomLocation}
-                  title={selectedLocationLabel || t('home.selectedLocationTitle')}
-                />
-            )}
+          {/*Marcador de la ubicacion clicada por el usuario con un clic manualmente */}
+          {!isNavigating && selectedLocation && !selectedStation && (
+            <Marker
+              key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} 
+              coordinate={selectedLocation}
+              pinColor={sem.mapCustomLocation}
+              title={selectedLocationLabel || t('home.selectedLocationTitle')}
+            />
+          )}
 
-            {/*EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
-                {isNavigating && routeDestination && (
-                  <Marker
-                    coordinate={routeDestination}
-                    title={t('home.selectedLocationTitle')}
-                    pinColor={sem.mapRouteDestination}
-                  />
-            )}
+          {/*EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
+          {isNavigating && routeDestination && (
+            <Marker
+              coordinate={routeDestination}
+              title={t('home.selectedLocationTitle')}
+              pinColor={sem.mapRouteDestination}
+            />
+          )}
 
-            {/* Trazado de la ruta (Solo visible si estamos navegando) */}
-            {isNavigating && routeOrigin && routeDestination && (
-              <MapViewDirections
-                origin={routeOrigin}
-                destination={routeDestination}
-                apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-                strokeWidth={0}
-                strokeColor={sem.routeLine}
-                mode="DRIVING"
-                onReady={(result) => {
-                  setRouteInfo({
-                    distance: result.distance,
-                    duration: result.duration
+          {/* Trazado de la ruta (Solo visible si estamos navegando) */}
+          {isNavigating && routeOrigin && routeDestination && (
+            <MapViewDirections
+              origin={routeOrigin}
+              destination={routeDestination}
+              apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+              strokeWidth={0}
+              strokeColor={sem.routeLine}
+              mode="DRIVING"
+              onReady={(result) => {
+                setRouteInfo({
+                  distance: result.distance,
+                  duration: result.duration
+                });
+                setRouteCoords(result.coordinates);
+
+                if (!isDrivingMode && mapRef.current) {
+                  mapRef.current.fitToCoordinates(result.coordinates, {
+                    edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
+                    animated: true
                   });
-                  setRouteCoords(result.coordinates);
+                }
+              }}
+              onError={(errorMessage) => {
+                Alert.alert(t('navigation.routeErrorTitle'), t('navigation.routeErrorBody'));
+                console.log(errorMessage);
+              }}
+            />
+          )}
+          
+          {/*Nuestro propio trazado de la ruta (100% controlable) */}
+          {isNavigating && routeCoords.length > 0 && (
+            <Polyline
+              key={`polyline-${routeCoords.length}`}
+              coordinates={routeCoords}
+              strokeWidth={4}
+              strokeColor={sem.routeLine}
+              lineJoin="round"
+            />
+          )}
 
-                  if (!isDrivingMode && mapRef.current) {
-                    mapRef.current.fitToCoordinates(result.coordinates, {
-                      edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
-                      animated: true
-                    });
-                  }
-                }}
-                onError={(errorMessage) => {
-                  Alert.alert(t('navigation.routeErrorTitle'), t('navigation.routeErrorBody'));
-                  console.log(errorMessage);
-                }}
-              />
-            )}
-            {/*Nuestro propio trazado de la ruta (100% controlable) */}
-              {isNavigating && routeCoords.length > 0 && (
-                <Polyline
-                  key={`polyline-${routeCoords.length}`}
-                  coordinates={routeCoords}
-                  strokeWidth={4}
-                  strokeColor={sem.routeLine}
-                  lineJoin="round"
+          {/* 🟢 MARCADOR DEL COCHE ARREGLADO */}
+          {userLocation?.coords && (
+            <Marker 
+              key={`user-skin-${activeSkinAsset}`}
+              coordinate={{
+                latitude: userLocation.coords.latitude,
+                longitude: userLocation.coords.longitude
+              }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              flat={true}
+              zIndex={9999}
+              // 🔴 tracksViewChanges eliminado para evitar el bug de Android
+            >
+              <View style={{ width: 50, height: 50, justifyContent: 'center', alignItems: 'center' }}>
+                <Image 
+                  source={getSkinImage(activeSkinAsset)} 
+                  style={{ width: '100%', height: '100%' }} 
+                  resizeMode="contain"
+                  fadeDuration={0} // Esto fuerza a Android a no hacer animaciones raras al cargar
                 />
-            )}
+              </View>
+            </Marker>
+          )}
         </MapView>
           {/* ========================================================== */}
           {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) para cuando hay ruta */}
