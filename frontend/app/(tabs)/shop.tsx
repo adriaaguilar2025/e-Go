@@ -9,7 +9,7 @@ import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext'
 import { getSemanticColors } from '@/constants/accessibilityColors';
 
 
-const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/api`;
+const API_URL = `${process.env.EXPO_PUBLIC_API_URL}`;
 
 interface Skin {
   id: number;

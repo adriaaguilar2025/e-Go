@@ -79,7 +79,7 @@ app.use('/ranking', rankingRoutes);
 app.use('/user', userRoutes);
 app.use('/incidencias', incidenciaRoutes);
 app.use('/geocode', geocodeRoutes);
-app.use('/api/skins', skinRoutes);
+app.use('/skins', skinRoutes);
 
 // Can Reach endpoint (range calculation)
 app.get('/can-reach', async (req, res) => {

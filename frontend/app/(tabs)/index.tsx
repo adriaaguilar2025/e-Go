@@ -502,29 +502,38 @@ export default function InicioScreen() {
         return;
       }
 
-      // 1. Obtenemos la posición inicial rápida para centrar el mapa
-      const initialLocation = await Location.getCurrentPositionAsync({});
-      setUserLocation(initialLocation);
+      try {
+        // 1. Obtenemos la posición inicial rápida para centrar el mapa
+        const initialLocation = await Location.getCurrentPositionAsync({});
+        setUserLocation(initialLocation);
 
-      if (initialLocation && mapRef.current) {
-        if (typeof mapRef.current.animateToRegion === 'function') {
-          mapRef.current.animateToRegion(
-            { ...initialLocation.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
-            1000
-          );
+        if (initialLocation && mapRef.current) {
+          if (typeof mapRef.current.animateToRegion === 'function') {
+            mapRef.current.animateToRegion(
+              { ...initialLocation.coords, latitudeDelta: 0.05, longitudeDelta: 0.05 },
+              1000
+            );
+          }
         }
+      } catch (error) {
+        console.warn("No se pudo obtener la ubicación inicial por GPS apagado o sin señal:", error);
+        // Si falla, no pasa nada, la app no crashea y el watchPositionAsync de abajo lo seguirá intentando.
       }
 
-      locationSubscriber = await Location.watchPositionAsync(
-        { 
-          accuracy: Location.Accuracy.High, 
-          timeInterval: 2000, // Actualiza cada 2 segundos
-          distanceInterval: 2 // Actualiza si te mueves 2 metros
-        },
-        (newLocation) => {
-          setUserLocation(newLocation);
-        }
-      );
+      try {
+        locationSubscriber = await Location.watchPositionAsync(
+          { 
+            accuracy: Location.Accuracy.High, 
+            timeInterval: 2000, // Actualiza cada 2 segundos
+            distanceInterval: 2 // Actualiza si te mueves 2 metros
+          },
+          (newLocation) => {
+            setUserLocation(newLocation);
+          }
+        );
+      } catch (error) {
+        console.warn("Error al intentar suscribirse al GPS:", error);
+      }
     })();
 
     // 3. Limpiamos la suscripción si el componente se desmonta (ahorra batería)
@@ -607,33 +616,43 @@ export default function InicioScreen() {
   const fetchEquippedSkin = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await appFetch(`/skins/conductor/${user.id}?_t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      const res = await appFetch(`/skins/conductor/${user.id}`, {
+        method: 'GET',
+        headers: { 
+          'Cache-Control': 'no-cache, no-store, must-revalidate', 
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
-      const data = await res.json();
-      const miInventario = data.inventari || [];
       
-      // 🔴 FILTRAMOS TODOS LOS QUE ESTÉN EN TRUE
+      const data = await res.json();
+      
+
+      if (!res.ok) {
+         console.warn('Error del servidor:', data);
+         setActiveSkinAsset('cotxe_basic');
+         return;
+      }
+
+      const miInventario = Array.isArray(data) ? data : (data.inventari || data.skins || []);
+      
       const equippedSkins = miInventario.filter((item: any) => 
         item.equipada === true || item.equipada === 'true' || item.equipada === 1 || item.equipada === '1'
       );
       
-      // 🔴 COGEMOS EL ÚLTIMO (Por si el backend no ha puesto los antiguos en false)
       const equippedSkin = equippedSkins.length > 0 ? equippedSkins[equippedSkins.length - 1] : null;
-      
       const newSkin = equippedSkin?.arxiu_asset ? equippedSkin.arxiu_asset : 'cotxe_basic';
       
       setActiveSkinAsset((prev) => {
         if (prev !== newSkin) {
           setTrackMarker(true);
-          setMarkerRefreshKey(Date.now()); // Forzamos al marcador a recrearse
+          setMarkerRefreshKey(Date.now());
           return newSkin;
         }
         return prev;
       });
 
     } catch (e) {
-      console.log("No s'ha pogut carregar la skin pel mapa", e);
       setActiveSkinAsset('cotxe_basic');
     }
   }, [user?.id]);
@@ -660,7 +679,6 @@ const fetchUserFavorites = async () => {
     } else {
       console.warn("El backend no devolvió un array de favoritos:", data);
     }
-    console.log("IDs favoritos cargados:", ids);
     setFavoriteIds(ids);
   } catch (error) {
     console.error("Error cargando favoritos:", error);
@@ -1486,10 +1504,9 @@ useEffect(() => {
                 />
             )}
 
-            {/* 🟢 MARCADOR DEL COCHE PERSISTENTE (Solución definitiva anti-bugs) */}
+            {/* MARCADOR DEL COCHE PERSISTENTE (Solución definitiva anti-bugs) */}
           {userLocation?.coords && activeSkinAsset && (
             <Marker 
-              // 🔴 La key ahora incluye markerRefreshKey para que se reconstruya al volver de la tienda
               key={`user-skin-${activeSkinAsset}-${markerRefreshKey}`} 
               coordinate={{
                 latitude: userLocation.coords.latitude,
@@ -1502,7 +1519,7 @@ useEffect(() => {
               // @ts-ignore
               cluster={false}
             >
-              <View style={{ width: 60, height: 60, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ width: 50, height: 50, justifyContent: 'center', alignItems: 'center' }}>
                 <Image 
                   source={getSkinImage(activeSkinAsset)} 
                   style={{ width: '100%', height: '100%' }} 
@@ -1519,7 +1536,7 @@ useEffect(() => {
           )}
         </MapView>
 
-        {/* 🟢 BOTÓN DE CENTRAR UBICACIÓN MANUAL (Puesto tras el mapa para que flote por encima) */}
+        {/*BOTÓN DE CENTRAR UBICACIÓN MANUAL (Puesto tras el mapa para que flote por encima) */}
         <TouchableOpacity 
           style={styles.centerMapButton} 
           onPress={centerMapOnUser}
