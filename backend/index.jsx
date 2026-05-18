@@ -18,6 +18,7 @@ const chargingRoutes = require('./routes/charging'); // Importamos la ruta de ca
 const reviewsRoutes = require('./routes/reviews');
 const rankingRoutes = require('./routes/ranking');
 const userRoutes = require('./routes/users');
+const friendsRoutes = require('./routes/amics');
 const incidenciaRoutes = require('./routes/incidencias');
 const geocodeRoutes = require('./routes/geocode');
 const skinRoutes = require('./routes/skinRoutes');
@@ -77,6 +78,7 @@ app.use('/charging', chargingRoutes); // Rutas para sesiones de carga y puntos
 app.use('/', reviewsRoutes);
 app.use('/ranking', rankingRoutes);
 app.use('/user', userRoutes);
+app.use('/friends', friendsRoutes);
 app.use('/incidencias', incidenciaRoutes);
 app.use('/geocode', geocodeRoutes);
 app.use('/skins', skinRoutes);

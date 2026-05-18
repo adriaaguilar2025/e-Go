@@ -12,27 +12,17 @@
       "bundleIdentifier": "com.anonymous.frontend",
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para mostrarte las estaciones de carga cercanas y centrar el mapa.",
-        "NSAppTransportSecurity": {
-          "NSExceptionDomains": {
-            "13.38.238.95": {
-              "NSTemporaryExceptionAllowsInsecureHTTPLoads": true
-            }
-          }
-        }
+        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para mostrarte las estaciones de carga cercanas y centrar el mapa."
       }
     },
     "android": {
-      "usesCleartextTraffic": true,
-      "package": "com.ego2.app",
-      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.ego.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./app/_assets/favicon.png",
         "backgroundImage": "./app/_assets/favicon.png",
         "monochromeImage": "./app/_assets/favicon.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -63,6 +53,10 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "react-native-google-mobile-ads": {
+      "android_app_id": "ca-app-pub-3940256099942544~3347511713",
+      "ios_app_id": "ca-app-pub-3940256099942544~1458002511"
     }
   }
 }
