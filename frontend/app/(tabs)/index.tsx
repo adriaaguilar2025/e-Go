@@ -2918,12 +2918,6 @@ activeFiltersText: {
     fontWeight: 'bold',
     fontSize: 14,
   },
-  navInstructionText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: t.textPrimary,
-    marginBottom: 6,
-  },
   navLiveInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
