@@ -701,6 +701,7 @@ export const StationBottomSheet: React.FC<StationBottomSheetProps> = ({
 
   return (
     <BottomSheet
+      testID="station-bottom-sheet"
       ref={bottomSheetRef}
       index={1}
       snapPoints={snapPoints}

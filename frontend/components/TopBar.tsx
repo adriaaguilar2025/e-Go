@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, StyleSheet, Image, TouchableOpacity, StatusBar, FlatList, Text, ActivityIndicator, Platform } from 'react-native';
+import { View, TextInput, StyleSheet, Image, TouchableOpacity, StatusBar, FlatList, Text, ActivityIndicator, Platform, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -76,8 +76,11 @@ export default function TopBar({
                 handleSearchTextChange(event.nativeEvent.text);
               }
             }}
-            onSubmitEditing={onSubmitSearch}
-            blurOnSubmit={false}
+            onSubmitEditing={() => {
+              Keyboard.dismiss();
+              onSubmitSearch?.();
+            }}
+            blurOnSubmit
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
@@ -126,7 +129,15 @@ export default function TopBar({
               }
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.resultItem} onPress={() => onSelectResult(item)}>
+                <TouchableOpacity
+                  testID={
+                    item.kind === 'station'
+                      ? `search-result-station-${item.station.id}`
+                      : `search-result-address-${item.placeId}`
+                  }
+                  style={styles.resultItem}
+                  onPress={() => onSelectResult(item)}
+                >
                   <Ionicons
                     name={item.kind === 'station' ? 'flash-outline' : 'location-outline'}
                     size={20}

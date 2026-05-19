@@ -1332,7 +1332,7 @@ useEffect(() => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} testID="home-map-screen">
       <TopBar
         onPressMenu={() => setMenuOpen(true)}
         searchQuery={searchQuery}
@@ -1532,6 +1532,7 @@ useEffect(() => {
             {/*Marcador de la ubicacion clicada por el usuario con un clic manualmente */}
               {!isNavigating && selectedLocation && !selectedStation && (
                 <Marker
+                  testID="map-event-marker"
                   key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} //Soluciona el problema de que no se borren al clicar en otro sitio
                   coordinate={selectedLocation}
                   pinColor={sem.mapCustomLocation}
@@ -1636,7 +1637,7 @@ useEffect(() => {
         {/* ========================================================== */}
         {/* Panel de Información de Ruta Activa */}
         {isNavigating && routeInfo && (
-          <View style={styles.navPanel}>
+          <View style={styles.navPanel} testID="map-navigation-panel">
             <View style={{ flex: 1 }}>
               <Text style={styles.navTextBold} numberOfLines={1}>
                 {t('home.navTowards', {
@@ -1717,7 +1718,7 @@ useEffect(() => {
 
         {/* Mini panel para cuando se clica a una ubicacion cualquiera del mapa (De TU rama feature/rutas) */}
         {!isNavigating && selectedLocation && !selectedStation && (
-          <View style={styles.infoPanel}>
+          <View style={styles.infoPanel} testID="event-location-panel">
             <View style={styles.infoHandle} />
 
             <View style={styles.infoTitleRow}>
@@ -1746,6 +1747,7 @@ useEffect(() => {
             </View>
 
             <TouchableOpacity
+              testID="event-location-how-to-arrive"
               style={styles.routeButton}
               activeOpacity={0.8}
               onPress={() => handleStartNavigation(selectedLocation)}

@@ -132,3 +132,29 @@ npm run test:integration
 
 - `GET /` (health check completo con conexión a DB).
 - Flujo real de `POST /car`, `GET /car`, `DELETE /car` usando datos de prueba aislados.
+
+---
+
+## 🧪 E2E Testing (Frontend)
+
+### Jest (recomendado en CI)
+
+Prueba el flux **cercar punt de càrrega → clicar resultat → panell de l’estació** amb components reals (`TopBar`, `StationBottomSheet`):
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+Fitxers:
+- `frontend/tests/e2e/searchStationPanel.e2e.test.tsx` — cerca → panell estació
+- `frontend/tests/e2e/eventNavigationFlow.e2e.test.tsx` — panell → events → mapa → navegació
+
+### Maestro (dispositiu / emulador)
+
+Requereix usuari autenticat i app instal·lada. Veure `frontend/.maestro/README.md`.
+
+```bash
+cd frontend
+maestro test .maestro/flows/search-station-opens-panel.yaml
+```
