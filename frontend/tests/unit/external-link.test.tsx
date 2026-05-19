@@ -47,7 +47,7 @@ describe('ExternalLink', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (openBrowserAsync as jest.Mock).mockResolvedValue({ type: 'opened' });
+    (openBrowserAsync as jest.Mock<any>).mockResolvedValue({ type: 'opened' });
   });
 
   afterEach(() => {

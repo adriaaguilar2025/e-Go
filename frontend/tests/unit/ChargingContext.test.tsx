@@ -5,11 +5,15 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 jest.unmock('@/contexts/ChargingContext');
 
-const mockCalculateDistance = jest.fn();
-const mockStartTracking = jest.fn();
-const mockStopTracking = jest.fn();
-const mockEndCharging = jest.fn();
-const mockCancelCharging = jest.fn();
+type LocationUpdateCb = (location: {
+  coords: { latitude: number; longitude: number };
+}) => void;
+
+const mockCalculateDistance = jest.fn<any>();
+const mockStartTracking = jest.fn<any>();
+const mockStopTracking = jest.fn<any>();
+const mockEndCharging = jest.fn<any>();
+const mockCancelCharging = jest.fn<any>();
 
 jest.mock('@/contexts/AuthContext', () => ({
   __esModule: true,
@@ -56,15 +60,14 @@ function ChargingProbe({
 }
 
 describe('ChargingContext', () => {
-  let locationCallback: ((location: { coords: { latitude: number; longitude: number } }) => void) | null =
-    null;
+  let locationCallback: LocationUpdateCb | null = null;
   const mockUnsubscribe = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     locationCallback = null;
     mockCalculateDistance.mockReturnValue(10);
-    mockStartTracking.mockImplementation(async (cb) => {
+    mockStartTracking.mockImplementation(async (cb: LocationUpdateCb) => {
       locationCallback = cb;
       return mockUnsubscribe;
     });

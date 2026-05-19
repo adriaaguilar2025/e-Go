@@ -61,7 +61,9 @@ describe('HapticTab', () => {
 
   test('funciona sin onPressIn del padre', () => {
     process.env.EXPO_OS = 'ios';
-    const { getByTestId } = render(<HapticTab accessibilityRole="button" />);
+    const { getByTestId } = render(
+      <HapticTab accessibilityRole="button">{null}</HapticTab>
+    );
     expect(() =>
       fireEvent(getByTestId('platform-pressable'), 'pressIn', { nativeEvent: {} })
     ).not.toThrow();
