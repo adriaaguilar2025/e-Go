@@ -155,6 +155,20 @@ const getDistanceToRoute = (
   return { distance: minDistance, index: closestIndex };
 };
 
+// Funció per convertir la maniobra de Google en una fletxa visual de MaterialIcons
+const getManeuverIcon = (maneuver: string): any => {
+  if (!maneuver) return 'navigation'; // Icona per defecte (fletxa de rumb)
+
+  const m = maneuver.toLowerCase();
+  if (m.includes('left')) return 'turn-left';
+  if (m.includes('right')) return 'turn-right';
+  if (m.includes('straight') || m.includes('keep')) return 'arrow-upward';
+  if (m.includes('roundabout')) return 'loop'; // Una icona de bucle simula molt bé una rotonda
+  if (m.includes('merge') || m.includes('fork')) return 'call-split'; // Icona de bifurcació
+
+  return 'navigation';
+};
+
 export default function InicioScreen() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
@@ -268,19 +282,78 @@ export default function InicioScreen() {
   const [authError, setAuthError] = useState('');
   const INCIDENCIA_TYPE_KEYS = ['Avariat', 'Inexistent', 'DadesIncorrectes', 'Altres'] as const;
 
-  //Estados para la navegacion a un punto
+  // ===================================================================
+  // BLOC ÚNIC I ENDREÇAT D'ESTATS I REFS DE NAVEGACIÓ (SENSE DUPLICATS)
+  // ===================================================================
   const [isNavigating, setIsNavigating] = useState(false);
   const [isDrivingMode, setIsDrivingMode] = useState(false);
-  // Referencia para guardar la suscripción al GPS y poder apagarla
+  const [routeOrigin, setRouteOrigin] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeDestination, setRouteDestination] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  const [liveRouteInfo, setLiveRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  const [visibleRouteCoords, setVisibleRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  const [routeSteps, setRouteSteps] = useState<{instruction: string, maneuver: string, location: {latitude: number, longitude: number}}[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeOriginPreset, setRouteOriginPreset] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
+  const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
+
+  const isFirstRouteLoad = useRef(true);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
-  //NAVEGACIÓN Y RECALCULO DE RUTAS
+  // Referències sincronitzades pel seguiment en temps real del GPS
+  const routeInfoRef = useRef(routeInfo);
+  useEffect(() => { routeInfoRef.current = routeInfo; }, [routeInfo]);
+
+  const routeCoordsRef = useRef(routeCoords);
+  useEffect(() => { routeCoordsRef.current = routeCoords; }, [routeCoords]);
+
+  const routeStepsRef = useRef(routeSteps);
+  useEffect(() => { routeStepsRef.current = routeSteps; }, [routeSteps]);
+
+  //Funció per obtenir les indicacions Turn-By-Turn
+  const fetchNavigationSteps = async (origin: {latitude: number, longitude: number}, destination: {latitude: number, longitude: number}) => {
+    try {
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}&language=ca`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const leg = data.routes[0].legs[0]; // <--- Capturem la branca de la ruta
+
+        const steps = leg.steps.map((step: any) => ({
+          instruction: step.html_instructions.replace(/<[^>]*>/g, ''),
+          maneuver: step.maneuver || '',
+          location: {
+            latitude: step.start_location.lat,
+            longitude: step.start_location.lng,
+          }
+        }));
+        setRouteSteps(steps);
+        setCurrentStepIndex(0);
+
+        // <--- Actualitzem el temps i la distància amb la font original i exacta de Google
+        setRouteInfo({
+          distance: leg.distance.value / 1000, // L'API ho dona en metres, passem a Km
+          duration: leg.duration.value / 60    // L'API ho dona en segons, passem a minuts
+        });
+      }
+    } catch (error) {
+      console.error("Error obtenint passos de navegació de Google:", error);
+    }
+  };
+
+  // SEGUIMIENTO GPS, RECÀLCUL I CÀMERA 3D AUTOMÀTICA
   useEffect(() => {
     let isMounted = true;
 
     const startTracking = async () => {
-      // Ara també activem el GPS si s'està navegant, encara que no estiguem al mode 3D
-      if (isDrivingMode || isNavigating) {
+      // S'activa automàticament només amb estar navegant (isNavigating)
+      if (isNavigating) {
         locationSubscription.current = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
@@ -291,39 +364,69 @@ export default function InicioScreen() {
             if (!isMounted) return;
             const { latitude, longitude, heading } = location.coords;
 
-            // Mantenim l'estat del globus d'usuari actualitzat al mapa
             setUserLocation(location);
 
-            // --- LÒGICA DE RECÀLCUL I ESMORZAR DE RUTA ---
-            if (isNavigating && routeCoordsRef.current.length > 0) {
-              const routeData = getDistanceToRoute(
-                { latitude, longitude },
-                routeCoordsRef.current
-              );
+            // Lògica de recàlcul i retall de ruta
+            if (routeCoordsRef.current.length > 0) {
+              const routeData = getDistanceToRoute({ latitude, longitude }, routeCoordsRef.current);
 
               if (routeData.distance > 50) {
-                // Es desvia molt: Esborrem i recalculem tota la ruta
+                setRouteInfo(null);
+                setLiveRouteInfo(null);
                 setRouteCoords([]);
                 setVisibleRouteCoords([]);
+                setRouteSteps([]);
                 setRouteOrigin({ latitude, longitude });
               } else {
-                // Va bé pel camí: Retallem la part del darrere
-                // Creem un nou traçat que vagi des d'on som ara, enganxat amb el següent punt del camí
-                setVisibleRouteCoords([
-                  { latitude, longitude }, // El primer punt de la línia verda serà el cotxe/punt blau
-                  ...routeCoordsRef.current.slice(routeData.index + 1) // Li sumem tota la resta del camí
-                ]);
+                const newVisibleCoords = [
+                  { latitude, longitude },
+                  ...routeCoordsRef.current.slice(routeData.index + 1)
+                ];
+                setVisibleRouteCoords(newVisibleCoords);
+
+                // Càlcul de distància i temps restants...
+                let remainingMeters = 0;
+                for (let i = 0; i < newVisibleCoords.length - 1; i++) {
+                  remainingMeters += calculateDistanceInMeters(
+                    newVisibleCoords[i].latitude,      newVisibleCoords[i].longitude,
+                    newVisibleCoords[i+1].latitude,    newVisibleCoords[i+1].longitude
+                  );
+                }
+                const remainingKm = remainingMeters / 1000;
+                const totalOriginalDist = routeInfoRef.current?.distance || remainingKm || 1;
+                const totalOriginalDur = routeInfoRef.current?.duration || 1;
+                const remainingMin = (remainingKm / totalOriginalDist) * totalOriginalDur;
+
+                setLiveRouteInfo({ distance: remainingKm, duration: remainingMin });
+
+                // Actualització de la instrucció actual
+                if (routeStepsRef.current.length > 0) {
+                  let closestStepIdx = 0;
+                  let minStepDist = Infinity;
+                  for (let i = 0; i < routeStepsRef.current.length; i++) {
+                    const d = calculateDistanceInMeters(
+                      latitude, longitude,
+                      routeStepsRef.current[i].location.latitude, routeStepsRef.current[i].location.longitude
+                    );
+                    if (d < minStepDist) {
+                      minStepDist = d;
+                      closestStepIdx = i;
+                    }
+                  }
+                  setCurrentStepIndex(closestStepIdx);
+                }
               }
             }
 
-            // --- LÒGICA CÀMERA 3D (Mode Conducció) ---
-            if (isDrivingMode && mapRef.current && typeof mapRef.current.animateCamera === 'function') {
+            // --- NOU: ANIMACIÓ AUTOMÀTICA 3D NAVEGACIÓ ---
+            // Cada vegada que el GPS canvia de lloc, reorientem la càmera estil Waze/Google Maps
+            if (mapRef.current && typeof mapRef.current.animateCamera === 'function') {
               mapRef.current.animateCamera(
                 {
                   center: { latitude, longitude },
-                  heading: heading || 0,
-                  pitch: 60,
-                  zoom: 18,
+                  heading: heading || 0, // Gira el mapa cap a on mira el cotxe
+                  pitch: 60,            // Inclinació 3D de la vista
+                  zoom: 18,             // Zoom de proximitat de navegació
                 },
                 { duration: 1000 }
               );
@@ -331,7 +434,6 @@ export default function InicioScreen() {
           }
         );
       } else {
-        // Apaguem el GPS si no estem ni navegant ni en mode conducció
         if (locationSubscription.current) {
           locationSubscription.current.remove();
           locationSubscription.current = null;
@@ -345,26 +447,7 @@ export default function InicioScreen() {
       isMounted = false;
       if (locationSubscription.current) locationSubscription.current.remove();
     };
-  }, [isDrivingMode, isNavigating]);
-  const [routeOrigin, setRouteOrigin] = useState<{latitude: number, longitude: number} | null>(null);
-  const [routeDestination, setRouteDestination] = useState<{latitude: number, longitude: number} | null>(null);
-  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
-  //Estado para saber el punto  marcado por el usuario (lo uso para cunado un conductor quiere ir a un sitio que no es un punto de carga y lo selecciona en el mapa)
-  const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
-  /** Si ve d’un event: ruta “Cómo llegar” amb origen a l’estació (no demanar GPS). */
-  const [routeOriginPreset, setRouteOriginPreset] = useState<{latitude: number; longitude: number} | null>(null);
-  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
-  //Estado para saber las coordenadas que ocupan la ruta
-  const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
-  //Estado para saber si estamos seleccionando nosotros mismos el origen de la ruta
-  const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
-  // Referència per llegir la ruta dins del Location.watchPositionAsync
-  const routeCoordsRef = useRef<{latitude: number, longitude: number}[]>([]);
-  useEffect(() => {
-    routeCoordsRef.current = routeCoords;
-  }, [routeCoords]);
-  // Aquesta és la ruta que realment dibuixarem, i s'anirà retallant
-  const [visibleRouteCoords, setVisibleRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  }, [isNavigating]);
 
   const handleFocusEventOnMap = useCallback(
     (
@@ -1285,16 +1368,18 @@ useEffect(() => {
 
   return (
     <View style={styles.screen}>
-      <TopBar
-        onPressMenu={() => setMenuOpen(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchResults={searchResults}
-        onSelectResult={handleSelectSearchResult}
-        isSearching={isSearching}
-        searchMode={searchMode}
-        onToggleSearchMode={toggleSearchMode}
-      />
+      {!isNavigating && (
+        <TopBar
+          onPressMenu={() => setMenuOpen(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          onSelectResult={handleSelectSearchResult}
+          isSearching={isSearching}
+          searchMode={searchMode}
+          onToggleSearchMode={toggleSearchMode}
+        />
+      )}
 
       {/* Aviso de selección de origen para cuando estamos seleccionando el punto de origen de una ruta */}
       {isSelectingOrigin && (
@@ -1403,6 +1488,9 @@ useEffect(() => {
           initialRegion={region}
           showsUserLocation={true}
           showsUserHeading={true}
+          showsCompass={!isNavigating}
+          showsMyLocationButton={!isNavigating}
+          mapPadding={{ top: 0, right: 0, bottom: 0, left: 0 }}
           //Al clicar en el mapa cogemos el punto exacto donde ha hecho clic y quitamos si habia una estación seleccionada
           onPress={(e: any) => {
             if (isSelectingOrigin) {
@@ -1501,6 +1589,7 @@ useEffect(() => {
             {/* Trazado de la ruta (Solo visible si estamos navegando) */}
             {isNavigating && routeOrigin && routeDestination && (
               <MapViewDirections
+                key={`directions-${routeOrigin.latitude}-${routeOrigin.longitude}`}
                 origin={routeOrigin}
                 destination={routeDestination}
                 apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
@@ -1515,11 +1604,15 @@ useEffect(() => {
                   setRouteCoords(result.coordinates);
                   setVisibleRouteCoords(result.coordinates); // Inicialitzem la visible
 
-                  if (!isDrivingMode && mapRef.current) {
+                  // Demanem els passos detallats turn-by-turn a l'API de Google
+                  fetchNavigationSteps(routeOrigin!, routeDestination!);
+
+                  if (isFirstRouteLoad.current && mapRef.current) {
                     mapRef.current.fitToCoordinates(result.coordinates, {
-                      edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
+                      edgePadding: { top: 120, right: 50, bottom: 250, left: 50 },
                       animated: true
                     });
+                    isFirstRouteLoad.current = false; // Desactivem per als propers recàlculs
                   }
                 }}
                 onError={(errorMessage) => {
@@ -1539,55 +1632,72 @@ useEffect(() => {
               />
             )}
         </MapView>
-          {/* ========================================================== */}
-          {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) para cuando hay ruta */}
-          {/* ========================================================== */}
-            {/* Panel de Información de Ruta Activa */}
-            {isNavigating && routeInfo && (
-              <View style={styles.navPanel}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.navTextBold} numberOfLines={1}>
-                    {t('home.navTowards', {
-                      name: selectedStation ? selectedStation.nom : t('home.navDestination'),
-                    })}
+        {/* ========================================================== */}
+        {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) para cuando hay ruta */}
+        {/* ========================================================== */}
+        {/* Panel de Información de Ruta Activa Estilizado con Flechas */}
+        {isNavigating && (
+          <View style={styles.navPanel}>
+            <View style={styles.navContentRow}>
+
+              {/* NOU: Icona visual amb la fletxa Turn-by-Turn */}
+              <View style={styles.navIconContainer}>
+                <MaterialIcons
+                  name={getManeuverIcon(routeSteps[currentStepIndex]?.maneuver)}
+                  size={32}
+                  color={sem.accent}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                {/* Text de la maniobra pas a pas */}
+                <Text style={styles.navInstructionText} numberOfLines={2}>
+                  {routeSteps[currentStepIndex]?.instruction || "Calculant ruta..."}
+                </Text>
+
+                {/* Fila inferior con el tiempo, km i ETA */}
+                <View style={styles.navLiveInfoRow}>
+                  <Text style={styles.navLiveTime}>
+                    {liveRouteInfo ? `${Math.ceil(liveRouteInfo.duration)} min` : '...'}
                   </Text>
-                  <Text style={styles.navText}>
-                    {routeInfo.distance.toFixed(1)} km • {Math.ceil(routeInfo.duration)} min
+                  <Text style={styles.navLiveDot}>•</Text>
+                  <Text style={styles.navLiveDistance}>
+                    {liveRouteInfo ? `${liveRouteInfo.distance.toFixed(1)} km` : '...'}
+                  </Text>
+                  <Text style={styles.navLiveDot}>•</Text>
+                  <Text style={styles.navLiveEta}>
+                    {liveRouteInfo
+                      ? `ETA: ${new Date(Date.now() + liveRouteInfo.duration * 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                      : '...'
+                    }
                   </Text>
                 </View>
-
-                {/* BOTÓN PARA PASAR A MODO 3D */}
-                {!isDrivingMode && (
-                  <TouchableOpacity
-                    style={[styles.startDrivingBtn, { marginRight: 10 }]}
-                    onPress={() => setIsDrivingMode(true)}
-                  >
-                    <MaterialIcons name="navigation" size={20} color="#fff" />
-                    <Text style={styles.startDrivingText}>{t('home.startDriving')}</Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={styles.cancelRouteBtn}
-                  onPress={() => {
-                    setIsNavigating(false);
-                    setIsDrivingMode(false); // 🌟 También reseteamos el modo conducción
-                    setRouteOrigin(null);
-                    setRouteDestination(null);
-                    setRouteInfo(null);
-                    setRouteCoords([]);
-                    setVisibleRouteCoords([]);
-                    setSelectedStation(null);
-                    const cleared = buildClearEventLocationPatch();
-                    setSelectedLocation(cleared.selectedLocation);
-                    setRouteOriginPreset(cleared.routeOriginPreset);
-                    setSelectedLocationLabel(cleared.selectedLocationLabel);
-                  }}
-                >
-                  <MaterialIcons name="close" size={24} color="#fff" />
-                </TouchableOpacity>
               </View>
-            )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.cancelRouteBtn}
+              onPress={() => {
+                setIsNavigating(false);
+                isFirstRouteLoad.current = true;
+                setRouteOrigin(null);
+                setRouteDestination(null);
+                setRouteInfo(null);
+                setLiveRouteInfo(null);
+                setRouteCoords([]);
+                setVisibleRouteCoords([]);
+                setRouteSteps([]);
+                setSelectedStation(null);
+                const cleared = buildClearEventLocationPatch();
+                setSelectedLocation(cleared.selectedLocation);
+                setRouteOriginPreset(cleared.routeOriginPreset);
+                setSelectedLocationLabel(cleared.selectedLocationLabel);
+              }}
+            >
+              <MaterialIcons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {loadingEstaciones && (
           <View style={styles.mapLoading} testID="map-stations-loading">
@@ -2443,7 +2553,7 @@ activeFiltersText: {
   // --- Estilos de los componentes de rutas de navegacion ---
   navPanel: {
     position: 'absolute',
-    top: 50, // Ajusta según tu TopBar
+    top: 30, // Ajusta según tu TopBar
     left: 20,
     right: 20,
     backgroundColor: t.cardBg,
@@ -2673,6 +2783,56 @@ activeFiltersText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  navInstructionText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: t.textPrimary,
+    marginBottom: 6,
+  },
+  navLiveInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  navLiveTime: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#10b981', // Verd brillant estil GPS
+  },
+  navLiveDistance: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: t.subtitleText,
+  },
+  navLiveEta: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: t.textPrimary,
+  },
+  navLiveDot: {
+    fontSize: 14,
+    color: t.mutedText,
+  },
+  navContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  navIconContainer: {
+    marginRight: 12,
+    backgroundColor: isDark ? '#1e293b' : '#f1f5f9', // Un fons suau rodó per ressaltar la fletxa
+    padding: 8,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navInstructionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: t.textPrimary,
+    marginBottom: 4,
   },
   });
 };
