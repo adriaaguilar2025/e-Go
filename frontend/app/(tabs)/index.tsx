@@ -169,6 +169,53 @@ const getManeuverIcon = (maneuver: string): any => {
   return 'navigation';
 };
 
+// --- FUNCIONS AUXILIARS PER LA NAVEGACIÓ ---
+
+const calculateRemainingRouteInfo = (
+  visibleCoords: {latitude: number, longitude: number}[],
+  originalDistance: number,
+  originalDuration: number
+) => {
+  let remainingMeters = 0;
+  for (let i = 0; i < visibleCoords.length - 1; i++) {
+    remainingMeters += calculateDistanceInMeters(
+      visibleCoords[i].latitude, visibleCoords[i].longitude,
+      visibleCoords[i + 1].latitude, visibleCoords[i + 1].longitude
+    );
+  }
+  const remainingKm = remainingMeters / 1000;
+  const totalDist = originalDistance || remainingKm || 1;
+  const totalDur = originalDuration || 1;
+
+  return {
+    distance: remainingKm,
+    duration: (remainingKm / totalDist) * totalDur
+  };
+};
+
+const getClosestStepIndex = (
+  lat: number,
+  lon: number,
+  steps: {location: {latitude: number, longitude: number}}[]
+) => {
+  if (!steps || steps.length === 0) return 0;
+
+  let closestStepIdx = 0;
+  let minStepDist = Infinity;
+
+  for (let i = 0; i < steps.length; i++) {
+    const d = calculateDistanceInMeters(
+      lat, lon,
+      steps[i].location.latitude, steps[i].location.longitude
+    );
+    if (d < minStepDist) {
+      minStepDist = d;
+      closestStepIdx = i;
+    }
+  }
+  return closestStepIdx;
+};
+
 export default function InicioScreen() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
@@ -357,87 +404,71 @@ export default function InicioScreen() {
   useEffect(() => {
     let isMounted = true;
 
+    // Aquesta funció s'encarrega d'un sol pols de GPS
+    const handleLocationUpdate = (location: Location.LocationObject) => {
+      if (!isMounted) return;
+      const { latitude, longitude, heading } = location.coords;
+
+      setUserLocation(location);
+
+      // --- Lògica de recàlcul i retall de ruta ---
+      if (routeCoordsRef.current.length > 0) {
+        const routeData = getDistanceToRoute({ latitude, longitude }, routeCoordsRef.current);
+
+        if (routeData.distance > 50) {
+          // Desviament detectat: Netegem i recalculem origen
+          setRouteInfo(null);
+          setLiveRouteInfo(null);
+          setRouteCoords([]);
+          setVisibleRouteCoords([]);
+          setRouteSteps([]);
+          setRouteOrigin({ latitude, longitude });
+        } else {
+          // Va bé pel camí: Retallem la part que ja hem passat
+          const newVisibleCoords = [
+            { latitude, longitude },
+            ...routeCoordsRef.current.slice(routeData.index + 1)
+          ];
+          setVisibleRouteCoords(newVisibleCoords);
+
+          // Càlcul de distància/temps (funció externa)
+          const liveInfo = calculateRemainingRouteInfo(
+            newVisibleCoords,
+            routeInfoRef.current?.distance || 0,
+            routeInfoRef.current?.duration || 0
+          );
+          setLiveRouteInfo(liveInfo);
+
+          // Actualització de la instrucció Turn-by-Turn (funció externa)
+          const closestIdx = getClosestStepIndex(latitude, longitude, routeStepsRef.current);
+          setCurrentStepIndex(closestIdx);
+        }
+      }
+
+      // --- Animació Càmera 3D ---
+      if (mapRef.current && typeof mapRef.current.animateCamera === 'function') {
+        mapRef.current.animateCamera(
+          {
+            center: { latitude, longitude },
+            heading: heading || 0,
+            pitch: 60,
+            zoom: 18,
+          },
+          { duration: 1000 }
+        );
+      }
+    };
+
+    // Aquesta funció només activa o desactiva l'escolta
     const startTracking = async () => {
-      // S'activa automàticament només amb estar navegant (isNavigating)
       if (isNavigating) {
         locationSubscription.current = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.BestForNavigation ?? 6,
+            accuracy: Location.Accuracy?.BestForNavigation ?? 6,
             timeInterval: 1000,
             distanceInterval: 2,
           },
-          (location) => {
-            if (!isMounted) return;
-            const { latitude, longitude, heading } = location.coords;
-
-            setUserLocation(location);
-
-            // Lògica de recàlcul i retall de ruta
-            if (routeCoordsRef.current.length > 0) {
-              const routeData = getDistanceToRoute({ latitude, longitude }, routeCoordsRef.current);
-
-              if (routeData.distance > 50) {
-                setRouteInfo(null);
-                setLiveRouteInfo(null);
-                setRouteCoords([]);
-                setVisibleRouteCoords([]);
-                setRouteSteps([]);
-                setRouteOrigin({ latitude, longitude });
-              } else {
-                const newVisibleCoords = [
-                  { latitude, longitude },
-                  ...routeCoordsRef.current.slice(routeData.index + 1)
-                ];
-                setVisibleRouteCoords(newVisibleCoords);
-
-                // Càlcul de distància i temps restants...
-                let remainingMeters = 0;
-                for (let i = 0; i < newVisibleCoords.length - 1; i++) {
-                  remainingMeters += calculateDistanceInMeters(
-                    newVisibleCoords[i].latitude,      newVisibleCoords[i].longitude,
-                    newVisibleCoords[i+1].latitude,    newVisibleCoords[i+1].longitude
-                  );
-                }
-                const remainingKm = remainingMeters / 1000;
-                const totalOriginalDist = routeInfoRef.current?.distance || remainingKm || 1;
-                const totalOriginalDur = routeInfoRef.current?.duration || 1;
-                const remainingMin = (remainingKm / totalOriginalDist) * totalOriginalDur;
-
-                setLiveRouteInfo({ distance: remainingKm, duration: remainingMin });
-
-                // Actualització de la instrucció actual
-                if (routeStepsRef.current.length > 0) {
-                  let closestStepIdx = 0;
-                  let minStepDist = Infinity;
-                  for (let i = 0; i < routeStepsRef.current.length; i++) {
-                    const d = calculateDistanceInMeters(
-                      latitude, longitude,
-                      routeStepsRef.current[i].location.latitude, routeStepsRef.current[i].location.longitude
-                    );
-                    if (d < minStepDist) {
-                      minStepDist = d;
-                      closestStepIdx = i;
-                    }
-                  }
-                  setCurrentStepIndex(closestStepIdx);
-                }
-              }
-            }
-
-            // --- NOU: ANIMACIÓ AUTOMÀTICA 3D NAVEGACIÓ ---
-            // Cada vegada que el GPS canvia de lloc, reorientem la càmera estil Waze/Google Maps
-            if (mapRef.current && typeof mapRef.current.animateCamera === 'function') {
-              mapRef.current.animateCamera(
-                {
-                  center: { latitude, longitude },
-                  heading: heading || 0, // Gira el mapa cap a on mira el cotxe
-                  pitch: 60,            // Inclinació 3D de la vista
-                  zoom: 18,             // Zoom de proximitat de navegació
-                },
-                { duration: 1000 }
-              );
-            }
-          }
+          handleLocationUpdate
         );
       } else {
         if (locationSubscription.current) {
