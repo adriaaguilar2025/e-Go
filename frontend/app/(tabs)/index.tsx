@@ -683,14 +683,9 @@ export default function InicioScreen() {
       const equippedSkin = equippedSkins.length > 0 ? equippedSkins[equippedSkins.length - 1] : null;
       const newSkin = equippedSkin?.arxiu_asset ? equippedSkin.arxiu_asset : 'cotxe_basic';
       
-      setActiveSkinAsset((prev) => {
-        if (prev !== newSkin) {
-          setTrackMarker(true);
-          setMarkerRefreshKey(Date.now());
-          return newSkin;
-        }
-        return prev;
-      });
+      setTrackMarker(true);
+      setMarkerRefreshKey(Date.now());
+      setActiveSkinAsset(newSkin);
 
     } catch (e) {
       setActiveSkinAsset('cotxe_basic');
