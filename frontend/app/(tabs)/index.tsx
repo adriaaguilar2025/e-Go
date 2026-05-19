@@ -625,7 +625,7 @@ export default function InicioScreen() {
     }
   }, [pendingAutoStart, selectedStation, userLocation, isCharging]);
 
-  const fetchEstaciones = async () => {
+  const fetchEstaciones = async (): Promise<Estacion[]> => {
     setLoadingEstaciones(true);
     try {
       let queryParams = [];
@@ -640,14 +640,24 @@ export default function InicioScreen() {
       const response = await appFetch(`/stations${queryString}`);
       const data = await response.json();
 
-      setEstaciones(Array.isArray(data) ? data : []);
-
+      const stations = Array.isArray(data) ? data : [];
+      setEstaciones(stations);
+      return stations;
     } catch (error) {
       console.error('Error cargando estaciones:', error);
       setEstaciones([]); // Si falla la red, vaciamos para evitar errores de .map()
+      return [];
     } finally {
         setLoadingEstaciones(false);
 
+    }
+  };
+
+  const refreshStationsAfterIncidencia = async (stationId: number) => {
+    const stations = await fetchEstaciones();
+    const updated = stations.find((e) => e.id === stationId);
+    if (updated) {
+      setSelectedStation(updated);
     }
   };
   const [markerRefreshKey, setMarkerRefreshKey] = useState(Date.now());
@@ -759,19 +769,18 @@ useEffect(() => {
     }
   };
 
-// Efecte per buscar quan l'usuari escriu (amb debounce de 500ms)
-  useEffect(() => {
-    if (searchQuery.length < 3) {
-      setSearchResults([]);
-      return;
-    }
+  const runMapSearch = useCallback(
+    async (query: string) => {
+      if (query.length < 3) {
+        setSearchResults([]);
+        return;
+      }
 
-    const delayDebounceFn = setTimeout(async () => {
       setIsSearching(true);
       try {
         if (searchMode === 'addresses') {
           const response = await fetch(
-            `${getApiUrl()}/geocode/autocomplete?input=${encodeURIComponent(searchQuery)}`
+            `${getApiUrl()}/geocode/autocomplete?input=${encodeURIComponent(query)}`
           );
           const data = await response.json();
           if (!response.ok) {
@@ -792,21 +801,16 @@ useEffect(() => {
           return;
         }
 
-        let queryParams = [`q=${encodeURIComponent(searchQuery)}`];
-
+        const queryParams = [`q=${encodeURIComponent(query)}`];
         if (minKw) queryParams.push(`minKw=${minKw}`);
         if (maxKw) queryParams.push(`maxKw=${maxKw}`);
         if (connectorType) queryParams.push(`connectorType=${encodeURIComponent(connectorType)}`);
         if (ac_dc) queryParams.push(`ac_dc=${ac_dc}`);
 
-        // Ajuntem tots els paràmetres amb un "&"
         const queryString = queryParams.join('&');
-
-        // CANVIA AQUESTA URL PER LA TEVA RUTA DE CERCA DEL BACKEND!
         const response = await appFetch(`/stations/search?${queryString}`);
         const data = await response.json();
 
-        // --- APLIQUEM EL FILTRE DE FAVORITS LOCALMENT ---
         let resultatsFinals = Array.isArray(data) ? data : [];
         if (showFavoritesFilter) {
           resultatsFinals = resultatsFinals.filter((est: Estacion) => favoriteIds.includes(est.id));
@@ -816,13 +820,32 @@ useEffect(() => {
         );
       } catch (error) {
         console.error('Error cercant estacions:', error);
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 500); // Espera mig segon després de parar d'escriure
+    },
+    [searchMode, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]
+  );
+
+  // Cerca mentre s'escriu (debounce 500 ms, mínim 3 caràcters)
+  useEffect(() => {
+    if (searchQuery.length < 3) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      void runMapSearch(searchQuery);
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, searchMode, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]);
+  }, [searchQuery, runMapSearch]);
+
+  const handleSubmitMapSearch = useCallback(() => {
+    void runMapSearch(searchQuery);
+  }, [runMapSearch, searchQuery]);
 
 
   const toggleSearchMode = () => {
@@ -1073,11 +1096,12 @@ useEffect(() => {
       return;
     }
 
+    const stationId = selectedStation.id;
     setIncidenciaSubmitting(true);
     try {
       const formData = buildIncidenciaFormData({
         conductor: user.id,
-        estacio: selectedStation.id,
+        estacio: stationId,
         comentari: incidenciaComentario.trim(),
         tipus: incidenciaTipo,
       });
@@ -1099,6 +1123,7 @@ useEffect(() => {
         throw new Error(result.error || t('incident.registerError'));
       }
 
+      await refreshStationsAfterIncidencia(stationId);
       Alert.alert(t('incident.sentTitle'), t('incident.sentBody'));
       handleCloseIncidenciaForm();
     } catch (error) {
@@ -1112,8 +1137,9 @@ useEffect(() => {
   const handleSolvedIncidenciaSubmit = async () => {
     if (!user || !selectedStation) return;
 
+    const stationId = selectedStation.id;
     try {
-      const result = await submitSolvedIncidencia(user.id, selectedStation.id);
+      const result = await submitSolvedIncidencia(user.id, stationId);
       if (!result.ok && result.conflict) {
         Alert.alert(t('incident.alreadyReportedTitle'), t('incident.alreadyReported'));
         return;
@@ -1122,6 +1148,7 @@ useEffect(() => {
         throw new Error(result.error || t('incident.solvedRegisterError'));
       }
 
+      await refreshStationsAfterIncidencia(stationId);
       Alert.alert(t('incident.reportedTitle'), t('incident.reportedBody'));
     } catch (error) {
       const message = error instanceof Error ? error.message : t('incident.solvedReportError');
@@ -1300,7 +1327,7 @@ useEffect(() => {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} testID="home-map-screen">
       <TopBar
         onPressMenu={() => setMenuOpen(true)}
         searchQuery={searchQuery}
@@ -1310,6 +1337,7 @@ useEffect(() => {
         isSearching={isSearching}
         searchMode={searchMode}
         onToggleSearchMode={toggleSearchMode}
+        onSubmitSearch={handleSubmitMapSearch}
       />
 
       {/* Aviso de selección de origen para cuando estamos seleccionando el punto de origen de una ruta */}
@@ -1499,6 +1527,7 @@ useEffect(() => {
             {/*Marcador de la ubicacion clicada por el usuario con un clic manualmente */}
               {!isNavigating && selectedLocation && !selectedStation && (
                 <Marker
+                  testID="map-event-marker"
                   key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} //Soluciona el problema de que no se borren al clicar en otro sitio
                   coordinate={selectedLocation}
                   pinColor={sem.mapCustomLocation}
@@ -1603,7 +1632,7 @@ useEffect(() => {
         {/* ========================================================== */}
         {/* Panel de Información de Ruta Activa */}
         {isNavigating && routeInfo && (
-          <View style={styles.navPanel}>
+          <View style={styles.navPanel} testID="map-navigation-panel">
             <View style={{ flex: 1 }}>
               <Text style={styles.navTextBold} numberOfLines={1}>
                 {t('home.navTowards', {
@@ -1684,7 +1713,7 @@ useEffect(() => {
 
         {/* Mini panel para cuando se clica a una ubicacion cualquiera del mapa (De TU rama feature/rutas) */}
         {!isNavigating && selectedLocation && !selectedStation && (
-          <View style={styles.infoPanel}>
+          <View style={styles.infoPanel} testID="event-location-panel">
             <View style={styles.infoHandle} />
 
             <View style={styles.infoTitleRow}>
@@ -1713,6 +1742,7 @@ useEffect(() => {
             </View>
 
             <TouchableOpacity
+              testID="event-location-how-to-arrive"
               style={styles.routeButton}
               activeOpacity={0.8}
               onPress={() => handleStartNavigation(selectedLocation)}
