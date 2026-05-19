@@ -144,7 +144,7 @@ describe('MyFavoriteStationsScreen Integration', () => {
   });
 
   test('elimina correctament una estació seleccionada si es confirma el diàleg', async () => {
-    (appFetch as jest.Mock).mockImplementation(async (url: string, options?: RequestInit) => {
+    (appFetch as jest.Mock).mockImplementation(async (url: any, options?: any) => {
       if (options?.method === 'DELETE') {
         return { ok: true };
       }
