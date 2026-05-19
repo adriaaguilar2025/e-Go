@@ -28,50 +28,66 @@ jest.mock('react-native-svg', () => {
 import { WelcomePremiumModal } from '@/components/WelcomePremiumModal';
 
 function patchAnimated() {
-  const runStart = (cb?: (() => void) | { finished?: boolean }) => {
-    if (typeof cb === 'function') cb();
+  const runStart = (cb?: Animated.EndCallback) => {
+    if (typeof cb === 'function') cb({ finished: true });
   };
 
-  jest.spyOn(Animated, 'timing').mockImplementation(((value: Animated.Value, config: { toValue?: number }) => {
-    return {
-      start: (cb?: (() => void) | { finished?: boolean }) => {
-        if (config?.toValue !== undefined && value?.setValue) {
-          value.setValue(config.toValue);
-        }
-        runStart(cb);
-      },
-    };
-  }) as typeof Animated.timing);
-
-  jest.spyOn(Animated, 'spring').mockImplementation(((value: Animated.Value, config: { toValue?: number }) => {
-    return {
-      start: (cb?: (() => void) | { finished?: boolean }) => {
-        if (config?.toValue !== undefined && value?.setValue) {
-          value.setValue(config.toValue);
-        }
-        runStart(cb);
-      },
-    };
-  }) as typeof Animated.spring);
-
-  jest.spyOn(Animated, 'parallel').mockImplementation(((anims: { start: (cb?: () => void) => void }[]) => ({
-    start: (cb?: () => void) => {
-      anims.forEach((a) => a.start?.());
+  const composite = (onStart?: (cb?: Animated.EndCallback) => void): Animated.CompositeAnimation => ({
+    start: (cb) => {
+      onStart?.(cb);
       runStart(cb);
     },
-  })) as typeof Animated.parallel);
-
-  jest.spyOn(Animated, 'sequence').mockImplementation(((anims: { start: (cb?: () => void) => void }[]) => ({
-    start: (cb?: () => void) => {
-      anims.forEach((a) => a.start?.());
-      runStart(cb);
-    },
-  })) as typeof Animated.sequence);
-
-  jest.spyOn(Animated, 'loop').mockImplementation(((anim: { start: (cb?: () => void) => void; stop?: () => void }) => ({
-    start: () => anim.start?.(),
     stop: jest.fn(),
-  })) as typeof Animated.loop);
+    reset: jest.fn(),
+  });
+
+  jest.spyOn(Animated, 'timing').mockImplementation(
+    jest.fn<any>((value: Animated.Value, config: { toValue?: number }) =>
+      composite((cb) => {
+        if (config?.toValue !== undefined && value?.setValue) {
+          value.setValue(config.toValue);
+        }
+        runStart(cb);
+      })
+    )
+  );
+
+  jest.spyOn(Animated, 'spring').mockImplementation(
+    jest.fn<any>((value: Animated.Value, config: { toValue?: number }) =>
+      composite((cb) => {
+        if (config?.toValue !== undefined && value?.setValue) {
+          value.setValue(config.toValue);
+        }
+        runStart(cb);
+      })
+    )
+  );
+
+  jest.spyOn(Animated, 'parallel').mockImplementation(
+    jest.fn<any>((anims: Animated.CompositeAnimation[]) =>
+      composite((cb) => {
+        anims.forEach((a) => a.start?.());
+        runStart(cb);
+      })
+    )
+  );
+
+  jest.spyOn(Animated, 'sequence').mockImplementation(
+    jest.fn<any>((anims: Animated.CompositeAnimation[]) =>
+      composite((cb) => {
+        anims.forEach((a) => a.start?.());
+        runStart(cb);
+      })
+    )
+  );
+
+  jest.spyOn(Animated, 'loop').mockImplementation(
+    jest.fn<any>((anim: Animated.CompositeAnimation) =>
+      composite(() => {
+        anim.start?.();
+      })
+    )
+  );
 }
 
 describe('WelcomePremiumModal', () => {

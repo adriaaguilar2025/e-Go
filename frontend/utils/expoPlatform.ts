@@ -1,8 +1,11 @@
-/** Helpers para ramas testables (EXPO_OS en runtime). */
+import { Platform } from 'react-native';
+
+/** Abre enlaces en navegador in-app en nativo (no en web). */
 export function shouldUseNativeInAppBrowser(): boolean {
-  return process.env.EXPO_OS !== 'web';
+  return Platform.OS !== 'web';
 }
 
+/** Haptic suave en pestañas solo en iOS. */
 export function shouldUseIosTabHaptic(): boolean {
-  return process.env.EXPO_OS === 'ios';
+  return Platform.OS === 'ios';
 }
