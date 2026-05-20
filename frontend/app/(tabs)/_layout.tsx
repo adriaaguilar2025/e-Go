@@ -54,19 +54,19 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="payments"
+        options={{
+          title: '',
+          tabBarIcon: ({ color }) => <MaterialIcons name="credit-card" size={28} color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
         name="index"
         options={{
           title: '',
           href: '/',
           tabBarIcon: ({ color }) => <MaterialIcons name="map" size={28} color={color} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="payments"
-        options={{
-          title: '',
-          tabBarIcon: ({ color }) => <MaterialIcons name="credit-card" size={28} color={color} />,
         }}
       />
 

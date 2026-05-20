@@ -1550,19 +1550,6 @@ useEffect(() => {
 
   return (
     <View style={styles.screen} testID="home-map-screen">
-      {!isNavigating && (
-        <TopBar
-          onPressMenu={() => setMenuOpen(true)}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchResults={searchResults}
-          onSelectResult={handleSelectSearchResult}
-          isSearching={isSearching}
-          searchMode={searchMode}
-          onToggleSearchMode={toggleSearchMode}
-          onSubmitSearch={handleSubmitMapSearch}
-        />
-      )}
 
       {/* Aviso de selección de origen para cuando estamos seleccionando el punto de origen de una ruta */}
       {isSelectingOrigin && (
@@ -1853,6 +1840,19 @@ useEffect(() => {
             </Marker>
           )}
         </MapView>
+
+        {/* Botó flotant per centrar el mapa en la teva ubicació actual */}
+        {!isNavigating && (
+          <TouchableOpacity
+            style={styles.centerMapButton}
+            onPress={centerMapOnUser}
+            activeOpacity={0.8}
+            testID="center-map-button"
+          >
+            <MaterialIcons name="my-location" size={24} color={sem.accent} />
+          </TouchableOpacity>
+        )}
+
         {/* ========================================================== */}
         {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) para cuando hay ruta */}
         {/* ========================================================== */}
@@ -2013,6 +2013,20 @@ useEffect(() => {
           onConfirm={handleResultModalConfirm}
         />
       </View>
+
+      {!isNavigating && (
+        <TopBar
+          onPressMenu={() => setMenuOpen(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          onSelectResult={handleSelectSearchResult}
+          isSearching={isSearching}
+          searchMode={searchMode}
+          onToggleSearchMode={toggleSearchMode}
+          onSubmitSearch={handleSubmitMapSearch}
+        />
+      )}
 
       <Modal
         visible={showIncidenciaForm}

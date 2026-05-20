@@ -50,7 +50,7 @@ export default function TopBar({
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} pointerEvents="box-none">
       <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.logoContainer}>
           <SvgComponent width={56} height={56} />
@@ -184,6 +184,10 @@ export default function TopBar({
 
 const createStyles = (isDark: boolean, sem: SemanticColors) => StyleSheet.create({
   wrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 100,
   },
   headerContainer: {
@@ -225,10 +229,7 @@ const createStyles = (isDark: boolean, sem: SemanticColors) => StyleSheet.create
   menuButton: { padding: 2 },
 
   dropdownContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 10,
-    right: 10,
+    marginHorizontal: 10,
     backgroundColor: isDark ? '#1e293b' : 'white',
     borderRadius: 12,
     maxHeight: 250,
