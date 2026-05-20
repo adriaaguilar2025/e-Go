@@ -414,6 +414,10 @@ export default function InicioScreen() {
           distance: leg.distance.value / 1000, // L'API ho dona en metres, passem a Km
           duration: leg.duration.value / 60    // L'API ho dona en segons, passem a minuts
         });
+        setLiveRouteInfo({
+          distance: leg.distance.value / 1000,
+          duration: leg.duration.value / 60
+        });
       }
     } catch (error) {
       console.error("Error obtenint passos de navegació de Google:", error);
@@ -1778,6 +1782,10 @@ useEffect(() => {
                 mode="DRIVING"
                 onReady={(result) => {
                   setRouteInfo({
+                    distance: result.distance,
+                    duration: result.duration
+                  });
+                  setLiveRouteInfo({
                     distance: result.distance,
                     duration: result.duration
                   });
