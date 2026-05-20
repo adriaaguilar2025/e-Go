@@ -141,6 +141,7 @@ function EventSlideCard({
   return (
     <TouchableOpacity
       key={item.id}
+      testID={`event-carousel-card-${item.id}`}
       activeOpacity={0.85}
       disabled={!mapFocusEnabled}
       onPress={onPress}
