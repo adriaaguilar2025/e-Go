@@ -4,10 +4,10 @@ import type { AppLocale } from '@/i18n/i18n';
 
 const SENYERA = ['#FCDD09', '#DA121A', '#FCDD09', '#DA121A', '#FCDD09', '#DA121A', '#FCDD09', '#DA121A', '#FCDD09'] as const;
 
-type Props = {
+type Props = Readonly<{
   locale: AppLocale;
   size?: number;
-};
+}>;
 
 /** Banderas dibujadas (sin emojis) para el selector de idioma. */
 export function LocaleFlagIcon({ locale, size = 24 }: Props) {
@@ -23,7 +23,7 @@ export function LocaleFlagIcon({ locale, size = 24 }: Props) {
         ]}
       >
         {SENYERA.map((color, index) => (
-          <View key={index} style={[styles.senyeraStripe, { backgroundColor: color }]} />
+          <View key={`senyera-${color}-${index}`} style={[styles.senyeraStripe, { backgroundColor: color }]} />
         ))}
       </View>
     );

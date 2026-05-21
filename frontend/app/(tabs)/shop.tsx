@@ -149,11 +149,14 @@ export default function ShopScreen() {
     const isActive = activeSkinId === item.id;
     const isProcessing = processingId === item.id;
 
-    const buttonLabel = isActive
-      ? t('shop.equipped')
-      : isOwned
-        ? t('shop.equip')
-        : t('shop.pricePts', { count: item.preu_punts });
+    let buttonLabel: string;
+    if (isActive) {
+      buttonLabel = t('shop.equipped');
+    } else if (isOwned) {
+      buttonLabel = t('shop.equip');
+    } else {
+      buttonLabel = t('shop.pricePts', { count: item.preu_punts });
+    }
 
     return (
       <View style={[styles.card, isActive && { borderColor: sem.accent, backgroundColor: `${sem.accent}15` }]}>
