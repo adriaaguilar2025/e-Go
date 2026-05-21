@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
@@ -38,6 +39,7 @@ type AdminUser = {
 };
 
 export default function AdminLoginScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colorblindFriendly } = useColorblindPreference();
   const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
@@ -82,7 +84,7 @@ export default function AdminLoginScreen() {
 
   async function submitAdminLocalLogin() {
     if (!email.trim() || !password) {
-      setError('Email y contraseña son obligatorios');
+      setError(t('login.errors.emailPasswordRequired'));
       return;
     }
     setLocalLoading(true);
@@ -96,7 +98,7 @@ export default function AdminLoginScreen() {
       const data = await res.json();
       if (!res.ok) {
         const detail = [data.error, data.message].filter(Boolean).join(' — ');
-        setError(detail || 'Error al iniciar sesión');
+        setError(detail || t('login.errors.localLoginFailed'));
         return;
       }
       if (data.admin && data.token) {
@@ -105,7 +107,7 @@ export default function AdminLoginScreen() {
         router.replace('/admin-home');
       }
     } catch (err) {
-      setError('No se pudo conectar con el servidor. Comprueba la URL del backend.');
+      setError(t('adminLogin.serverHint'));
     } finally {
       setLocalLoading(false);
     }
@@ -121,7 +123,7 @@ export default function AdminLoginScreen() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al iniciar sesion admin');
+        setError(data.error || t('adminLogin.loginFailed'));
         return;
       }
 
@@ -131,7 +133,7 @@ export default function AdminLoginScreen() {
         router.replace('/admin-home');
       }
     } catch (err) {
-      setError('No se pudo conectar con el servidor. Comprueba la URL del backend.');
+      setError(t('adminLogin.serverHint'));
     }
   }
 
@@ -147,7 +149,7 @@ export default function AdminLoginScreen() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al iniciar sesion admin');
+        setError(data.error || t('adminLogin.loginFailed'));
         return;
       }
 
@@ -157,7 +159,7 @@ export default function AdminLoginScreen() {
         router.replace('/admin-home');
       }
     } catch (err) {
-      setError('No se pudo conectar con el servidor. Comprueba la URL del backend.');
+      setError(t('adminLogin.serverHint'));
     } finally {
       setLoading(false);
     }
@@ -178,7 +180,7 @@ export default function AdminLoginScreen() {
       const idToken = legacyUserInfo.idToken ?? modernUserInfo.data?.idToken;
 
       if (!idToken) {
-        setError('No se pudo obtener el token de Google');
+        setError(t('login.errors.googleToken'));
         return;
       }
 
@@ -187,9 +189,9 @@ export default function AdminLoginScreen() {
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
         // Cancelado por el usuario
       } else if (err.code === statusCodes.IN_PROGRESS) {
-        setError('Ya hay un inicio de sesion en curso');
+        setError(t('login.errors.inProgress'));
       } else {
-        setError('Error al conectar con Google');
+        setError(t('login.errors.googleConnect'));
         console.error('[Google Native Error]', err);
       }
     } finally {
@@ -201,30 +203,28 @@ export default function AdminLoginScreen() {
     <ScrollView contentContainerStyle={styles.scroll} style={styles.screen}>
       <View style={styles.card}>
         <SvgComponent width={150} height={125} />
-        <Text style={styles.title}>Acceso Admin</Text>
-        <Text style={styles.subtitle}>Backoffice de e-Go</Text>
+        <Text style={styles.title}>{t('adminLogin.title')}</Text>
+        <Text style={styles.subtitle}>{t('adminLogin.subtitle')}</Text>
 
         {!GOOGLE_WEB_CLIENT_ID ? (
-          <Text style={styles.hintText}>
-            Para continuar con Google, configura EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID en el .env del frontend.
-          </Text>
+          <Text style={styles.hintText}>{t('adminLogin.googleHint')}</Text>
         ) : null}
 
         {admin ? (
           <View style={styles.successBox}>
-            <Text style={styles.successTitle}>Sesion iniciada</Text>
+            <Text style={styles.successTitle}>{t('adminLogin.sessionStarted')}</Text>
             <Text style={styles.successText}>{admin.email}</Text>
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={() => router.replace('/(tabs)')}
             >
-              <Text style={styles.secondaryButtonText}>Ir a la app</Text>
+              <Text style={styles.secondaryButtonText}>{t('adminLogin.goToApp')}</Text>
             </TouchableOpacity>
           </View>
         ) : openGoogle === '1' && IS_WEB ? (
           <View style={styles.openingGoogle}>
             <ActivityIndicator size="large" color={sem.accent} />
-            <Text style={styles.openingGoogleText}>Iniciando sesion…</Text>
+            <Text style={styles.openingGoogleText}>{t('adminLogin.openingGoogle')}</Text>
           </View>
         ) : (
           <>
@@ -232,7 +232,7 @@ export default function AdminLoginScreen() {
             <View style={styles.localForm}>
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder={t('common.email')}
                 placeholderTextColor="#9ca3af"
                 value={email}
                 onChangeText={setEmail}
@@ -242,7 +242,7 @@ export default function AdminLoginScreen() {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Contraseña"
+                placeholder={t('common.password')}
                 placeholderTextColor="#9ca3af"
                 value={password}
                 onChangeText={setPassword}
@@ -259,12 +259,12 @@ export default function AdminLoginScreen() {
                 {localLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
+                  <Text style={styles.primaryButtonText}>{t('login.signIn')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.separatorText}>o</Text>
+            <Text style={styles.separatorText}>{t('common.or')}</Text>
 
             <TouchableOpacity
               style={styles.googleButton}
@@ -281,7 +281,7 @@ export default function AdminLoginScreen() {
                     style={styles.googleIcon}
                     resizeMode="contain"
                   />
-                  <Text style={styles.googleButtonText}>Continuar con Google</Text>
+                  <Text style={styles.googleButtonText}>{t('login.continueGoogle')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -289,7 +289,7 @@ export default function AdminLoginScreen() {
         )}
 
         <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/login')}>
-          <Text style={styles.backLinkText}>Volver al login</Text>
+          <Text style={styles.backLinkText}>{t('adminLogin.backToLogin')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

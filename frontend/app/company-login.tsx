@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
@@ -38,6 +39,7 @@ type CompanyUser = {
 };
 
 export default function CompanyLoginScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colorblindFriendly } = useColorblindPreference();
   const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
@@ -81,7 +83,7 @@ export default function CompanyLoginScreen() {
 
   async function submitCompanyLocalLogin() {
     if (!email.trim() || !password) {
-      setError('Email y contraseña son obligatorios');
+      setError(t('login.errors.emailPasswordRequired'));
       return;
     }
     setLocalLoading(true);
@@ -95,7 +97,7 @@ export default function CompanyLoginScreen() {
       const data = await res.json();
       if (!res.ok) {
         const detail = [data.error, data.message].filter(Boolean).join(' — ');
-        setError(detail || 'Error al iniciar sesión');
+        setError(detail || t('login.errors.localLoginFailed'));
         return;
       }
       if (data.company && data.token) {
@@ -103,7 +105,7 @@ export default function CompanyLoginScreen() {
         await onLoginOk(data);
       }
     } catch (err) {
-      setError('No se pudo conectar con el servidor. Comprueba la URL del backend.');
+      setError(t('companyLogin.serverHint'));
     } finally {
       setLocalLoading(false);
     }
@@ -119,7 +121,7 @@ export default function CompanyLoginScreen() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Error al iniciar sesion empresa');
+        setError(data.error || t('companyLogin.loginFailed'));
         return;
       }
       if (data.company && data.token) {
@@ -127,7 +129,7 @@ export default function CompanyLoginScreen() {
         await onLoginOk(data);
       }
     } catch (err) {
-      setError('No se pudo conectar con el servidor. Comprueba la URL del backend.');
+      setError(t('companyLogin.serverHint'));
     }
   }
 
@@ -142,7 +144,7 @@ export default function CompanyLoginScreen() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Error al iniciar sesion empresa');
+        setError(data.error || t('companyLogin.loginFailed'));
         return;
       }
       if (data.company && data.token) {
@@ -150,7 +152,7 @@ export default function CompanyLoginScreen() {
         await onLoginOk(data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor');
+      setError(err instanceof Error ? err.message : t('companyLogin.serverHint'));
     } finally {
       setLoading(false);
     }
@@ -168,14 +170,14 @@ export default function CompanyLoginScreen() {
       const userInfo = await GoogleSignin.signIn();
       const idToken = (userInfo as any).data?.idToken ?? (userInfo as any).idToken;
       if (!idToken) {
-        setError('No se pudo obtener el token de Google');
+        setError(t('login.errors.googleToken'));
         return;
       }
       await loginWithIdToken(idToken);
     } catch (err: any) {
       if (err?.code === statusCodes.SIGN_IN_CANCELLED) return;
-      if (err?.code === statusCodes.IN_PROGRESS) setError('Ya hay un inicio de sesion en curso');
-      else setError(err instanceof Error ? err.message : 'Error al conectar con Google');
+      if (err?.code === statusCodes.IN_PROGRESS) setError(t('login.errors.inProgress'));
+      else setError(err instanceof Error ? err.message : t('login.errors.googleConnect'));
     } finally {
       setLoading(false);
     }
@@ -185,30 +187,28 @@ export default function CompanyLoginScreen() {
     <ScrollView contentContainerStyle={styles.scroll} style={styles.screen}>
       <View style={styles.card}>
         <SvgComponent width={150} height={125} />
-        <Text style={styles.title}>Acceso Empresa</Text>
-        <Text style={styles.subtitle}>Gestion de solicitudes de estaciones</Text>
+        <Text style={styles.title}>{t('companyLogin.title')}</Text>
+        <Text style={styles.subtitle}>{t('companyLogin.subtitle')}</Text>
 
         {!GOOGLE_WEB_CLIENT_ID ? (
-          <Text style={styles.hintText}>
-            Para continuar con Google, configura EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID en el .env del frontend.
-          </Text>
+          <Text style={styles.hintText}>{t('companyLogin.googleHint')}</Text>
         ) : null}
 
         {company ? (
           <View style={styles.successBox}>
-            <Text style={styles.successTitle}>Sesion iniciada</Text>
+            <Text style={styles.successTitle}>{t('companyLogin.sessionStarted')}</Text>
             <Text style={styles.successText}>{company.email}</Text>
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={() => router.replace('/(tabs)' as Href)}
             >
-              <Text style={styles.secondaryButtonText}>Ir a la app</Text>
+              <Text style={styles.secondaryButtonText}>{t('companyLogin.goToApp')}</Text>
             </TouchableOpacity>
           </View>
         ) : openGoogle === '1' && IS_WEB ? (
           <View style={styles.openingGoogle}>
             <ActivityIndicator size="large" color={sem.accent} />
-            <Text style={styles.openingGoogleText}>Iniciando sesion…</Text>
+            <Text style={styles.openingGoogleText}>{t('companyLogin.openingGoogle')}</Text>
           </View>
         ) : (
           <>
@@ -216,7 +216,7 @@ export default function CompanyLoginScreen() {
             <View style={styles.localForm}>
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder={t('common.email')}
                 placeholderTextColor="#9ca3af"
                 value={email}
                 onChangeText={setEmail}
@@ -226,7 +226,7 @@ export default function CompanyLoginScreen() {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Contraseña"
+                placeholder={t('common.password')}
                 placeholderTextColor="#9ca3af"
                 value={password}
                 onChangeText={setPassword}
@@ -243,12 +243,12 @@ export default function CompanyLoginScreen() {
                 {localLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
+                  <Text style={styles.primaryButtonText}>{t('login.signIn')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.separatorText}>o</Text>
+            <Text style={styles.separatorText}>{t('common.or')}</Text>
 
             <TouchableOpacity
               style={styles.googleButton}
@@ -267,7 +267,7 @@ export default function CompanyLoginScreen() {
                     style={styles.googleIcon}
                     resizeMode="contain"
                   />
-                  <Text style={styles.googleButtonText}>Continuar con Google</Text>
+                  <Text style={styles.googleButtonText}>{t('login.continueGoogle')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -275,7 +275,7 @@ export default function CompanyLoginScreen() {
         )}
 
         <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/login' as Href)}>
-          <Text style={styles.backLinkText}>Volver al login</Text>
+          <Text style={styles.backLinkText}>{t('companyLogin.backToLogin')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

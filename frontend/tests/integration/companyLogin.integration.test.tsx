@@ -104,7 +104,7 @@ describe('CompanyLoginScreen', () => {
     fireEvent.changeText(getByPlaceholderText('Email'), 'bad@test.com');
     fireEvent.changeText(getByPlaceholderText(/Contrase/), 'wrong');
     fireEvent.press(getByText(/Iniciar/));
-    await findByText(/Error al iniciar/);
+    await findByText(/No se pudo iniciar/);
   });
 
   test('network error shows connection error', async () => {
@@ -243,7 +243,7 @@ describe('CompanyLoginScreen', () => {
       (GoogleSignin.signIn as jest.Mock<any>).mockRejectedValue({ code: statusCodes.IN_PROGRESS });
       const { getByText, findByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
-      await findByText('Ya hay un inicio de sesion en curso');
+      await findByText(/sesión en curso/);
     });
 
     test('Google sign-in unknown error shows the error message', async () => {
