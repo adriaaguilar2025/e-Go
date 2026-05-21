@@ -373,6 +373,12 @@ export default function InicioScreen() {
   const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
   const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
 
+  // --- ESTATS PER LA GESTIÓ D'AUTONOMIA ---
+    const [showAutonomyPrompt, setShowAutonomyPrompt] = useState(false);
+    const [autonomyInput, setAutonomyInput] = useState('');
+    const [pendingRoute, setPendingRoute] = useState<{origin: any, destination: any} | null>(null);
+    const [routeWaypoint, setRouteWaypoint] = useState<{latitude: number, longitude: number} | null>(null);
+
   const isFirstRouteLoad = useRef(true);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
@@ -386,11 +392,99 @@ export default function InicioScreen() {
   const routeStepsRef = useRef(routeSteps);
   useEffect(() => { routeStepsRef.current = routeSteps; }, [routeSteps]);
 
+  //Guarda la ruta temporalmente y abre el modal
+    const prepareRouteWithAutonomy = (origin: any, destination: any) => {
+      setPendingRoute({ origin, destination });
+      setAutonomyInput(''); //Reseteamos el campo
+      setShowAutonomyPrompt(true);//Preguntamos la autonomia
+    };
+
+    //Ejecuta la matemática del calculo del desvio una vez el usuario le da a "Calcular"
+    const processRouteWithAutonomy = async (autonomyStr: string) => {
+      setShowAutonomyPrompt(false);
+      if (!pendingRoute) return;
+
+      const { origin, destination } = pendingRoute;
+      const autonomy = parseFloat(autonomyStr);
+
+      //Si deja el campo vacío o pone texto, hacemos ruta directa clásica
+      if (isNaN(autonomy) || autonomy <= 0) {
+        startFinalNavigation(origin, destination, null);
+        return;
+      }
+
+      // Calculamos distancia recta aproximada al recorrido real (Multiplicamos x 1.3 por las curvas de las carreteras)
+      const directDistMeters = calculateDistanceInMeters(
+        origin.latitude, origin.longitude,
+        destination.latitude, destination.longitude
+      );
+      const directDistKm = (directDistMeters / 1000) * 1.3;
+
+      // Condición principal: ¿Llega al destino y le sobran 50 km?
+      if (directDistKm <= (autonomy - 50)) {
+        Alert.alert("Ruta directa", "Tienes autonomía suficiente para llegar a tu destino con más de 50km de margen.");
+        startFinalNavigation(origin, destination, null);
+      } else {
+        //No llega, toca buscar el cargador que genere el menor desvío posible
+        Alert.alert("Parada necesaria", "No tienes suficiente autonomía. Buscando un cargador en tu ruta...");
+
+        let bestStation = null;
+        let minDetour = Infinity;
+
+        for (const est of estaciones) {
+          // Ignoramos estaciones estropeadas si tienes esa propiedad
+          if (est.operatiu === false) continue;
+
+          const lat = parseFloat(est.latitud);
+          const lon = parseFloat(est.longitud);
+
+          // 1. Distancia del origen al cargador
+          const distToStation = (calculateDistanceInMeters(origin.latitude, origin.longitude, lat, lon) / 1000) * 1.3;
+
+          // 2. ¿Puede llegar el coche a ESE cargador y que le sigan sobrando 50km?
+          if (distToStation <= (autonomy - 50)) {
+            // 3. Distancia del cargador al destino final
+            const distToDest = (calculateDistanceInMeters(lat, lon, destination.latitude, destination.longitude) / 1000) * 1.3;
+
+            // 4. El coste total es lo que recorremos. Buscamos el mínimo absoluto.
+            const totalPath = distToStation + distToDest;
+            if (totalPath < minDetour) {
+              minDetour = totalPath;
+              bestStation = est;
+            }
+          }
+        }
+
+        if (bestStation) {
+          Alert.alert("Parada añadida", `Se ha modificado la ruta para parar en: ${bestStation.nom}`);
+          startFinalNavigation(origin, destination, {
+            latitude: parseFloat(bestStation.latitud),
+            longitude: parseFloat(bestStation.longitud)
+          });
+        } else {
+          Alert.alert("Atención", "No hemos encontrado ningún cargador intermedio al que puedas llegar. ¡Precaución!");
+          startFinalNavigation(origin, destination, null);
+        }
+      }
+    };
+
+    // 3. Arranca el motor de Google Maps y dibuja
+    const startFinalNavigation = (origin: any, destination: any, waypoint: any) => {
+      setRouteWaypoint(waypoint);
+      setRouteOrigin(origin);
+      setRouteDestination(destination);
+      setIsNavigating(true);
+      fetchNavigationSteps(origin, destination, waypoint);
+    };
+
   //Funció per obtenir les indicacions Turn-By-Turn
   const fetchNavigationSteps = async (origin: {latitude: number, longitude: number}, destination: {latitude: number, longitude: number}) => {
     try {
       const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}&language=ca`;
+      if (waypoint) {//Añadimos la parada a la URL si hay
+              url += `&waypoints=${waypoint.latitude},${waypoint.longitude}`;
+            }
 
       const response = await fetch(url);
       const data = await response.json();
@@ -549,7 +643,7 @@ export default function InicioScreen() {
       setRouteOrigin(originResolution.origin);
       setRouteOriginPreset(null);
       setSelectedLocationLabel(null);
-      setIsNavigating(true);
+      prepareRouteWithAutonomy(originResolution.origin, coordenadas);
       return;
     }
     //Preguntamos al usuario el origen
@@ -577,17 +671,27 @@ export default function InicioScreen() {
             }
 
             // Un cop assegurats, llancem la ruta
-            if (locToUse && locToUse.coords) {
-              void activateNavigation(() => {
-                setRouteOrigin({
-                  latitude: locToUse.coords!.latitude, // L'exclamació diu a TypeScript que és segur
-                  longitude: locToUse.coords!.longitude,
+              if (locToUse && locToUse.coords) {
+                // 1. Guardamos los datos exactos del GPS en variables normales
+                const latInstantanea = locToUse.coords.latitude;
+                const lonInstantanea = locToUse.coords.longitude;
+
+                void activateNavigation(() => {
+                  // 2. Le decimos a React que guarde esto para el futuro
+                  setRouteOrigin({
+                    latitude: latInstantanea,
+                    longitude: lonInstantanea,
+                  });
+
+                  // 3. ¡LA CLAVE! Le pasamos el objeto construido al momento, NO usamos 'routeOrigin'
+                  prepareRouteWithAutonomy(
+                    { latitude: latInstantanea, longitude: lonInstantanea },
+                    coordenadas
+                  );
                 });
-                setIsNavigating(true);
-              });
-            } else {
-              Alert.alert(t('navigation.gpsOffTitle'), t('navigation.gpsOffBody'));
-            }
+              } else {
+                Alert.alert(t('navigation.gpsOffTitle'), t('navigation.gpsOffBody'));
+              }
           },
         },
         {
@@ -1795,44 +1899,58 @@ useEffect(() => {
             )}
 
             {/* Trazado de la ruta (Solo visible si estamos navegando) */}
-            {isNavigating && routeOrigin && routeDestination && (
-              <MapViewDirections
-                key={`directions-${routeOrigin.latitude}-${routeOrigin.longitude}`}
-                origin={routeOrigin}
-                destination={routeDestination}
-                apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-                strokeWidth={0}
-                strokeColor={sem.routeLine}
-                mode="DRIVING"
-                onReady={(result) => {
-                  setRouteInfo({
-                    distance: result.distance,
-                    duration: result.duration
-                  });
-                  setLiveRouteInfo({
-                    distance: result.distance,
-                    duration: result.duration
-                  });
-                  setRouteCoords(result.coordinates);
-                  setVisibleRouteCoords(result.coordinates); // Inicialitzem la visible
+                {isNavigating && routeOrigin && routeDestination && (
+                  <> {/* <--- ¡AQUÍ ABRIMOS EL FRAGMENTO! */}
+                    <MapViewDirections
+                      key={`directions-${routeOrigin.latitude}-${routeOrigin.longitude}`}
+                      origin={routeOrigin}
+                      destination={routeDestination}
+                      waypoints={routeWaypoint ? [routeWaypoint] : []}
+                      apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
+                      strokeWidth={0}
+                      strokeColor={sem.routeLine}
+                      mode="DRIVING"
 
-                  // Demanem els passos detallats turn-by-turn a l'API de Google
-                  fetchNavigationSteps(routeOrigin!, routeDestination!);
+                      onReady={(result) => {
+                        setRouteInfo({
+                          distance: result.distance,
+                          duration: result.duration
+                        });
+                        setLiveRouteInfo({
+                          distance: result.distance,
+                          duration: result.duration
+                        });
+                        setRouteCoords(result.coordinates);
+                        setVisibleRouteCoords(result.coordinates); // Inicialitzem la visible
 
-                  if (isFirstRouteLoad.current && mapRef.current) {
-                    mapRef.current.fitToCoordinates(result.coordinates, {
-                      edgePadding: { top: 120, right: 50, bottom: 250, left: 50 },
-                      animated: true
-                    });
-                    isFirstRouteLoad.current = false; // Desactivem per als propers recàlculs
-                  }
-                }}
-                onError={(errorMessage) => {
-                  Alert.alert(t('navigation.routeErrorTitle'), t('navigation.routeErrorBody'));
-                  console.log(errorMessage);
-                }}
-              />
-            )}
+                        // Demanem els passos detallats turn-by-turn a l'API de Google
+                        // (AQUÍ LE PASAMOS EL WAYPOINT TAMBIÉN PARA QUE CALCULE LOS PASOS CON LA PARADA)
+                        fetchNavigationSteps(routeOrigin!, routeDestination!, routeWaypoint);
+
+                        if (isFirstRouteLoad.current && mapRef.current) {
+                          mapRef.current.fitToCoordinates(result.coordinates, {
+                            edgePadding: { top: 120, right: 50, bottom: 250, left: 50 },
+                            animated: true
+                          });
+                          isFirstRouteLoad.current = false; // Desactivem per als propers recàlculs
+                        }
+                      }}
+                      onError={(errorMessage) => {
+                        Alert.alert(t('navigation.routeErrorTitle'), t('navigation.routeErrorBody'));
+                        console.log(errorMessage);
+                      }}
+                    />
+
+                    {/* --- DIBUJAR LA PARADA EN MEDIO --- */}
+                    {routeWaypoint && (
+                      <Marker
+                        coordinate={routeWaypoint}
+                        pinColor="orange"
+                        title="Parada de Carga (Autonomía)"
+                      />
+                    )}
+                  </>
+                )}
             {/* Nuestro propio trazado de la ruta (100% controlable) */}
             {isNavigating && (
               <Polyline
@@ -2303,6 +2421,44 @@ useEffect(() => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* MODAL DE AUTONOMÍA */}
+        <Modal visible={showAutonomyPrompt} transparent animationType="fade">
+          <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 }}>
+            <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, elevation: 10 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#1f2937' }}>
+                🔋 Autonomía del Vehículo
+              </Text>
+              <Text style={{ marginBottom: 20, color: '#4b5563', lineHeight: 20 }}>
+                Introduce los km de autonomía que te quedan (opcional). Si no tienes suficiente para llegar con 50km de margen, desviaremos la ruta a un cargador de paso.
+              </Text>
+
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 16 }}
+                placeholder="Ej: 150 (km)"
+                keyboardType="numeric"
+                value={autonomyInput}
+                onChangeText={setAutonomyInput}
+              />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => processRouteWithAutonomy('')}
+                  style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#f3f4f6' }}
+                >
+                  <Text style={{ color: '#4b5563', fontWeight: 'bold' }}>Saltar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => processRouteWithAutonomy(autonomyInput)}
+                  style={{ backgroundColor: '#10b981', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }}
+                >
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Calcular Ruta</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
     </View>
   );
 }
