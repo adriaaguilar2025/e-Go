@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Alert, Image, View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
+import { Alert, Image, View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { appFetch } from '@/services/appFetch';
 import { getApiUrl } from '@/constants/api';
@@ -11,6 +11,7 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { waitFor } from '@testing-library/react-native';
+import { getSkinImage } from '@/utils/skinsMapping';
 
 const LOGO = require('./_assets/favicon.png'); // Ruta a tu imagen de perfil (el logo de momento)
 const RAINBOW_BASE_COLORS = ['#3b82f6', '#a855f7', '#ec4899', '#f97316', '#facc15', '#3fad17', '#14b8b0', '#3b82f6'];
@@ -67,6 +68,10 @@ interface PerfilUser {
   admin: boolean;
   empresa: boolean;
   valoracio: number;
+  amics: number;
+  posicio: number;
+  skin: string | null;
+  carrega: number;
 }
 
 export default function PerfilScreen() {
@@ -158,7 +163,6 @@ export default function PerfilScreen() {
       
       if (Array.isArray(data)) {
         setAmicsList(data);
-        console.log("AmicsList:", data);
         const friendRelation = data.find((friend: any) => Number(friend?.id) === user.id);
         if (friendRelation) {
           // Es amigo: 3 si aceptado, 2 si pendiente de aceptación por el usuario en pantalla, 1 si pendiente de aceptación por el usuario logueado
@@ -392,196 +396,243 @@ export default function PerfilScreen() {
         <View style={{ width: 24 }} />
       </View>
       {/* Contingut del perfil */}
-      <View style={styles.profileContainer}>
-        <ViewShot
-          ref={viewShotRef}
-          options={{ format: 'jpg', quality: 0.9 }}
-          style={{ backgroundColor: '#fff', borderRadius: 16 }} // Posa el color de fons del teu perfil
-        >
-          <View style={styles.profileCard}>
-            <View style={styles.profileAvatarWrapper}>
-              <Image source={LOGO} style={styles.avatar} resizeMode="contain" />
-            </View>
-            <View style={styles.profileContent}>
-              {renderProfileName()}
-              {perfil?.id === user?.id ? (
+      <ScrollView
+              style={styles.contentContainer}
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+        <View style={styles.profileContainer}>
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: 'jpg', quality: 0.9 }}
+            style={{ backgroundColor: '#fff', borderRadius: 16 }} // Posa el color de fons del teu perfil
+          >
+            <View style={styles.profileCard}>
+              <View style={styles.profileAvatarWrapper}>
+                <Image source={LOGO} style={styles.avatar} resizeMode="contain" />
+              </View>
+              <View style={styles.profileContent}>
+                {renderProfileName()}
+                {perfil?.id === user?.id ? (
+                  <>
+                    <Text style={styles.profileEmail}>{perfil?.email ?? 'email@ejemplo.com'}</Text>
+                    {!isEditing ? (
+                      <>
+                        <TouchableOpacity
+                          style={styles.editButton}
+                          onPress={() => {
+                            setEditedUsername(perfil?.username ?? '');
+                            setIsEditing(true);
+                          }}
+                        >
+                          <Text style={styles.editButtonText}>Modificar perfil</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TextInput
+                          style={styles.input}
+                          value={editedUsername}
+                          onChangeText={setEditedUsername}
+                          placeholder="Nombre de usuario"
+                          placeholderTextColor="#94a3b8"
+                        />
+                      </>
+                    )}
+                  </>
+                ) : (
                 <>
-                  <Text style={styles.profileEmail}>{perfil?.email ?? 'email@ejemplo.com'}</Text>
-                  {!isEditing ? (
-                    <>
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => {
-                          setEditedUsername(perfil?.username ?? '');
-                          setIsEditing(true);
-                        }}
-                      >
-                        <Text style={styles.editButtonText}>Modificar perfil</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      <TextInput
-                        style={styles.input}
-                        value={editedUsername}
-                        onChangeText={setEditedUsername}
-                        placeholder="Nombre de usuario"
-                        placeholderTextColor="#94a3b8"
-                      />
-                    </>
-                  )}
-                </>
-              ) : (
-              <>
-                {esAmic === 0 && (
-                  <TouchableOpacity
-                    style={[styles.primaryButton, isSendingRequest && styles.buttonDisabled]}
-                    onPress={sendFriendRequest}
-                    disabled={isSendingRequest}
-                  >
-                    <MaterialIcons name="person-add" size={18} color="#fff" />
-                    <Text style={styles.primaryButtonText}>{isSendingRequest ? 'Enviando...' : 'Enviar solicitud'}</Text>
-                  </TouchableOpacity>
-                )}
-                {esAmic === 1 && (
-                  <View style={styles.pendingRequestContainer}>
-                    <View>
-                      <Text style={styles.pendingRequestText}>Solicitud pendiente</Text>
-                      <Text style={styles.pendingRequestSubtext}>Tienes una solicitud de amistad de este usuario</Text>
-                    </View>
-                    <View style={styles.buttonGroup}>
-                      <TouchableOpacity
-                        style={[styles.acceptButton, isAcceptingFriend && styles.buttonDisabled]}
-                        onPress={() => handleAcceptFriendRequest(idUser)}
-                        disabled={isAcceptingFriend || isRejectingRequest}
-                      >
-                        <MaterialIcons name="check" size={18} color="#fff" />
-                        <Text style={styles.acceptButtonText}>{isAcceptingFriend ? 'Aceptando...' : 'Aceptar'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.rejectButton, isRejectingRequest && styles.buttonDisabled]}
-                        onPress={() => handleRejectFriendRequest(idUser)}
-                        disabled={isRejectingRequest || isAcceptingFriend}
-                      >
-                        <MaterialIcons name="close" size={18} color="#fff" />
-                        <Text style={styles.rejectButtonText}>{isRejectingRequest ? 'Rechazando...' : 'Rechazar'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-                {esAmic === 2 && (
-                  <View style={styles.sentRequestContainer}>
-                    <View style={styles.sentRequestContent}>
-                      <MaterialIcons name="mail-outline" size={16} color="#f59e0b" />
-                      <Text style={styles.sentRequestText}>Solicitud enviada</Text>
-                    </View>
+                  {esAmic === 0 && (
                     <TouchableOpacity
-                      style={[styles.cancelFriendButton, isSendingRequest && styles.buttonDisabled]}
-                      onPress={() => handleCancelFriendRequest(idUser)}
+                      style={[styles.primaryButton, isSendingRequest && styles.buttonDisabled]}
+                      onPress={sendFriendRequest}
                       disabled={isSendingRequest}
                     >
-                      <MaterialIcons name="close" size={16} color="#fff" />
+                      <MaterialIcons name="person-add" size={18} color="#fff" />
+                      <Text style={styles.primaryButtonText}>{isSendingRequest ? 'Enviando...' : 'Enviar solicitud'}</Text>
                     </TouchableOpacity>
-                  </View>
-                )}
-                {esAmic === 3 && (
-                  <View style={styles.friendStatusContainer}>
-                    <View style={styles.friendStatusContent}>
-                      <MaterialIcons name="check-circle" size={16} color="#10b981" />
-                      <Text style={styles.friendStatusText}>✓ Amigo</Text>
+                  )}
+                  {esAmic === 1 && (
+                    <View style={styles.pendingRequestContainer}>
+                      <View>
+                        <Text style={styles.pendingRequestText}>Solicitud pendiente</Text>
+                        <Text style={styles.pendingRequestSubtext}>Tienes una solicitud de amistad de este usuario</Text>
+                      </View>
+                      <View style={styles.buttonGroup}>
+                        <TouchableOpacity
+                          style={[styles.acceptButton, isAcceptingFriend && styles.buttonDisabled]}
+                          onPress={() => handleAcceptFriendRequest(idUser)}
+                          disabled={isAcceptingFriend || isRejectingRequest}
+                        >
+                          <MaterialIcons name="check" size={18} color="#fff" />
+                          <Text style={styles.acceptButtonText}>{isAcceptingFriend ? 'Aceptando...' : 'Aceptar'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.rejectButton, isRejectingRequest && styles.buttonDisabled]}
+                          onPress={() => handleRejectFriendRequest(idUser)}
+                          disabled={isRejectingRequest || isAcceptingFriend}
+                        >
+                          <MaterialIcons name="close" size={18} color="#fff" />
+                          <Text style={styles.rejectButtonText}>{isRejectingRequest ? 'Rechazando...' : 'Rechazar'}</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <TouchableOpacity
-                      style={[styles.deleteButton, isRemovingFriend && styles.buttonDisabled]}
-                      onPress={removeFriendAction}
-                      disabled={isRemovingFriend}
-                    >
-                      <MaterialIcons name="person-remove" size={16} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </>
-            )}
-            {perfil?.id === user?.id && isEditing && (
-              <>
-                <TouchableOpacity
-                  style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-                  onPress={savePerfil}
-                  disabled={isSaving}
-                >
-                  <Text style={styles.saveButtonText}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => {
-                    setEditedUsername(perfil?.username ?? '');
-                    setIsEditing(false);
-                  }}
-                  disabled={isSaving}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-              </>
-            )}
-            <Text style={styles.profileSubtitle}>Se unió el {perfil?.created_at ? new Date(perfil.created_at).toLocaleDateString() : 'fecha no disponible'}</Text>
-              {(perfil?.empresa || perfil?.admin) && (
-              <View style={styles.badgeRow}>
-                {perfil?.empresa && (
-                  <View style={styles.badge}>
-                    <MaterialIcons name="business" size={16} color="#2563eb" />
-                    <Text style={styles.badgeLabel}>Empresa</Text>
-                  </View>
-                )}
-                {perfil?.admin && (
-                  <View style={styles.badge}>
-                    <MaterialIcons name="shield" size={16} color={sem.mapCustomLocation} />
-                    <Text style={styles.badgeLabel}>Admin</Text>
-                  </View>
-                )}
-              </View>
-            )}
-            </View>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={sem.accent} />
-              <Text style={styles.loadingText}>Cargando perfil...</Text>
-            </View>
-          ) : perfil ? (
-            <>
-              <View style={[styles.statsCard, styles.centered]}>
-                <Text style={styles.points}>{perfil.punts}</Text>
-                <Text style={styles.ptsLabel}>Puntos</Text>
-              </View>
-              <View style={[styles.statsCard, styles.centered]}>
-                {perfil.valoracio ?
+                  )}
+                  {esAmic === 2 && (
+                    <View style={styles.sentRequestContainer}>
+                      <View style={styles.sentRequestContent}>
+                        <MaterialIcons name="mail-outline" size={16} color="#f59e0b" />
+                        <Text style={styles.sentRequestText}>Solicitud enviada</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.cancelFriendButton, isSendingRequest && styles.buttonDisabled]}
+                        onPress={() => handleCancelFriendRequest(idUser)}
+                        disabled={isSendingRequest}
+                      >
+                        <MaterialIcons name="close" size={16} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {esAmic === 3 && (
+                    <View style={styles.friendStatusContainer}>
+                      <View style={styles.friendStatusContent}>
+                        <MaterialIcons name="check-circle" size={16} color="#10b981" />
+                        <Text style={styles.friendStatusText}>✓ Amigo</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.deleteButton, isRemovingFriend && styles.buttonDisabled]}
+                        onPress={removeFriendAction}
+                        disabled={isRemovingFriend}
+                      >
+                        <MaterialIcons name="person-remove" size={16} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+              {perfil?.id === user?.id && isEditing && (
                 <>
-                  <Text style={styles.points}>{Number(perfil.valoracio).toFixed(2)}</Text>
-                  <Text style={styles.ptsLabel}>Valoración media de estaciones</Text>
-                </> : <Text style={styles.points}>Sin valoraciones</Text>}
+                  <TouchableOpacity
+                    style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                    onPress={savePerfil}
+                    disabled={isSaving}
+                  >
+                    <Text style={styles.saveButtonText}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setEditedUsername(perfil?.username ?? '');
+                      setIsEditing(false);
+                    }}
+                    disabled={isSaving}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              <Text style={styles.profileSubtitle}>Se unió el {perfil?.created_at ? new Date(perfil.created_at).toLocaleDateString() : 'fecha no disponible'}</Text>
+                {(perfil?.empresa || perfil?.admin) && (
+                <View style={styles.badgeRow}>
+                  {perfil?.empresa && (
+                    <View style={styles.badge}>
+                      <MaterialIcons name="business" size={16} color="#2563eb" />
+                      <Text style={styles.badgeLabel}>Empresa</Text>
+                    </View>
+                  )}
+                  {perfil?.admin && (
+                    <View style={styles.badge}>
+                      <MaterialIcons name="shield" size={16} color={sem.mapCustomLocation} />
+                      <Text style={styles.badgeLabel}>Admin</Text>
+                    </View>
+                  )}
+                </View>
+              )}
               </View>
-            </>
-          ) : (
-            <Text style={styles.emptyText}>No existe el usuario</Text>
-          )}
-        </ViewShot>
-          {!isLoading && perfil?.id === user?.id && renderFriendRequests()}
+            </View>
 
-        {/* AFEGIM EL BOTÓ D'INSTAGRAM */}
-        <TouchableOpacity
-          style={styles.instagramButton}
-          onPress={shareToInstagram}
-          activeOpacity={0.8}
-        >
-          <MaterialIcons name="camera-alt" size={20} color="#fff" />
-          <Text style={styles.instagramButtonText}>Comparte tu perfil!</Text>
-        </TouchableOpacity>
-      </View>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={sem.accent} />
+                <Text style={styles.loadingText}>Cargando perfil...</Text>
+              </View>
+            ) : perfil ? (
+              <>
+                <View style={styles.statsContainer}>
+                  <View style={[styles.statsCard, styles.centered]}>
+                    <Text style={styles.points}>{perfil.punts}</Text>
+                    <Text style={styles.ptsLabel}>Puntos</Text>
+                  </View>
+                  <View style={[styles.statsCard, styles.centered]}>
+                    <Text style={styles.points}>{perfil.posicio}</Text>
+                    <Text style={styles.ptsLabel}>Posición en el ránking</Text>
+                  </View>
+                </View>
+                <View style={styles.statsContainer}>
+                  <View style={[styles.statsCard, styles.centered]}>
+                    {perfil.amics ?
+                    <>
+                      <Text style={styles.points}>{perfil.amics}</Text>
+                      <Text style={styles.ptsLabel}>Amigos</Text>
+                    </> : <Text style={styles.points}>Sin amigos</Text>}
+                  </View>
+                  <View style={[styles.statsCard, styles.centered]}>
+                    {perfil.valoracio ?
+                    <>
+                      <Text style={styles.points}>{Number(perfil.valoracio).toFixed(2)}</Text>
+                      <Text style={styles.ptsLabel}>Valoración media de estaciones</Text>
+                    </> : <Text style={styles.points}>Sin valoraciones</Text>}
+                  </View>
+                </View>
+                <View style={styles.statsContainer}>
+                  <View style={[styles.statsCard, styles.centered]}>
+                    {perfil.skin ?
+                    <>
+                      <Image source={getSkinImage(perfil.skin)} style={styles.image} resizeMode="contain" />
+                    </> : <Text style={styles.points}>Sin skin</Text>}
+                  </View>
+                  <View style={[styles.statsCard, styles.centered]}>
+                    {perfil.carrega ?
+                    <>
+                      <Text style={styles.points}>{perfil.carrega} {perfil.carrega === 1 ? 'min' : 'mins'}</Text>
+                      <Text style={styles.ptsLabel}>Tiempo total de carga</Text>
+                    </> : <Text style={styles.points}>Aún no has cargado</Text>}
+                  </View>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>No existe el usuario</Text>
+            )}
+          </ViewShot>
+            {!isLoading && perfil?.id === user?.id && renderFriendRequests()}
+
+          {/* AFEGIM EL BOTÓ D'INSTAGRAM */}
+          {perfil?.id === user?.id && (
+          <TouchableOpacity
+            style={styles.instagramButton}
+            onPress={shareToInstagram}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="camera-alt" size={20} color="#fff" />
+            <Text style={styles.instagramButtonText}>Comparte tu perfil!</Text>
+          </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
+  contentContainer: {
+    flex: 1,
+  },
+  content: {
+    padding: 0,
+  },
+  image: { width: 90, height: 90, marginBottom: 12 },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
@@ -733,8 +784,14 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   statsCard: {
     backgroundColor: '#e0f2fe',
     borderRadius: 18,
-    padding: 24,
-    marginBottom: 16,
+    padding: 18,
+    margin: 8,
+    flex: 1,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -747,11 +804,13 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: sem.accent,
+    textAlign: 'center',
   },
   ptsLabel: {
     fontSize: 12,
     color: '#64748b',
     fontWeight: '500',
+    textAlign: 'center',
   },
   emptyText: {
     textAlign: 'center',
@@ -974,6 +1033,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     marginBottom: 16, // Ajusta l'espai com necessitis
+    marginTop: 18,
     gap: 8,
   },
   instagramButtonText: {

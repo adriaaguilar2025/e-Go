@@ -105,6 +105,137 @@ type ChargingResultPayload = {
   reason: string;
 };
 
+// Funció per calcular la distància en metres des de l'usuari fins a la ruta traçada
+const getDistanceToRoute = (
+  userCoord: { latitude: number; longitude: number },
+  routeCoords: { latitude: number; longitude: number }[]
+) => {
+  if (!routeCoords || routeCoords.length === 0) return { distance: 0, index: 0 };
+
+  const R = 6371000;
+  const toRad = Math.PI / 180;
+  const pLat = userCoord.latitude * toRad;
+  const pLon = userCoord.longitude * toRad;
+
+  let minDistance = Infinity;
+  let closestIndex = 0; // Guardarem l'índex aquí
+
+  for (let i = 0; i < routeCoords.length - 1; i++) {
+    const aLat = routeCoords[i].latitude * toRad;
+    const aLon = routeCoords[i].longitude * toRad;
+    const bLat = routeCoords[i + 1].latitude * toRad;
+    const bLon = routeCoords[i + 1].longitude * toRad;
+
+    const xA = (aLon - pLon) * Math.cos(pLat) * R;
+    const yA = (aLat - pLat) * R;
+    const xB = (bLon - pLon) * Math.cos(pLat) * R;
+    const yB = (bLat - pLat) * R;
+
+    const dx = xB - xA;
+    const dy = yB - yA;
+    const lengthSquared = dx * dx + dy * dy;
+
+    let distance;
+    if (lengthSquared === 0) {
+      distance = Math.sqrt(xA * xA + yA * yA);
+    } else {
+      let t = -(xA * dx + yA * dy) / lengthSquared;
+      t = Math.max(0, Math.min(1, t));
+      const closestX = xA + t * dx;
+      const closestY = yA + t * dy;
+      distance = Math.sqrt(closestX * closestX + closestY * closestY);
+    }
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestIndex = i; // Actualitzem el millor índex
+    }
+  }
+
+  return { distance: minDistance, index: closestIndex };
+};
+
+// Funció per convertir la maniobra de Google en una fletxa visual de MaterialIcons
+const getManeuverIcon = (maneuver: string): any => {
+  if (!maneuver) return 'navigation'; // Icona per defecte (fletxa de rumb)
+
+  const m = maneuver.toLowerCase();
+  if (m.includes('left')) return 'turn-left';
+  if (m.includes('right')) return 'turn-right';
+  if (m.includes('straight') || m.includes('keep')) return 'arrow-upward';
+  if (m.includes('roundabout')) return 'loop'; // Una icona de bucle simula molt bé una rotonda
+  if (m.includes('merge') || m.includes('fork')) return 'call-split'; // Icona de bifurcació
+
+  return 'navigation';
+};
+
+// --- FUNCIONS AUXILIARS PER LA NAVEGACIÓ ---
+
+const calculateRemainingRouteInfo = (
+  visibleCoords: {latitude: number, longitude: number}[],
+  originalDistance: number,
+  originalDuration: number
+) => {
+  let remainingMeters = 0;
+  for (let i = 0; i < visibleCoords.length - 1; i++) {
+    remainingMeters += calculateDistanceInMeters(
+      visibleCoords[i].latitude, visibleCoords[i].longitude,
+      visibleCoords[i + 1].latitude, visibleCoords[i + 1].longitude
+    );
+  }
+  const remainingKm = remainingMeters / 1000;
+  const totalDist = originalDistance || remainingKm || 1;
+  const totalDur = originalDuration || 1;
+
+  return {
+    distance: remainingKm,
+    duration: (remainingKm / totalDist) * totalDur
+  };
+};
+
+const getClosestStepIndex = (
+  lat: number,
+  lon: number,
+  steps: {location: {latitude: number, longitude: number}}[]
+) => {
+  if (!steps || steps.length === 0) return 0;
+
+  let closestStepIdx = 0;
+  let minStepDist = Infinity;
+
+  for (let i = 0; i < steps.length; i++) {
+    const d = calculateDistanceInMeters(
+      lat, lon,
+      steps[i].location.latitude, steps[i].location.longitude
+    );
+    if (d < minStepDist) {
+      minStepDist = d;
+      closestStepIdx = i;
+    }
+  }
+  return closestStepIdx;
+};
+
+// Funció totalment segura que neteja l'HTML sense usar Expressions Regulars.
+// Resol el Security Hotspot del SonarQube evitant vulnerabilitats ReDoS.
+const stripHtmlTags = (text: string): string => {
+  if (!text) return '';
+  let cleanText = '';
+  let insideTag = false;
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '<') {
+      insideTag = true;
+    } else if (text[i] === '>' && insideTag) {
+      insideTag = false;
+    } else if (!insideTag) {
+      cleanText += text[i];
+    }
+  }
+
+  return cleanText;
+};
+
 export default function InicioScreen() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
@@ -224,43 +355,146 @@ export default function InicioScreen() {
   const [authError, setAuthError] = useState('');
   const INCIDENCIA_TYPE_KEYS = ['Avariat', 'Inexistent', 'DadesIncorrectes', 'Altres'] as const;
 
-  //Estados para la navegacion a un punto
+  // ===================================================================
+  // BLOC ÚNIC I ENDREÇAT D'ESTATS I REFS DE NAVEGACIÓ (SENSE DUPLICATS)
+  // ===================================================================
   const [isNavigating, setIsNavigating] = useState(false);
   const [isDrivingMode, setIsDrivingMode] = useState(false);
-  // Referencia para guardar la suscripción al GPS y poder apagarla
+  const [routeOrigin, setRouteOrigin] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeDestination, setRouteDestination] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  const [liveRouteInfo, setLiveRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  const [visibleRouteCoords, setVisibleRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
+  const [routeSteps, setRouteSteps] = useState<{instruction: string, maneuver: string, location: {latitude: number, longitude: number}}[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [routeOriginPreset, setRouteOriginPreset] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
+  const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
+
+  const isFirstRouteLoad = useRef(true);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
-  //NAVEGACIÓN 3D (Waze / Google Maps)
+  // Referències sincronitzades pel seguiment en temps real del GPS
+  const routeInfoRef = useRef(routeInfo);
+  useEffect(() => { routeInfoRef.current = routeInfo; }, [routeInfo]);
+
+  const routeCoordsRef = useRef(routeCoords);
+  useEffect(() => { routeCoordsRef.current = routeCoords; }, [routeCoords]);
+
+  const routeStepsRef = useRef(routeSteps);
+  useEffect(() => { routeStepsRef.current = routeSteps; }, [routeSteps]);
+
+  //Funció per obtenir les indicacions Turn-By-Turn
+  const fetchNavigationSteps = async (origin: {latitude: number, longitude: number}, destination: {latitude: number, longitude: number}) => {
+    try {
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}&language=ca`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const leg = data.routes[0].legs[0]; // <--- Capturem la branca de la ruta
+
+        const steps = leg.steps.map((step: any) => ({
+          instruction: stripHtmlTags(step.html_instructions),
+          maneuver: step.maneuver || '',
+          location: {
+            latitude: step.start_location.lat,
+            longitude: step.start_location.lng,
+          }
+        }));
+        setRouteSteps(steps);
+        setCurrentStepIndex(0);
+
+        // <--- Actualitzem el temps i la distància amb la font original i exacta de Google
+        setRouteInfo({
+          distance: leg.distance.value / 1000, // L'API ho dona en metres, passem a Km
+          duration: leg.duration.value / 60    // L'API ho dona en segons, passem a minuts
+        });
+        setLiveRouteInfo({
+          distance: leg.distance.value / 1000,
+          duration: leg.duration.value / 60
+        });
+      }
+    } catch (error) {
+      console.error("Error obtenint passos de navegació de Google:", error);
+    }
+  };
+
+  // SEGUIMIENTO GPS, RECÀLCUL I CÀMERA 3D AUTOMÀTICA
   useEffect(() => {
     let isMounted = true;
 
-    const start3DTracking = async () => {
-      if (isDrivingMode) { 
+    // Aquesta funció s'encarrega d'un sol pols de GPS
+    const handleLocationUpdate = (location: Location.LocationObject) => {
+      if (!isMounted) return;
+      const { latitude, longitude, heading } = location.coords;
+
+      setUserLocation(location);
+
+      // --- Lògica de recàlcul i retall de ruta ---
+      if (routeCoordsRef.current.length > 0) {
+        const routeData = getDistanceToRoute({ latitude, longitude }, routeCoordsRef.current);
+
+        if (routeData.distance > 50) {
+          // Desviament detectat: Netegem i recalculem origen
+          setRouteInfo(null);
+          setLiveRouteInfo(null);
+          setRouteCoords([]);
+          setVisibleRouteCoords([]);
+          setRouteSteps([]);
+          setRouteOrigin({ latitude, longitude });
+        } else {
+          // Va bé pel camí: Retallem la part que ja hem passat
+          const newVisibleCoords = [
+            { latitude, longitude },
+            ...routeCoordsRef.current.slice(routeData.index + 1)
+          ];
+          setVisibleRouteCoords(newVisibleCoords);
+
+          // Càlcul de distància/temps (funció externa)
+          const liveInfo = calculateRemainingRouteInfo(
+            newVisibleCoords,
+            routeInfoRef.current?.distance || 0,
+            routeInfoRef.current?.duration || 0
+          );
+          setLiveRouteInfo(liveInfo);
+
+          // Actualització de la instrucció Turn-by-Turn (funció externa)
+          const closestIdx = getClosestStepIndex(latitude, longitude, routeStepsRef.current);
+          setCurrentStepIndex(closestIdx);
+        }
+      }
+
+      // --- Animació Càmera 3D ---
+      if (mapRef.current && typeof mapRef.current.animateCamera === 'function') {
+        mapRef.current.animateCamera(
+          {
+            center: { latitude, longitude },
+            heading: heading || 0,
+            pitch: 60,
+            zoom: 18,
+          },
+          { duration: 1000 }
+        );
+      }
+    };
+
+    // Aquesta funció només activa o desactiva l'escolta
+    const startTracking = async () => {
+      if (isNavigating) {
         locationSubscription.current = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.BestForNavigation,
+            accuracy: Location.Accuracy?.BestForNavigation ?? 6,
             timeInterval: 1000,
             distanceInterval: 2,
           },
-          (location) => {
-            if (!isMounted) return;
-            const { latitude, longitude, heading } = location.coords;
-
-            if (mapRef.current && typeof mapRef.current.animateCamera === 'function') {
-              mapRef.current.animateCamera(
-                {
-                  center: { latitude, longitude },
-                  heading: heading || 0,
-                  pitch: 60, 
-                  zoom: 18,
-                },
-                { duration: 1000 }
-              );
-            }
-          }
+          handleLocationUpdate
         );
       } else {
-        // Si no estamos en modo conducción, nos aseguramos de apagar el GPS
         if (locationSubscription.current) {
           locationSubscription.current.remove();
           locationSubscription.current = null;
@@ -268,25 +502,13 @@ export default function InicioScreen() {
       }
     };
 
-    start3DTracking();
+    startTracking();
 
     return () => {
       isMounted = false;
       if (locationSubscription.current) locationSubscription.current.remove();
     };
-  }, [isDrivingMode]);
-  const [routeOrigin, setRouteOrigin] = useState<{latitude: number, longitude: number} | null>(null);
-  const [routeDestination, setRouteDestination] = useState<{latitude: number, longitude: number} | null>(null);
-  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
-  //Estado para saber el punto  marcado por el usuario (lo uso para cunado un conductor quiere ir a un sitio que no es un punto de carga y lo selecciona en el mapa)
-  const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
-  /** Si ve d’un event: ruta “Cómo llegar” amb origen a l’estació (no demanar GPS). */
-  const [routeOriginPreset, setRouteOriginPreset] = useState<{latitude: number; longitude: number} | null>(null);
-  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
-  //Estado para saber las coordenadas que ocupan la ruta
-  const [routeCoords, setRouteCoords] = useState<{latitude: number, longitude: number}[]>([]);
-  //Estado para saber si estamos seleccionando nosotros mismos el origen de la ruta
-  const [isSelectingOrigin, setIsSelectingOrigin] = useState(false);
+  }, [isNavigating]);
 
   const handleFocusEventOnMap = useCallback(
     (
@@ -319,49 +541,82 @@ export default function InicioScreen() {
 
   //Funcion para empezar la navegacion
   const handleStartNavigation = (coordenadas: {latitude: number, longitude: number}) => {
-      setRouteCoords([]);
-      setRouteInfo(null);
-      setRouteDestination(coordenadas);
-      const originResolution = resolveNavigationOrigin(routeOriginPreset);
-      if (originResolution.type === 'preset') {
-        setRouteOrigin(originResolution.origin);
-        setRouteOriginPreset(null);
-        setSelectedLocationLabel(null);
-        setIsNavigating(true);
-        return;
-      }
-      //Preguntamos al usuario el origen
-      Alert.alert(
-        t('navigation.startRouteTitle'),
-        t('navigation.startRouteBody'),
-        [
-          {
-            text: t('navigation.myLocation'),
-            onPress: () => {
-              if (userLocation && userLocation.coords) {
-                void activateNavigation(() => {
-                  setRouteOrigin({
-                    latitude: userLocation.coords.latitude,
-                    longitude: userLocation.coords.longitude,
-                  });
-                  setIsNavigating(true);
-                });
-              } else {
-                Alert.alert(t('navigation.gpsOffTitle'), t('navigation.gpsOffBody'));
+    setRouteCoords([]);
+    setRouteInfo(null);
+    setRouteDestination(coordenadas);
+    const originResolution = resolveNavigationOrigin(routeOriginPreset);
+    if (originResolution.type === 'preset') {
+      setRouteOrigin(originResolution.origin);
+      setRouteOriginPreset(null);
+      setSelectedLocationLabel(null);
+      setIsNavigating(true);
+      return;
+    }
+    //Preguntamos al usuario el origen
+    Alert.alert(
+      t('navigation.startRouteTitle'),
+      t('navigation.startRouteBody'),
+      [
+        {
+          text: t('navigation.myLocation'),
+          onPress: async () => {
+            // Si ja tenim la ubicació carregada la fem servir ràpid
+            let locToUse = userLocation;
+
+            // Si està buida (venim de favorits o el GPS va lent), la demanem de forma forçada
+            if (!locToUse || !locToUse.coords) {
+              try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                  // getLastKnown és gairebé instantani i evita l'error de l'emulador
+                  locToUse = await Location.getLastKnownPositionAsync({}) || await Location.getCurrentPositionAsync({});
+                }
+              } catch (e) {
+                console.warn("Fallo obteniendo GPS on-demand:", e);
               }
-            },
-          },
-          {
-            text: t('navigation.searchOtherOrigin'),
-            onPress: () => {
-              setIsSelectingOrigin(true); //Activamos el modo selección de punto de origen
-              //Alert.alert("Modo búsqueda", "Busca un lugar en la barra superior para usarlo como origen.");
+            }
+
+            // Un cop assegurats, llancem la ruta
+            if (locToUse && locToUse.coords) {
+              void activateNavigation(() => {
+                setRouteOrigin({
+                  latitude: locToUse.coords!.latitude, // L'exclamació diu a TypeScript que és segur
+                  longitude: locToUse.coords!.longitude,
+                });
+                setIsNavigating(true);
+              });
+            } else {
+              Alert.alert(t('navigation.gpsOffTitle'), t('navigation.gpsOffBody'));
             }
           },
-          { text: t('common.cancel'), style: "cancel" }
-        ]
-      );
+        },
+        {
+          text: t('navigation.searchOtherOrigin'),
+          onPress: () => {
+            setIsSelectingOrigin(true); //Activamos el modo selección de punto de origen
+            //Alert.alert("Modo búsqueda", "Busca un lugar en la barra superior para usarlo como origen.");
+          }
+        },
+        { text: t('common.cancel'), style: "cancel" }
+      ]
+    );
   };
+
+  // --- INICIAR RUTA DES DE LA LLISTA DE FAVORITS ---
+  useEffect(() => {
+    if (params.action === 'start_route_from_fav' && params.destLat && params.destLng) {
+
+      // 1. Aprofitem la TEVA funció existent que ja fa tota la màgia del pop-up i neteja!
+      handleStartNavigation({
+        latitude: parseFloat(params.destLat as string),
+        longitude: parseFloat(params.destLng as string)
+      });
+
+      // 2. Netejem el paràmetre ràpidament perquè no salti l'alerta en bucle
+      router.setParams({ action: '' });
+    }
+  }, [params.action, params.destLat, params.destLng]);
+
   // Función para manejar el inicio de una sesión de carga
   const handleStartCharging = async (): Promise<boolean> => {
     if (!user || !selectedStation || !userLocation) {
@@ -625,7 +880,7 @@ export default function InicioScreen() {
     }
   }, [pendingAutoStart, selectedStation, userLocation, isCharging]);
 
-  const fetchEstaciones = async () => {
+  const fetchEstaciones = async (): Promise<Estacion[]> => {
     setLoadingEstaciones(true);
     try {
       let queryParams = [];
@@ -640,14 +895,24 @@ export default function InicioScreen() {
       const response = await appFetch(`/stations${queryString}`);
       const data = await response.json();
 
-      setEstaciones(Array.isArray(data) ? data : []);
-
+      const stations = Array.isArray(data) ? data : [];
+      setEstaciones(stations);
+      return stations;
     } catch (error) {
       console.error('Error cargando estaciones:', error);
       setEstaciones([]); // Si falla la red, vaciamos para evitar errores de .map()
+      return [];
     } finally {
         setLoadingEstaciones(false);
 
+    }
+  };
+
+  const refreshStationsAfterIncidencia = async (stationId: number) => {
+    const stations = await fetchEstaciones();
+    const updated = stations.find((e) => e.id === stationId);
+    if (updated) {
+      setSelectedStation(updated);
     }
   };
   const [markerRefreshKey, setMarkerRefreshKey] = useState(Date.now());
@@ -683,14 +948,9 @@ export default function InicioScreen() {
       const equippedSkin = equippedSkins.length > 0 ? equippedSkins[equippedSkins.length - 1] : null;
       const newSkin = equippedSkin?.arxiu_asset ? equippedSkin.arxiu_asset : 'cotxe_basic';
       
-      setActiveSkinAsset((prev) => {
-        if (prev !== newSkin) {
-          setTrackMarker(true);
-          setMarkerRefreshKey(Date.now());
-          return newSkin;
-        }
-        return prev;
-      });
+      setTrackMarker(true);
+      setMarkerRefreshKey(Date.now());
+      setActiveSkinAsset(newSkin);
 
     } catch (e) {
       setActiveSkinAsset('cotxe_basic');
@@ -764,19 +1024,18 @@ useEffect(() => {
     }
   };
 
-// Efecte per buscar quan l'usuari escriu (amb debounce de 500ms)
-  useEffect(() => {
-    if (searchQuery.length < 3) {
-      setSearchResults([]);
-      return;
-    }
+  const runMapSearch = useCallback(
+    async (query: string) => {
+      if (query.length < 3) {
+        setSearchResults([]);
+        return;
+      }
 
-    const delayDebounceFn = setTimeout(async () => {
       setIsSearching(true);
       try {
         if (searchMode === 'addresses') {
           const response = await fetch(
-            `${getApiUrl()}/geocode/autocomplete?input=${encodeURIComponent(searchQuery)}`
+            `${getApiUrl()}/geocode/autocomplete?input=${encodeURIComponent(query)}`
           );
           const data = await response.json();
           if (!response.ok) {
@@ -797,21 +1056,16 @@ useEffect(() => {
           return;
         }
 
-        let queryParams = [`q=${encodeURIComponent(searchQuery)}`];
-
+        const queryParams = [`q=${encodeURIComponent(query)}`];
         if (minKw) queryParams.push(`minKw=${minKw}`);
         if (maxKw) queryParams.push(`maxKw=${maxKw}`);
         if (connectorType) queryParams.push(`connectorType=${encodeURIComponent(connectorType)}`);
         if (ac_dc) queryParams.push(`ac_dc=${ac_dc}`);
 
-        // Ajuntem tots els paràmetres amb un "&"
         const queryString = queryParams.join('&');
-
-        // CANVIA AQUESTA URL PER LA TEVA RUTA DE CERCA DEL BACKEND!
         const response = await appFetch(`/stations/search?${queryString}`);
         const data = await response.json();
 
-        // --- APLIQUEM EL FILTRE DE FAVORITS LOCALMENT ---
         let resultatsFinals = Array.isArray(data) ? data : [];
         if (showFavoritesFilter) {
           resultatsFinals = resultatsFinals.filter((est: Estacion) => favoriteIds.includes(est.id));
@@ -821,13 +1075,32 @@ useEffect(() => {
         );
       } catch (error) {
         console.error('Error cercant estacions:', error);
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 500); // Espera mig segon després de parar d'escriure
+    },
+    [searchMode, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]
+  );
+
+  // Cerca mentre s'escriu (debounce 500 ms, mínim 3 caràcters)
+  useEffect(() => {
+    if (searchQuery.length < 3) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      void runMapSearch(searchQuery);
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, searchMode, minKw, maxKw, connectorType, ac_dc, showFavoritesFilter, favoriteIds]);
+  }, [searchQuery, runMapSearch]);
+
+  const handleSubmitMapSearch = useCallback(() => {
+    void runMapSearch(searchQuery);
+  }, [runMapSearch, searchQuery]);
 
 
   const toggleSearchMode = () => {
@@ -1078,11 +1351,12 @@ useEffect(() => {
       return;
     }
 
+    const stationId = selectedStation.id;
     setIncidenciaSubmitting(true);
     try {
       const formData = buildIncidenciaFormData({
         conductor: user.id,
-        estacio: selectedStation.id,
+        estacio: stationId,
         comentari: incidenciaComentario.trim(),
         tipus: incidenciaTipo,
       });
@@ -1104,6 +1378,7 @@ useEffect(() => {
         throw new Error(result.error || t('incident.registerError'));
       }
 
+      await refreshStationsAfterIncidencia(stationId);
       Alert.alert(t('incident.sentTitle'), t('incident.sentBody'));
       handleCloseIncidenciaForm();
     } catch (error) {
@@ -1117,8 +1392,9 @@ useEffect(() => {
   const handleSolvedIncidenciaSubmit = async () => {
     if (!user || !selectedStation) return;
 
+    const stationId = selectedStation.id;
     try {
-      const result = await submitSolvedIncidencia(user.id, selectedStation.id);
+      const result = await submitSolvedIncidencia(user.id, stationId);
       if (!result.ok && result.conflict) {
         Alert.alert(t('incident.alreadyReportedTitle'), t('incident.alreadyReported'));
         return;
@@ -1127,6 +1403,7 @@ useEffect(() => {
         throw new Error(result.error || t('incident.solvedRegisterError'));
       }
 
+      await refreshStationsAfterIncidencia(stationId);
       Alert.alert(t('incident.reportedTitle'), t('incident.reportedBody'));
     } catch (error) {
       const message = error instanceof Error ? error.message : t('incident.solvedReportError');
@@ -1305,17 +1582,7 @@ useEffect(() => {
   }
 
   return (
-    <View style={styles.screen}>
-      <TopBar
-        onPressMenu={() => setMenuOpen(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchResults={searchResults}
-        onSelectResult={handleSelectSearchResult}
-        isSearching={isSearching}
-        searchMode={searchMode}
-        onToggleSearchMode={toggleSearchMode}
-      />
+    <View style={styles.screen} testID="home-map-screen">
 
       {/* Aviso de selección de origen para cuando estamos seleccionando el punto de origen de una ruta */}
       {isSelectingOrigin && (
@@ -1422,9 +1689,11 @@ useEffect(() => {
           key={`map-${displayedStations.length}-${isNavigating}`} 
           style={StyleSheet.absoluteFillObject}
           initialRegion={region}
-          showsUserLocation={false} 
-          showsMyLocationButton={false} 
+          showsUserLocation={false}
           showsUserHeading={true}
+          showsCompass={!isNavigating}
+          showsMyLocationButton={!isNavigating}
+          mapPadding={{ top: 0, right: 0, bottom: 0, left: 0 }}
           //Al clicar en el mapa cogemos el punto exacto donde ha hecho clic y quitamos si habia una estación seleccionada
           onPress={(e: any) => {
             if (isSelectingOrigin) {
@@ -1504,25 +1773,31 @@ useEffect(() => {
             {/*Marcador de la ubicacion clicada por el usuario con un clic manualmente */}
               {!isNavigating && selectedLocation && !selectedStation && (
                 <Marker
+                  testID="map-event-marker"
                   key={`custom-loc-${selectedLocation.latitude}-${selectedLocation.longitude}`} //Soluciona el problema de que no se borren al clicar en otro sitio
                   coordinate={selectedLocation}
                   pinColor={sem.mapCustomLocation}
                   title={selectedLocationLabel || t('home.selectedLocationTitle')}
+                  // @ts-expect-error
+                  cluster={false}
                 />
             )}
 
             {/*EL DESTINO de la ruta: Para que se vea a dónde vamos cuando se ocultan los demás */}
-                {isNavigating && routeDestination && (
-                  <Marker
-                    coordinate={routeDestination}
-                    title={t('home.selectedLocationTitle')}
-                    pinColor={sem.mapRouteDestination}
-                  />
+            {isNavigating && routeDestination && (
+              <Marker
+                coordinate={routeDestination}
+                title={t('home.selectedLocationTitle')}
+                pinColor={sem.mapRouteDestination}
+                // @ts-expect-error
+                cluster={false}
+              />
             )}
 
             {/* Trazado de la ruta (Solo visible si estamos navegando) */}
             {isNavigating && routeOrigin && routeDestination && (
               <MapViewDirections
+                key={`directions-${routeOrigin.latitude}-${routeOrigin.longitude}`}
                 origin={routeOrigin}
                 destination={routeDestination}
                 apikey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
@@ -1534,13 +1809,22 @@ useEffect(() => {
                     distance: result.distance,
                     duration: result.duration
                   });
+                  setLiveRouteInfo({
+                    distance: result.distance,
+                    duration: result.duration
+                  });
                   setRouteCoords(result.coordinates);
+                  setVisibleRouteCoords(result.coordinates); // Inicialitzem la visible
 
-                  if (!isDrivingMode && mapRef.current) {
+                  // Demanem els passos detallats turn-by-turn a l'API de Google
+                  fetchNavigationSteps(routeOrigin!, routeDestination!);
+
+                  if (isFirstRouteLoad.current && mapRef.current) {
                     mapRef.current.fitToCoordinates(result.coordinates, {
-                      edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
+                      edgePadding: { top: 120, right: 50, bottom: 250, left: 50 },
                       animated: true
                     });
+                    isFirstRouteLoad.current = false; // Desactivem per als propers recàlculs
                   }
                 }}
                 onError={(errorMessage) => {
@@ -1549,15 +1833,15 @@ useEffect(() => {
                 }}
               />
             )}
-            {/*Nuestro propio trazado de la ruta (100% controlable) */}
-              {isNavigating && routeCoords.length > 0 && (
-                <Polyline
-                  key={`polyline-${routeCoords.length}`}
-                  coordinates={routeCoords}
-                  strokeWidth={4}
-                  strokeColor={sem.routeLine}
-                  lineJoin="round"
-                />
+            {/* Nuestro propio trazado de la ruta (100% controlable) */}
+            {isNavigating && (
+              <Polyline
+                key="active-route-polyline"
+                coordinates={visibleRouteCoords}
+                strokeWidth={routeCoords.length > 0 ? 4 : 0}
+                strokeColor={sem.routeLine}
+                lineJoin="round"
+              />
             )}
 
             {/* MARCADOR DEL COCHE PERSISTENTE (Solución definitiva anti-bugs) */}
@@ -1576,6 +1860,39 @@ useEffect(() => {
               tracksViewChanges={trackMarker}
               // @ts-ignore
               cluster={false}
+
+              // --- NOU: Clic intel·ligent del cotxe ---
+              onPress={(e: any) => {
+                e.stopPropagation(); // Evitem que el clic passi al mapa i crei un pin lliure
+
+                let closestStation = null;
+                let minDistance = Infinity;
+
+                // Busquem si hi ha alguna estació enganxada a on som ara mateix
+                for (const est of displayedStations) {
+                  const dist = calculateDistanceInMeters(
+                    userLocation.coords.latitude,
+                    userLocation.coords.longitude,
+                    parseFloat(est.latitud),
+                    parseFloat(est.longitud)
+                  );
+                  if (dist < minDistance) {
+                    minDistance = dist;
+                    closestStation = est;
+                  }
+                }
+
+                // Si l'estació és a menys de 30 metres, l'obrim de cop!
+                if (closestStation && minDistance < 30) {
+                  setSelectedStation(closestStation);
+                  setSelectedLocation(null);
+                  setRouteOriginPreset(null);
+                  setSelectedLocationLabel(null);
+                  setRouteCoords([]);
+                  setIsNavigating(false);
+                  setRouteInfo(null);
+                }
+              }}
             >
               <View style={{ width: 50, height: 50, justifyContent: 'center', alignItems: 'center' }}>
                 <Image 
@@ -1594,52 +1911,73 @@ useEffect(() => {
           )}
         </MapView>
 
-        {/*BOTÓN DE CENTRAR UBICACIÓN MANUAL (Puesto tras el mapa para que flote por encima) */}
-        <TouchableOpacity 
-          style={styles.centerMapButton} 
-          onPress={centerMapOnUser}
-          activeOpacity={0.8}
-        >
-          <MaterialIcons name="my-location" size={26} color={isDark ? '#fff' : '#1f2937'} />
-        </TouchableOpacity>
+        {/* Botó flotant per centrar el mapa en la teva ubicació actual */}
+        {!isNavigating && !selectedStation && (
+          <TouchableOpacity
+            style={styles.centerMapButton}
+            onPress={centerMapOnUser}
+            activeOpacity={0.8}
+            testID="center-map-button"
+          >
+            <MaterialIcons name="my-location" size={24} color={sem.accent} />
+          </TouchableOpacity>
+        )}
 
         {/* ========================================================== */}
         {/* A PARTIR DE AQUÍ VAN LOS PANELES UI (FUERA DEL MAPA) para cuando hay ruta */}
         {/* ========================================================== */}
-        {/* Panel de Información de Ruta Activa */}
-        {isNavigating && routeInfo && (
-          <View style={styles.navPanel}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.navTextBold} numberOfLines={1}>
-                {t('home.navTowards', {
-                  name: selectedStation ? selectedStation.nom : t('home.navDestination'),
-                })}
-              </Text>
-              <Text style={styles.navText}>
-                {routeInfo.distance.toFixed(1)} km • {Math.ceil(routeInfo.duration)} min
-              </Text>
-            </View>
+        {/* Panel de Información de Ruta Activa Estilizado con Flechas */}
+        {isNavigating && (
+          <View style={styles.navPanel} testID="map-navigation-panel">
+            <View style={styles.navContentRow}>
 
-            {/* BOTÓN PARA PASAR A MODO 3D */}
-            {!isDrivingMode && (
-              <TouchableOpacity
-                style={[styles.startDrivingBtn, { marginRight: 10 }]}
-                onPress={() => setIsDrivingMode(true)}
-              >
-                <MaterialIcons name="navigation" size={20} color="#fff" />
-                <Text style={styles.startDrivingText}>{t('home.startDriving')}</Text>
-              </TouchableOpacity>
-            )}
+              {/* NOU: Icona visual amb la fletxa Turn-by-Turn */}
+              <View style={styles.navIconContainer}>
+                <MaterialIcons
+                  name={getManeuverIcon(routeSteps[currentStepIndex]?.maneuver)}
+                  size={32}
+                  color={sem.accent}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                {/* Text de la maniobra pas a pas */}
+                <Text style={styles.navInstructionText} numberOfLines={2}>
+                  {routeSteps[currentStepIndex]?.instruction || "Calculant ruta..."}
+                </Text>
+
+                {/* Fila inferior con el tiempo, km i ETA */}
+                <View style={styles.navLiveInfoRow}>
+                  <Text style={styles.navLiveTime}>
+                    {liveRouteInfo ? `${Math.ceil(liveRouteInfo.duration)} min` : '...'}
+                  </Text>
+                  <Text style={styles.navLiveDot}>•</Text>
+                  <Text style={styles.navLiveDistance}>
+                    {liveRouteInfo ? `${liveRouteInfo.distance.toFixed(1)} km` : '...'}
+                  </Text>
+                  <Text style={styles.navLiveDot}>•</Text>
+                  <Text style={styles.navLiveEta}>
+                    {liveRouteInfo
+                      ? `ETA: ${new Date(Date.now() + liveRouteInfo.duration * 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                      : '...'
+                    }
+                  </Text>
+                </View>
+              </View>
+            </View>
 
             <TouchableOpacity
               style={styles.cancelRouteBtn}
               onPress={() => {
                 setIsNavigating(false);
-                setIsDrivingMode(false); // 🌟 También reseteamos el modo conducción
+                isFirstRouteLoad.current = true;
                 setRouteOrigin(null);
                 setRouteDestination(null);
                 setRouteInfo(null);
+                setLiveRouteInfo(null);
                 setRouteCoords([]);
+                setVisibleRouteCoords([]);
+                setRouteSteps([]);
                 setSelectedStation(null);
                 const cleared = buildClearEventLocationPatch();
                 setSelectedLocation(cleared.selectedLocation);
@@ -1689,7 +2027,7 @@ useEffect(() => {
 
         {/* Mini panel para cuando se clica a una ubicacion cualquiera del mapa (De TU rama feature/rutas) */}
         {!isNavigating && selectedLocation && !selectedStation && (
-          <View style={styles.infoPanel}>
+          <View style={styles.infoPanel} testID="event-location-panel">
             <View style={styles.infoHandle} />
 
             <View style={styles.infoTitleRow}>
@@ -1718,6 +2056,7 @@ useEffect(() => {
             </View>
 
             <TouchableOpacity
+              testID="event-location-how-to-arrive"
               style={styles.routeButton}
               activeOpacity={0.8}
               onPress={() => handleStartNavigation(selectedLocation)}
@@ -1744,6 +2083,20 @@ useEffect(() => {
           onConfirm={handleResultModalConfirm}
         />
       </View>
+
+      {!isNavigating && (
+        <TopBar
+          onPressMenu={() => setMenuOpen(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          onSelectResult={handleSelectSearchResult}
+          isSearching={isSearching}
+          searchMode={searchMode}
+          onToggleSearchMode={toggleSearchMode}
+          onSubmitSearch={handleSubmitMapSearch}
+        />
+      )}
 
       <Modal
         visible={showIncidenciaForm}
@@ -2210,7 +2563,7 @@ const createStyles = (isDark: boolean, sem: SemanticColors) => {
   },
   centerMapButton: {
     position: 'absolute',
-    top: 16,
+    top: 120,
     right: 16,
     zIndex: 10,
     width: 48,
@@ -2501,7 +2854,7 @@ activeFiltersText: {
   // --- Estilos de los componentes de rutas de navegacion ---
   navPanel: {
     position: 'absolute',
-    top: 50, // Ajusta según tu TopBar
+    top: 30, // Ajusta según tu TopBar
     left: 20,
     right: 20,
     backgroundColor: t.cardBg,
@@ -2731,6 +3084,50 @@ activeFiltersText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  navLiveInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  navLiveTime: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#10b981', // Verd brillant estil GPS
+  },
+  navLiveDistance: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: t.subtitleText,
+  },
+  navLiveEta: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: t.textPrimary,
+  },
+  navLiveDot: {
+    fontSize: 14,
+    color: t.mutedText,
+  },
+  navContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  navIconContainer: {
+    marginRight: 12,
+    backgroundColor: isDark ? '#1e293b' : '#f1f5f9', // Un fons suau rodó per ressaltar la fletxa
+    padding: 8,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navInstructionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: t.textPrimary,
+    marginBottom: 4,
   },
   });
 };

@@ -1,5 +1,5 @@
 // Acceso a BD para usuarios: buscar por email y crear usuario
-const { pool, USUARIOS_TABLE, CONDUCTORES_TABLE, SUBSCRIPTIONS_TABLE, ADMINS_TABLE, EMPRESAS_TABLE, RESENYES_TABLE } = require('../lib/db');
+const { pool, USUARIOS_TABLE, CONDUCTORES_TABLE, SUBSCRIPTIONS_TABLE, ADMINS_TABLE, EMPRESAS_TABLE, RESENYES_TABLE, AMIGOS_TABLE, CONDUCTOR_SKINS_TABLE, CARGAS_TABLE } = require('../lib/db');
 let passwordHashColumnEnsured = false;
 
 async function ensurePasswordHashColumn() {
@@ -146,7 +146,11 @@ async function getInfoUser(userId) {
       exists(select * from ${SUBSCRIPTIONS_TABLE} where usuari_id = $1) as premium,
       exists(select * from ${ADMINS_TABLE} where user_id = $1) as admin,
       exists(select * from ${EMPRESAS_TABLE} where user_id = $1) as empresa,
-      (select avg(puntuacio) from ${RESENYES_TABLE} where usuari_id = $1) as valoracio
+      (select avg(puntuacio) from ${RESENYES_TABLE} where usuari_id = $1) as valoracio,
+      (SELECT count(*) FROM ${AMIGOS_TABLE} WHERE (usuari_id1 = $1 OR usuari_id2 = $1) AND per_acceptar IS NULL) AS amics,
+      (select posicio FROM (SELECT user_id, (ROW_NUMBER() OVER ( ORDER BY punts DESC)) AS posicio FROM ${CONDUCTORES_TABLE}) WHERE user_id = $1),
+      (SELECT s.arxiu_asset FROM ego.conductor_skins cs, ego.skins s WHERE cs.conductor_id = $1 AND cs.equipada = TRUE AND s.id = cs.skin_id) AS skin,
+      (SELECT sum(duracion_minutos) AS carrega FROM ${CARGAS_TABLE} WHERE usuari_id = $1)
     FROM ${USUARIOS_TABLE} u, ${CONDUCTORES_TABLE} c
     WHERE u.id = $1 AND c.user_id = $1`,
     [userId]

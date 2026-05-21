@@ -14,8 +14,9 @@ import '@/i18n/i18n';
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
   const { View, ScrollView } = require('react-native');
-  const BottomSheet = React.forwardRef((props: { children?: React.ReactNode }, _ref: unknown) =>
-    React.createElement(View, { testID: 'mock-bottom-sheet' }, props.children)
+  const BottomSheet = React.forwardRef(
+    (props: { children?: React.ReactNode; testID?: string }, _ref: unknown) =>
+      React.createElement(View, { testID: props.testID ?? 'mock-bottom-sheet' }, props.children)
   );
   return {
     __esModule: true,

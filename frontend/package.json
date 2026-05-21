@@ -16,7 +16,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "vitest run && jest --runInBand tests/integration"
+    "test": "vitest run && jest --runInBand tests/integration",
+    "test:e2e": "jest --runInBand tests/e2e"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

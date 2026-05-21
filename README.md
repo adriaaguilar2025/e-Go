@@ -132,3 +132,25 @@ npm run test:integration
 
 - `GET /` (health check completo con conexión a DB).
 - Flujo real de `POST /car`, `GET /car`, `DELETE /car` usando datos de prueba aislados.
+
+---
+
+## 🧪 E2E Testing (Frontend)
+
+Desde la terminal (Jest, sin emulador ni backend en marcha):
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+Un solo test:
+
+```bash
+npm run test:e2e -- searchStationPanel
+npm run test:e2e -- eventNavigationFlow
+```
+
+Archivos en `frontend/tests/e2e/`:
+- `searchStationPanel.e2e.test.tsx` — búsqueda → panel de estación
+- `eventNavigationFlow.e2e.test.tsx` — panel → eventos → mapa → navegación
