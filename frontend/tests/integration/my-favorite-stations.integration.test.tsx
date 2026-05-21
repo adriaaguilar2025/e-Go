@@ -10,11 +10,13 @@ import { appFetch } from '@/services/appFetch';
 // --- 1. MOCKS ---
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: mockPush,
     back: mockBack,
+    navigate: mockNavigate,
   }),
 }));
 
@@ -197,5 +199,31 @@ describe('MyFavoriteStationsScreen Integration', () => {
     }));
 
     alertSpy.mockRestore();
+  });
+
+  test('el botó "Cómo llegar" envia al router els paràmetres per iniciar la ruta', async () => {
+    // 1. Simulem que el backend retorna les estacions
+    (appFetch as jest.Mock).mockImplementation(async () => ({
+      ok: true,
+      json: async () => [...mockStations],
+    }));
+
+    // 2. Renderitzem la pantalla
+    const { getAllByText, getByText } = render(<MyFavoriteStationsScreen />);
+    await waitFor(() => expect(getByText('Estació Central')).toBeTruthy());
+
+    // 3. Busquem els botons de ruta i cliquem el de la primera estació (Estació Central)
+    const routeButtons = getAllByText('Cómo llegar');
+    fireEvent.press(routeButtons[0]);
+
+    // 4. Comprovem que s'ha cridat a navigate amb la URL i coordenades exactes
+    expect(mockNavigate).toHaveBeenCalledWith({
+      pathname: '/',
+      params: {
+        action: 'start_route_from_fav',
+        destLat: '41.38',
+        destLng: '2.17'
+      },
+    });
   });
 });
