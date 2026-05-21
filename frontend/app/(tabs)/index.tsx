@@ -1713,6 +1713,7 @@ useEffect(() => {
             if (e.nativeEvent.coordinate) {
               //Limpiamos cualquier estación seleccionada previamente
               setSelectedStation(null);
+              setChargingError('');
               //Guardamos la nueva ubicación libre
               setSelectedLocation({
                 latitude: e.nativeEvent.coordinate.latitude,
@@ -1760,6 +1761,7 @@ useEffect(() => {
                 }
 
                 setSelectedStation(est);
+                setChargingError('');
                 setSelectedLocation(null); //Limpiamos el punto manual si seleccionan una estación
                 setRouteOriginPreset(null);
                 setSelectedLocationLabel(null);
@@ -1885,6 +1887,7 @@ useEffect(() => {
                 // Si l'estació és a menys de 30 metres, l'obrim de cop!
                 if (closestStation && minDistance < 30) {
                   setSelectedStation(closestStation);
+                  setChargingError('');
                   setSelectedLocation(null);
                   setRouteOriginPreset(null);
                   setSelectedLocationLabel(null);
@@ -2000,7 +2003,10 @@ useEffect(() => {
         {!isNavigating && selectedStation && !isSelectingOrigin && (
           <StationBottomSheet
             station={selectedStation}
-            onClose={() => setSelectedStation(null)}
+            onClose={() => {
+              setSelectedStation(null);
+              setChargingError('');
+            }}
             isFavorite={favoriteIds.includes(selectedStation.id)}
             onToggleFavorite={(isFav) => {
               if (isFav) {
