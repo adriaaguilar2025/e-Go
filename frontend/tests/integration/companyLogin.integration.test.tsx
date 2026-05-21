@@ -36,6 +36,7 @@ jest.mock('@/services/privilegedAuth', () => ({
 }));
 
 import CompanyLoginScreen from '@/app/company-login';
+import es from '@/tests/helpers/localeEs';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 describe('CompanyLoginScreen', () => {
@@ -120,7 +121,7 @@ describe('CompanyLoginScreen', () => {
   test('back link navigates to app root', () => {
     const { getByText } = render(<CompanyLoginScreen />);
     fireEvent.press(getByText('Volver al login'));
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/login');
   });
 
   test('login without company in response does not navigate', async () => {
@@ -251,7 +252,7 @@ describe('CompanyLoginScreen', () => {
       (GoogleSignin.signIn as jest.Mock<any>).mockRejectedValue(new Error('Google crash'));
       const { getByText, findByText } = render(<CompanyLoginScreen />);
       fireEvent.press(getByText('Continuar con Google'));
-      await findByText('Google crash');
+      await findByText(es.login.errors.googleConnect);
     });
   });
 });
