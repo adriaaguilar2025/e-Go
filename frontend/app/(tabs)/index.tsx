@@ -478,19 +478,23 @@ export default function InicioScreen() {
     };
 
   //Funció per obtenir les indicacions Turn-By-Turn
-  const fetchNavigationSteps = async (origin: {latitude: number, longitude: number}, destination: {latitude: number, longitude: number}) => {
+  const fetchNavigationSteps = async (
+      origin: {latitude: number, longitude: number},
+      destination: {latitude: number, longitude: number},
+      waypoint?: {latitude: number, longitude: number} | null
+    ) => {
     try {
       const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}&language=ca`;
       if (waypoint) {//Añadimos la parada a la URL si hay
-              url += `&waypoints=${waypoint.latitude},${waypoint.longitude}`;
-            }
+          url += `&waypoints=${waypoint.latitude},${waypoint.longitude}`;
+      }
 
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.routes && data.routes.length > 0) {
-        const leg = data.routes[0].legs[0]; // <--- Capturem la branca de la ruta
+        const leg = data.routes[0].legs[0]; //Capturem la branca de la ruta
 
         const steps = leg.steps.map((step: any) => ({
           instruction: stripHtmlTags(step.html_instructions),
@@ -503,7 +507,7 @@ export default function InicioScreen() {
         setRouteSteps(steps);
         setCurrentStepIndex(0);
 
-        // <--- Actualitzem el temps i la distància amb la font original i exacta de Google
+        //Actualitzem el temps i la distància amb la font original i exacta de Google
         setRouteInfo({
           distance: leg.distance.value / 1000, // L'API ho dona en metres, passem a Km
           duration: leg.duration.value / 60    // L'API ho dona en segons, passem a minuts
@@ -518,7 +522,7 @@ export default function InicioScreen() {
     }
   };
 
-  // SEGUIMIENTO GPS, RECÀLCUL I CÀMERA 3D AUTOMÀTICA
+  //SEGUIMIENTO GPS, RECÀLCUL I CÀMERA 3D AUTOMÀTICA
   useEffect(() => {
     let isMounted = true;
 
