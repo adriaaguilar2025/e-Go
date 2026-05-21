@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import { Href, useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -382,6 +383,41 @@ export default function InicioScreen() {
   const isFirstRouteLoad = useRef(true);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
+  //Definir la interfaz del coche para escogerlo en la ruta
+  interface Vehicle {
+    id?: number;
+    usuari: number;
+    nom: string;
+    kw: string;
+    tipus_connexio: string;
+    ac_dc: string;
+  }
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+
+    useEffect(() => {
+      if (user?.id) {
+        cargarVehiculosUsuario();
+      }
+    }, [user?.id]);
+
+    const cargarVehiculosUsuario = async () => {
+      if (!user?.id) return;
+      try {
+        //Hacemos la petición exacta igual que en car.tsx
+        const response = await appFetch(`/car?usuari_id=${user.id}`);
+
+        //Extraemos el JSON real (esto es lo que faltaba)
+        const data = await response.json();
+
+        //Guardamos los vehículos en el estado
+        setVehicles(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error al cargar los vehículos en la pantalla principal:", error);
+      }
+    };
+
+
   // Referències sincronitzades pel seguiment en temps real del GPS
   const routeInfoRef = useRef(routeInfo);
   useEffect(() => { routeInfoRef.current = routeInfo; }, [routeInfo]);
@@ -435,18 +471,43 @@ export default function InicioScreen() {
           // Ignoramos estaciones estropeadas si tienes esa propiedad
           if (est.operatiu === false) continue;
 
+            // ================================================================
+            // FILTRADO punto de carga entre ruta POR COCHE SELECCIONADO (Imitando filtros del mapa)
+            // ================================================================
+            if (selectedVehicle !== null) {
+              //Validación de Tipo de Conector (Filtro estricto físico)
+              if (selectedVehicle.tipus_connexio && est.tipus_connexio) {
+                if (est.tipus_connexio !== selectedVehicle.tipus_connexio) {
+                  continue; // El conector no encaja físicamente, saltamos la estación
+                }
+              }
+              //Validación de Tipo de Corriente (AC / DC)
+              if (selectedVehicle.ac_dc && est.ac_dc) {
+                if (est.ac_dc !== selectedVehicle.ac_dc) {
+                  continue; // Incompatible el tipo de carga eléctrica, saltamos
+                }
+              }
+              //Validación de Potencia de carga (kW)
+              if (selectedVehicle.kw && est.kw) {
+                const potEstacion = parseFloat(est.kw);
+                const potCoche = parseFloat(selectedVehicle.kw);
+                //Si el punto de carga ofrece menos kW de los que tu coche necesita para
+                //un viaje óptimo, puedes descartarla descomentando la línea de abajo:
+                //if (potEstacion < potCoche) continue;
+              }
+            }
+
           const lat = parseFloat(est.latitud);
           const lon = parseFloat(est.longitud);
 
-          // 1. Distancia del origen al cargador
+          //Distancia del origen al cargador
           const distToStation = (calculateDistanceInMeters(origin.latitude, origin.longitude, lat, lon) / 1000) * 1.3;
 
-          // 2. ¿Puede llegar el coche a ESE cargador y que le sigan sobrando 50km?
-          if (distToStation <= (autonomy - 50)) {
-            // 3. Distancia del cargador al destino final
+          //¿Puede llegar el coche a ESE cargador y que le sigan sobrando 20km?
+          if (distToStation <= (autonomy - 20)) {
+            //Distancia del cargador al destino final
             const distToDest = (calculateDistanceInMeters(lat, lon, destination.latitude, destination.longitude) / 1000) * 1.3;
-
-            // 4. El coste total es lo que recorremos. Buscamos el mínimo absoluto.
+            //El coste total es lo que recorremos. Buscamos el mínimo absoluto.
             const totalPath = distToStation + distToDest;
             if (totalPath < minDetour) {
               minDetour = totalPath;
@@ -2444,6 +2505,65 @@ useEffect(() => {
                 value={autonomyInput}
                 onChangeText={setAutonomyInput}
               />
+
+              {/* Selector de Vehículo Opcional dentro del Modal de Autonomía, solo se llama si el usuario tiene vehiculos guardados */}
+              {vehicles.length > 0 && (
+                <View style={{ marginTop: 16, marginBottom: 8, width: '100%' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#64748b', marginBottom: 8 }}>
+                    ¿Con qué coche viajas? (Filtra conectores automáticamente):
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                  >
+                    {/* Opción por defecto para saltarse el filtrado por coche */}
+                    <TouchableOpacity
+                      onPress={() => setSelectedVehicle(null)}
+                      style={[
+                        {
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          borderColor: selectedVehicle === null ? sem.accent : '#cbd5e1',
+                          backgroundColor: selectedVehicle === null ? (sem.chipActiveBg || '#e0f2fe') : '#f1f5f9',
+                        }
+                      ]}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: selectedVehicle === null ? sem.accent : '#64748b' }}>
+                        Ninguno (Cualquier punto)
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Lista de tus coches guardados mapeados en chips */}
+                    {vehicles.map((car, idx) => {
+                      // Determinamos si está seleccionado comparando el nombre o ID
+                      const isSelected = selectedVehicle?.nom === car.nom;
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => setSelectedVehicle(car)}
+                          style={[
+                            {
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 20,
+                              borderWidth: 1,
+                              borderColor: isSelected ? sem.accent : '#cbd5e1',
+                              backgroundColor: isSelected ? (sem.chipActiveBg || '#e0f2fe') : '#f1f5f9',
+                            }
+                          ]}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: isSelected ? sem.accent : '#64748b' }}>
+                            🚗 {car.nom} ({car.kw}kW)
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
 
               <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
                 <TouchableOpacity
