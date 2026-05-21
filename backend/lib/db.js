@@ -30,6 +30,8 @@ const DB_TABLE_EMPRESAS = normalizeIdentifier(process.env.DB_TABLE_EMPRESAS, 'em
 const DB_TABLE_STATION_REQUESTS = normalizeIdentifier(process.env.DB_TABLE_STATION_REQUESTS, 'station_requests');
 const DB_TABLE_SUBSCRIPTIONS = normalizeIdentifier(process.env.DB_TABLE_SUBSCRIPTIONS, 'subscription');
 const DB_TABLE_RESENYES = normalizeIdentifier(process.env.DB_TABLE_RESENYES, 'resenyes');
+const DB_TABLE_CONDUCTOR_SKINS = normalizeIdentifier(process.env.DB_TABLE_CONDUCTOR_SKINS, 'conductor_skins');
+const DB_TABLE_CARGAS = normalizeIdentifier(process.env.DB_TABLE_CHARGING_SESSIONS, 'charging_sessions');
 const USUARIOS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_USUARIOS}"`;
 const AMIGOS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_AMIGOS}"`;
 const CONDUCTORES_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_CONDUCTORES}"`;
@@ -38,6 +40,8 @@ const EMPRESAS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_EMPRESAS}"`;
 const STATION_REQUESTS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_STATION_REQUESTS}"`;
 const SUBSCRIPTIONS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_SUBSCRIPTIONS}"`;
 const RESENYES_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_RESENYES}"`;
+const CONDUCTOR_SKINS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_CONDUCTOR_SKINS}"`;
+const CARGAS_TABLE = `"${DB_SCHEMA}"."${DB_TABLE_CARGAS}"`;
 
 module.exports = {
   pool,
@@ -48,5 +52,7 @@ module.exports = {
   EMPRESAS_TABLE,
   STATION_REQUESTS_TABLE,
   SUBSCRIPTIONS_TABLE,
-  RESENYES_TABLE
+  RESENYES_TABLE,
+  CONDUCTOR_SKINS_TABLE,
+  CARGAS_TABLE
 };
