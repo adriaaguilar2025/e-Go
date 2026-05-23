@@ -115,7 +115,7 @@ describe('E2E: Flux de Ressenyes al StationBottomSheet', () => {
     });
 
     jest.spyOn(reviewsApi, 'deleteStationReview').mockImplementation(async () => {
-      mockReviews = [];
+      mockReviews.length = 0;
     });
   });
 
@@ -130,7 +130,7 @@ describe('E2E: Flux de Ressenyes al StationBottomSheet', () => {
       isCharging: false,
       elapsedSeconds: 0,
       distanceToStation: null,
-      onStartCharging: jest.fn(),
+      onStartCharging: jest.fn(() => Promise.resolve(true)) as jest.Mock<Promise<boolean>, any>,
       onFinishCharging: jest.fn(),
       onCancelCharging: jest.fn(),
       chargingError: '',
@@ -196,21 +196,29 @@ describe('E2E: Flux de Ressenyes al StationBottomSheet', () => {
     });
 
     // --- PAS 4: ESBORRAR RESSENYA ---
-    // Preparem el mock de l'Alerta nativa per confirmar l'esborrat automàticament
+    let confirmDelete: (() => Promise<void>) | undefined;
+
+    // Preparem el mock de l'Alerta nativa per capturar el botó d'eliminar
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((title, msg, buttons) => {
-      // Executem la funció `onPress` del botó d'eliminar (que és el segon botó a l'array [1])
       if (buttons && buttons[1] && buttons[1].onPress) {
-        buttons[1].onPress();
+        confirmDelete = buttons[1].onPress as () => Promise<void>;
       }
     });
 
     // Cliquem "Eliminar" ('common.delete')
     fireEvent.press(getByText('common.delete'));
 
-    // Comprovem que s'ha cridat a l'API per esborrar
+    // Executem l'acció d'esborrar assegurant que React espera les promeses
+    await act(async () => {
+      if (confirmDelete) {
+        await confirmDelete();
+      }
+    });
+
+    // Ara sí, comprovem que s'ha cridat a l'API per esborrar
     await waitFor(() => {
       expect(reviewsApi.deleteStationReview).toHaveBeenCalled();
-      // I que el text de la ressenya ha desaparegut
+      // I que el text de la ressenya ha desaparegut definitivament
       expect(queryByText('M\'he equivocat, està espatllada.')).toBeNull();
     });
 

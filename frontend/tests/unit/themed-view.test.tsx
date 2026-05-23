@@ -7,7 +7,7 @@ import { describe, expect, jest, test } from '@jest/globals';
 
 // Mockeamos solo el hook, no el componente, para que el componente sea el REAL
 jest.mock('@/hooks/use-theme-color', () => ({
-  useThemeColor: jest.fn(),
+  useThemeColor: () => '#ffffff',
 }));
 
 describe('ThemedView', () => {
