@@ -30,7 +30,7 @@ import {
   TIPUS_TEXT_COLORS,
 } from '@/utils/adminIncidentUi';
 import {
-  createAdminIncidenciaScreenStyles,
+  mergeAdminIncidenciaStyles,
   type AdminIncidenciaCoreStyles,
 } from '@/constants/adminIncidenciaPanelStyles';
 import type { ScreenTheme } from '@/constants/screenTheme';
@@ -55,7 +55,7 @@ export default function AdminIncidenciasHistoryScreen() {
   const router = useRouter();
   const theme = useScreenTheme();
   const styles = useMemo(
-    () => createAdminIncidenciaScreenStyles(theme, adminIncidenciasHistoryExtraStyles(theme)),
+    () => mergeAdminIncidenciaStyles(theme, createAdminIncidenciasHistoryExtraStyles(theme)),
     [theme.isDark, theme.sem],
   );
   const estadoFilters = useMemo(
