@@ -3,13 +3,11 @@ import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { TabScreenLayout } from '@/components/layout/TabScreenLayout';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { getSemanticColors } from '@/constants/accessibilityColors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
-import { useScreenTheme } from '@/hooks/use-screen-theme';
 
 // 1. IMPORTEM EL HOOK D'ÀREA SEGURA
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +16,6 @@ export default function TabLayout() {
   const { user } = useAuth();
   const { colorblindFriendly } = useColorblindPreference();
   const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
-  const theme = useScreenTheme();
   const tabBarInactiveTintColor = colorblindFriendly ? '#075985' : '#064e3b';
 
   // 2. OBTENIM ELS MARGES DEL SISTEMA
@@ -26,11 +23,9 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenLayout={({ children }) => <TabScreenLayout>{children}</TabScreenLayout>}
       screenOptions={{
         tabBarActiveTintColor: '#ffffff',
         tabBarInactiveTintColor,
-        sceneStyle: { backgroundColor: theme.containerBg },
 
         tabBarStyle: {
           backgroundColor: sem.accent,
