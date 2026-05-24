@@ -12,13 +12,13 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
-import { getSemanticColors, type SemanticColors } from '@/constants/accessibilityColors';
 import {
   adminPanelScrollBase,
   adminPanelSectionHeaderBase,
-  adminPanelSharedSheet,
+  createAdminPanelSharedStyles,
 } from '@/constants/adminPanelLayoutStyles';
+import type { ScreenTheme } from '@/constants/screenTheme';
+import { useScreenTheme } from '@/hooks/use-screen-theme';
 import { ManualStationCard } from '@/components/stations/ManualStationCard';
 import { ManualStation } from '@/components/stations/types';
 import { fetchAdminSession, type AdminSessionPayload } from '@/lib/adminSession';
@@ -29,9 +29,8 @@ export default function AdminHomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { setUser } = useAuth();
-  const { colorblindFriendly } = useColorblindPreference();
-  const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
-  const styles = useMemo(() => createAdminStyles(sem), [sem]);
+  const theme = useScreenTheme();
+  const styles = useMemo(() => createAdminStyles(theme), [theme.isDark, theme.sem]);
   const [loading, setLoading] = useState(true);
   const [admin, setAdmin] = useState<AdminSessionPayload | null>(null);
   const [error, setError] = useState('');
@@ -280,10 +279,10 @@ export default function AdminHomeScreen() {
   );
 }
 
-const createAdminStyles = (sem: SemanticColors) =>
+const createAdminStyles = (theme: ScreenTheme) =>
   Object.assign(
     {},
-    adminPanelSharedSheet,
+    createAdminPanelSharedStyles(theme),
     StyleSheet.create({
       scroll: {
         ...adminPanelScrollBase,
@@ -292,7 +291,7 @@ const createAdminStyles = (sem: SemanticColors) =>
       title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.title,
     textAlign: 'center',
     marginBottom: 6,
   },
@@ -303,29 +302,29 @@ const createAdminStyles = (sem: SemanticColors) =>
   },
   muted: {
     fontSize: 14,
-    color: '#6b7280',
+    color: theme.mutedText,
   },
   infoBox: {
     marginBottom: 12,
   },
   infoLabel: {
     fontSize: 12,
-    color: '#6b7280',
+    color: theme.mutedText,
   },
   infoValue: {
     fontSize: 16,
-    color: '#111827',
+    color: theme.title,
     fontWeight: '600',
   },
   primaryButtonAlt: {
     marginTop: 10,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.secondaryBtnBg,
     alignItems: 'center',
   },
   primaryButtonAltText: {
-    color: '#111827',
+    color: theme.secondaryBtnText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -333,7 +332,7 @@ const createAdminStyles = (sem: SemanticColors) =>
     marginTop: 16,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: sem.error,
+    backgroundColor: theme.sem.error,
     alignItems: 'center',
   },
   secondaryButtonText: {
@@ -344,7 +343,7 @@ const createAdminStyles = (sem: SemanticColors) =>
   section: {
     marginTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: theme.border,
     paddingTop: 16,
   },
   sectionHeader: {
@@ -355,7 +354,7 @@ const createAdminStyles = (sem: SemanticColors) =>
     flex: 1,
     paddingVertical: 11,
     borderRadius: 10,
-    backgroundColor: sem.error,
+    backgroundColor: theme.sem.error,
     alignItems: 'center',
   },
   confirmDeleteText: {
