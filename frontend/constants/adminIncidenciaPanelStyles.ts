@@ -125,3 +125,12 @@ export function createAdminIncidenciaCoreStyles(theme: ScreenTheme) {
 }
 
 export type AdminIncidenciaCoreStyles = ReturnType<typeof createAdminIncidenciaCoreStyles>;
+
+/** Merge shared incidencia styles with screen-only extras (single copy of the large block). */
+export function createAdminIncidenciaScreenStyles(
+  theme: ScreenTheme,
+  extra: Parameters<typeof StyleSheet.create>[0],
+): AdminIncidenciaCoreStyles & Record<string, unknown> {
+  return Object.assign({}, createAdminIncidenciaCoreStyles(theme), StyleSheet.create(extra)) as AdminIncidenciaCoreStyles &
+    Record<string, unknown>;
+}

@@ -29,12 +29,17 @@ import {
   TIPUS_COLORS,
   TIPUS_TEXT_COLORS,
 } from '@/utils/adminIncidentUi';
+import {
+  createAdminIncidenciaScreenStyles,
+  type AdminIncidenciaCoreStyles,
+} from '@/constants/adminIncidenciaPanelStyles';
 import type { ScreenTheme } from '@/constants/screenTheme';
 import { useScreenTheme } from '@/hooks/use-screen-theme';
 
 const ALL_ESTADO_KEYS: IncidenciaEstado[] = ['pending', 'validated', 'resolved', 'rejected'];
 
-type AdminIncHistoryStyles = ReturnType<typeof createAdminIncidenciasHistoryStyles>;
+type AdminIncHistoryExtraStyles = ReturnType<typeof createAdminIncidenciasHistoryExtraStyles>;
+type AdminIncHistoryStyles = AdminIncidenciaCoreStyles & AdminIncHistoryExtraStyles;
 
 function toLocalDateString(date: Date): string {
   const y = date.getFullYear();
@@ -49,7 +54,10 @@ export default function AdminIncidenciasHistoryScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const theme = useScreenTheme();
-  const styles = useMemo(() => createAdminIncidenciasHistoryStyles(theme), [theme.isDark, theme.sem]);
+  const styles = useMemo(
+    () => createAdminIncidenciaScreenStyles(theme, adminIncidenciasHistoryExtraStyles(theme)),
+    [theme.isDark, theme.sem],
+  );
   const estadoFilters = useMemo(
     () =>
       ALL_ESTADO_KEYS.map((key) => ({
@@ -407,8 +415,8 @@ export default function AdminIncidenciasHistoryScreen() {
                 <Text style={styles.btnResolveText}>{t('adminIncidents.markResolved')}</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setDetailInc(null)}>
-              <Text style={styles.closeBtnText}>{t('adminIncidents.close')}</Text>
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setDetailInc(null)}>
+              <Text style={styles.modalCloseBtnText}>{t('adminIncidents.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -420,7 +428,7 @@ export default function AdminIncidenciasHistoryScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('adminIncidents.rejectModalShort', { id: rejectingInc?.id })}</Text>
             <TextInput
-              style={styles.textArea}
+              style={styles.modalInput}
               value={rejectMotiu}
               onChangeText={setRejectMotiu}
               placeholder={t('adminIncidents.rejectPlaceholder')}
@@ -428,8 +436,8 @@ export default function AdminIncidenciasHistoryScreen() {
               multiline
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setRejectingInc(null)}>
-                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setRejectingInc(null)}>
+                <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnReject} onPress={handleReject} disabled={submitting}>
                 <Text style={styles.btnRejectText}>{t('adminIncidents.reject')}</Text>
@@ -452,97 +460,105 @@ function DetailRow({ label, value, styles }: DetailRowProps) {
   );
 }
 
-function createAdminIncidenciasHistoryStyles(theme: ScreenTheme) {
-  return StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.panelScreenBg },
-  scroll: { flexGrow: 1, alignItems: 'center', padding: 16, paddingVertical: 32 },
-  container: { width: '100%', maxWidth: 640 },
-  title: { fontSize: 22, fontWeight: '700', color: theme.title, textAlign: 'center', marginBottom: 6 },
-  backBtn: { alignSelf: 'center', marginBottom: 14 },
-  backBtnText: { color: theme.mutedText, fontWeight: '600' },
-  errorText: { color: theme.error, textAlign: 'center', marginVertical: 8 },
-  muted: { color: theme.mutedText, textAlign: 'center', marginTop: 24 },
-  filterBox: {
-    backgroundColor: theme.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  filterTitle: { fontSize: 15, fontWeight: '700', color: theme.title, marginBottom: 10 },
-  filterSectionLabel: { fontSize: 12, fontWeight: '700', color: theme.mutedText, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
-  shortcutChip: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.secondaryBtnBg },
-  shortcutChipText: { fontSize: 13, color: theme.secondaryBtnText, fontWeight: '600' },
-  shortcutChipClear: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.dangerBtnBg },
-  shortcutChipClearText: { fontSize: 13, color: theme.dangerBtnText, fontWeight: '600' },
-  filterChip: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.chipBg, borderWidth: 1, borderColor: theme.border },
-  filterChipActive: { backgroundColor: theme.primaryBtnBg, borderColor: theme.primaryBtnBg },
-  filterChipText: { fontSize: 13, color: theme.secondaryText, fontWeight: '600' },
-  filterChipTextActive: { color: theme.primaryBtnText },
-  dateRow: { flexDirection: 'row', gap: 10, marginBottom: 4, marginTop: 8 },
-  dateField: { flex: 1 },
-  dateLabel: { fontSize: 11, fontWeight: '600', color: theme.mutedText, marginBottom: 4 },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 8,
-    padding: 8,
-    justifyContent: 'center',
-    minHeight: 40,
-    color: theme.inputText,
-    fontSize: 13,
-    backgroundColor: theme.inputBg,
-  },
-  applyBtn: { marginTop: 12, paddingVertical: 11, borderRadius: 10, backgroundColor: theme.primaryBtnBg, alignItems: 'center' },
-  applyBtnText: { color: theme.primaryBtnText, fontWeight: '700', fontSize: 14 },
-  card: {
-    backgroundColor: theme.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: { flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
-  typeBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  typeBadgeText: { fontSize: 12, fontWeight: '700' },
-  statusBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  statusBadgeText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  stationName: { fontSize: 14, fontWeight: '600', color: theme.title, marginBottom: 2 },
-  meta: { fontSize: 12, color: theme.mutedText, marginBottom: 6 },
-  comment: { fontSize: 13, color: theme.secondaryText, marginBottom: 8 },
-  detailBtn: { borderWidth: 1, borderColor: theme.border, borderRadius: 8, paddingVertical: 7, alignItems: 'center', marginBottom: 8 },
-  detailBtnText: { color: theme.title, fontWeight: '600', fontSize: 13 },
-  actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  btnValidate: { flex: 1, minWidth: 80, paddingVertical: 9, borderRadius: 8, backgroundColor: theme.primaryBtnBg, alignItems: 'center' },
-  btnValidateText: { color: theme.primaryBtnText, fontWeight: '700', fontSize: 13 },
-  btnReject: { flex: 1, minWidth: 80, paddingVertical: 9, borderRadius: 8, backgroundColor: theme.dangerBtnBg, alignItems: 'center' },
-  btnRejectText: { color: theme.dangerBtnText, fontWeight: '700', fontSize: 13 },
-  btnResolve: { flex: 1, minWidth: 80, paddingVertical: 9, borderRadius: 8, backgroundColor: theme.sem.chipActiveBg, alignItems: 'center' },
-  btnResolveText: { color: theme.sem.chipActiveText, fontWeight: '700', fontSize: 13 },
-  loadMoreBtn: { paddingVertical: 12, borderRadius: 10, backgroundColor: theme.secondaryBtnBg, alignItems: 'center', marginTop: 4 },
-  loadMoreBtnText: { color: theme.secondaryBtnText, fontWeight: '700' },
-  overlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  detailCard: { width: '100%', maxWidth: 440, maxHeight: '88%', backgroundColor: theme.surface, borderRadius: 16, padding: 20 },
-  detailScroll: { maxHeight: 380, marginBottom: 12 },
-  detailRow: { marginBottom: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
-  detailLabel: { fontSize: 11, fontWeight: '700', color: theme.mutedText, textTransform: 'uppercase', marginBottom: 2 },
-  detailValue: { fontSize: 14, color: theme.title },
-  modalCard: { width: '100%', maxWidth: 400, backgroundColor: theme.surface, borderRadius: 16, padding: 20 },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: theme.title, marginBottom: 12 },
-  textArea: { minHeight: 80, borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, marginBottom: 12, color: theme.inputText, backgroundColor: theme.inputBg, textAlignVertical: 'top' },
-  modalActions: { flexDirection: 'row', gap: 10, marginBottom: 8 },
-  cancelBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: theme.secondaryBtnBg, alignItems: 'center' },
-  cancelBtnText: { color: theme.secondaryBtnText, fontWeight: '700' },
-  closeBtn: { paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primaryBtnBg, alignItems: 'center' },
-  closeBtnText: { color: theme.primaryBtnText, fontWeight: '700' },
-  });
+function adminIncidenciasHistoryExtraStyles(theme: ScreenTheme) {
+  return {
+    title: { marginBottom: 6 },
+    backBtn: { marginBottom: 14 },
+    errorText: { marginVertical: 8, marginTop: 0 },
+    muted: { marginTop: 24, marginVertical: 0 },
+    filterBox: {
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    filterTitle: { fontSize: 15, fontWeight: '700' as const, color: theme.title, marginBottom: 10 },
+    filterSectionLabel: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: theme.mutedText,
+      textTransform: 'uppercase' as const,
+      marginTop: 10,
+      marginBottom: 6,
+    },
+    chipRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 6, marginBottom: 4 },
+    shortcutChip: {
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.secondaryBtnBg,
+    },
+    shortcutChipText: { fontSize: 13, color: theme.secondaryBtnText, fontWeight: '600' as const },
+    shortcutChipClear: {
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.dangerBtnBg,
+    },
+    shortcutChipClearText: { fontSize: 13, color: theme.dangerBtnText, fontWeight: '600' as const },
+    filterChip: {
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.chipBg,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    filterChipActive: { backgroundColor: theme.primaryBtnBg, borderColor: theme.primaryBtnBg },
+    filterChipText: { fontSize: 13, color: theme.secondaryText, fontWeight: '600' as const },
+    filterChipTextActive: { color: theme.primaryBtnText },
+    dateRow: { flexDirection: 'row' as const, gap: 10, marginBottom: 4, marginTop: 8 },
+    dateField: { flex: 1 },
+    dateLabel: { fontSize: 11, fontWeight: '600' as const, color: theme.mutedText, marginBottom: 4 },
+    dateInput: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      padding: 8,
+      justifyContent: 'center' as const,
+      minHeight: 40,
+      color: theme.inputText,
+      fontSize: 13,
+      backgroundColor: theme.inputBg,
+    },
+    applyBtn: {
+      marginTop: 12,
+      paddingVertical: 11,
+      borderRadius: 10,
+      backgroundColor: theme.primaryBtnBg,
+      alignItems: 'center' as const,
+    },
+    applyBtnText: { color: theme.primaryBtnText, fontWeight: '700' as const, fontSize: 14 },
+    card: { marginBottom: 12 },
+    stationName: { fontSize: 14 },
+    comment: { color: theme.secondaryText, marginBottom: 8 },
+    detailBtn: { borderColor: theme.border, paddingVertical: 7 },
+    btnValidate: { minWidth: 80, paddingVertical: 9 },
+    btnReject: { minWidth: 80, paddingVertical: 9 },
+    btnResolve: {
+      minWidth: 80,
+      paddingVertical: 9,
+      backgroundColor: theme.sem.chipActiveBg,
+    },
+    btnResolveText: { color: theme.sem.chipActiveText },
+    loadMoreBtn: {
+      paddingVertical: 12,
+      borderRadius: 10,
+      backgroundColor: theme.secondaryBtnBg,
+      alignItems: 'center' as const,
+      marginTop: 4,
+    },
+    loadMoreBtnText: { color: theme.secondaryBtnText, fontWeight: '700' as const },
+    detailScroll: { maxHeight: 380 },
+    modalActions: { marginBottom: 8 },
+  };
+}
+
+function createAdminIncidenciasHistoryExtraStyles(theme: ScreenTheme) {
+  return StyleSheet.create(adminIncidenciasHistoryExtraStyles(theme));
 }

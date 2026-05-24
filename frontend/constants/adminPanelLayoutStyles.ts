@@ -21,6 +21,49 @@ export const adminPanelSectionHeaderBase = {
   marginBottom: 12,
 };
 
+export type AdminPanelSharedStyles = ReturnType<typeof createAdminPanelSharedStyles>;
+
+export function mergeAdminPanelStyles<E extends object>(
+  theme: ScreenTheme,
+  extra: E,
+): AdminPanelSharedStyles & E {
+  return Object.assign({}, createAdminPanelSharedStyles(theme), StyleSheet.create(extra)) as AdminPanelSharedStyles & E;
+}
+
+export function createAdminPanelChromeStyleObjects(theme: ScreenTheme) {
+  return {
+    title: {
+      fontSize: 24,
+      fontWeight: '700' as const,
+      color: theme.title,
+      textAlign: 'center' as const,
+      marginBottom: 10,
+    },
+    backButton: { marginBottom: 20, paddingVertical: 10, alignItems: 'center' as const },
+    backText: { fontSize: 14, fontWeight: '600' as const, color: theme.link },
+    centered: { alignItems: 'center' as const, gap: 10, paddingVertical: 16 },
+    muted: { fontSize: 14, color: theme.mutedText },
+  };
+}
+
+export function createAdminPanelSearchStyleObjects(theme: ScreenTheme) {
+  return {
+    sectionHeader: { ...adminPanelSectionHeaderBase, marginTop: 8 },
+    searchBlock: { marginBottom: 14 },
+    searchLabel: { fontSize: 13, fontWeight: '600' as const, color: theme.secondaryText, marginBottom: 6 },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: theme.inputText,
+      backgroundColor: theme.inputBg,
+    },
+  };
+}
+
 export function createAdminPanelSharedStyles(theme: ScreenTheme) {
   return StyleSheet.create({
     screen: {

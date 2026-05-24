@@ -15,8 +15,9 @@ import {
 
 import {
   adminPanelScrollBase,
-  adminPanelSectionHeaderBase,
-  createAdminPanelSharedStyles,
+  createAdminPanelChromeStyleObjects,
+  createAdminPanelSearchStyleObjects,
+  mergeAdminPanelStyles,
 } from '@/constants/adminPanelLayoutStyles';
 import type { ScreenTheme } from '@/constants/screenTheme';
 import { useScreenTheme } from '@/hooks/use-screen-theme';
@@ -259,61 +260,11 @@ export default function AdminUsersScreen() {
 }
 
 const createAdminUsersStyles = (theme: ScreenTheme) =>
-  Object.assign(
-    {},
-    createAdminPanelSharedStyles(theme),
-    StyleSheet.create({
-      scroll: adminPanelScrollBase,
-      title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: theme.title,
-        textAlign: 'center',
-        marginBottom: 10,
-      },
-      backButton: {
-        marginBottom: 20,
-        paddingVertical: 10,
-        alignItems: 'center',
-      },
-      backText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: theme.link,
-      },
-      centered: {
-        alignItems: 'center',
-        gap: 10,
-        paddingVertical: 16,
-      },
-      muted: {
-        fontSize: 14,
-        color: theme.mutedText,
-      },
-      sectionHeader: {
-        ...adminPanelSectionHeaderBase,
-        marginTop: 8,
-      },
-      searchBlock: {
-        marginBottom: 14,
-      },
-      searchLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: theme.secondaryText,
-        marginBottom: 6,
-      },
-      searchInput: {
-        borderWidth: 1,
-        borderColor: theme.inputBorder,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 15,
-        color: theme.inputText,
-        backgroundColor: theme.inputBg,
-      },
-      userRow: {
+  mergeAdminPanelStyles(theme, {
+    scroll: adminPanelScrollBase,
+    ...createAdminPanelChromeStyleObjects(theme),
+    ...createAdminPanelSearchStyleObjects(theme),
+    userRow: {
         borderWidth: 1,
         borderColor: theme.border,
         borderRadius: 10,
@@ -416,5 +367,4 @@ const createAdminUsersStyles = (theme: ScreenTheme) =>
         backgroundColor: theme.sem.mapOk,
         alignItems: 'center',
       },
-    }),
-  ) as any;
+  });
