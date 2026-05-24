@@ -307,6 +307,7 @@ export default function AdminIncidenciasScreen() {
                 ) : null}
                 {detailInc.data_rebuig ? (
                   <Row
+                    styles={styles}
                     label={t('adminIncidents.fields.rejectionDate')}
                     value={new Date(detailInc.data_rebuig).toLocaleString()}
                   />
