@@ -120,7 +120,7 @@ export default function AdminIncidenciasScreen() {
   const router = useRouter();
   const theme = useScreenTheme();
   const styles = useMemo(
-    () => mergeAdminIncidenciaStyles(theme, createAdminIncidenciasExtraStyles(theme)),
+    () => mergeAdminIncidenciaStyles(theme, createAdminIncidenciasExtraStyles(theme)) as AdminIncStyles,
     [theme.isDark, theme.sem],
   );
   const [loading, setLoading] = useState(true);

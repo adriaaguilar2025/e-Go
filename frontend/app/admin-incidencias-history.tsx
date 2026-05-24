@@ -55,7 +55,7 @@ export default function AdminIncidenciasHistoryScreen() {
   const router = useRouter();
   const theme = useScreenTheme();
   const styles = useMemo(
-    () => mergeAdminIncidenciaStyles(theme, createAdminIncidenciasHistoryExtraStyles(theme)),
+    () => mergeAdminIncidenciaStyles(theme, createAdminIncidenciasHistoryExtraStyles(theme)) as AdminIncHistoryStyles,
     [theme.isDark, theme.sem],
   );
   const estadoFilters = useMemo(
