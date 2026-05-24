@@ -165,6 +165,13 @@ export default function AdminHomeScreen() {
               <Text style={styles.primaryButtonAltText}>{t('adminHome.incidentHistory')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              style={styles.primaryButtonAlt}
+              onPress={() => router.push('/admin-stations' as Href)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.primaryButtonAltText}>{t('adminHome.manageStations')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => {
                 (async () => {
