@@ -196,17 +196,17 @@ export default function MyFavoriteStationsScreen() {
             <Text style={styles.stationName} numberOfLines={1}>
               {item.nom || t('home.stationNoName')}
             </Text>
-            {item.municipi && (
+            {Boolean(item.municipi) && (
               <Text style={styles.stationDetail} numberOfLines={1}>
                 <MaterialIcons name="location-on" size={14} color={theme.mutedText} /> {item.municipi}
               </Text>
             )}
-            {item.adreca && (
+            {Boolean(item.adreca) && (
               <Text style={styles.stationDetail} numberOfLines={1}>
                 {item.adreca}
               </Text>
             )}
-            {item.kw && (
+            {Boolean(item.kw) && (
               <Text style={styles.stationDetail}>
                 <MaterialIcons name="bolt" size={14} color={theme.sem.accent} /> {item.kw} kW
               </Text>
