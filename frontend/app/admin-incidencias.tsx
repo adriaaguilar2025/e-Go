@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -29,6 +29,10 @@ import {
   TIPUS_COLORS,
   TIPUS_TEXT_COLORS,
 } from '@/utils/adminIncidentUi';
+import type { ScreenTheme } from '@/constants/screenTheme';
+import { useScreenTheme } from '@/hooks/use-screen-theme';
+
+type AdminIncStyles = ReturnType<typeof createAdminIncidenciasStyles>;
 
 type IncidenciaCardProps = {
   inc: Incidencia;
@@ -37,9 +41,10 @@ type IncidenciaCardProps = {
   onResolve: () => void;
   onDetails: () => void;
   submitting: boolean;
+  styles: AdminIncStyles;
 };
 
-function IncidenciaCard({ inc, onValidate, onReject, onResolve, onDetails, submitting }: IncidenciaCardProps) {
+function IncidenciaCard({ inc, onValidate, onReject, onResolve, onDetails, submitting, styles }: IncidenciaCardProps) {
   const { t } = useTranslation();
   const canValidate = !inc.validada && !inc.rebutjada;
   const canReject = !inc.validada && !inc.rebutjada && !inc.resolta;
@@ -94,9 +99,9 @@ function IncidenciaCard({ inc, onValidate, onReject, onResolve, onDetails, submi
   );
 }
 
-type RowProps = { label: string; value: string };
+type RowProps = { label: string; value: string; styles: AdminIncStyles };
 
-function Row({ label, value }: RowProps) {
+function Row({ label, value, styles }: RowProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -108,6 +113,8 @@ function Row({ label, value }: RowProps) {
 export default function AdminIncidenciasScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const theme = useScreenTheme();
+  const styles = useMemo(() => createAdminIncidenciasStyles(theme), [theme.isDark, theme.sem]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -148,6 +155,7 @@ export default function AdminIncidenciasScreen() {
         onResolve={() => handleResolve(inc.id)}
         onDetails={() => setDetailInc(inc)}
         submitting={submitting}
+        styles={styles}
       />
     ));
   }
@@ -228,7 +236,7 @@ export default function AdminIncidenciasScreen() {
           </Text>
         </TouchableOpacity>
 
-        {loading && <ActivityIndicator size="large" color="#111827" style={{ marginTop: 24 }} />}
+        {loading && <ActivityIndicator size="large" color={theme.primaryBtnBg} style={{ marginTop: 24 }} />}
         {!loading && error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         {!loading && !error && (
@@ -262,33 +270,37 @@ export default function AdminIncidenciasScreen() {
             </Text>
             {detailInc && (
               <ScrollView style={styles.detailScroll}>
-                <Row label={t('adminIncidents.fields.type')} value={incidentTypeLabel(detailInc.tipus, t)} />
-                <Row label={t('adminIncidents.fields.status')} value={incidentStatusLabel(detailInc, t)} />
+                <Row styles={styles} label={t('adminIncidents.fields.type')} value={incidentTypeLabel(detailInc.tipus, t)} />
+                <Row styles={styles} label={t('adminIncidents.fields.status')} value={incidentStatusLabel(detailInc, t)} />
                 <Row
+                  styles={styles}
                   label={t('adminIncidents.fields.station')}
                   value={detailInc.estacio_nom ?? `#${detailInc.estacio}`}
                 />
                 {detailInc.estacio_municipi ? (
-                  <Row label={t('adminIncidents.fields.municipality')} value={detailInc.estacio_municipi} />
+                  <Row styles={styles} label={t('adminIncidents.fields.municipality')} value={detailInc.estacio_municipi} />
                 ) : null}
-                <Row label={t('adminIncidents.fields.driver')} value={detailInc.conductor_username} />
-                <Row label={t('adminIncidents.fields.email')} value={detailInc.conductor_email} />
+                <Row styles={styles} label={t('adminIncidents.fields.driver')} value={detailInc.conductor_username} />
+                <Row styles={styles} label={t('adminIncidents.fields.email')} value={detailInc.conductor_email} />
                 <Row
+                  styles={styles}
                   label={t('adminIncidents.fields.reportDate')}
                   value={new Date(detailInc.data_inici).toLocaleString()}
                 />
-                <Row label={t('adminIncidents.fields.comment')} value={detailInc.comentari} />
+                <Row styles={styles} label={t('adminIncidents.fields.comment')} value={detailInc.comentari} />
                 {detailInc.motiu_rebuig ? (
-                  <Row label={t('adminIncidents.fields.rejectReason')} value={detailInc.motiu_rebuig} />
+                  <Row styles={styles} label={t('adminIncidents.fields.rejectReason')} value={detailInc.motiu_rebuig} />
                 ) : null}
                 {detailInc.data_validacio ? (
                   <Row
+                    styles={styles}
                     label={t('adminIncidents.fields.validationDate')}
                     value={new Date(detailInc.data_validacio).toLocaleString()}
                   />
                 ) : null}
                 {detailInc.data_resolucio ? (
                   <Row
+                    styles={styles}
                     label={t('adminIncidents.fields.resolutionDate')}
                     value={new Date(detailInc.data_resolucio).toLocaleString()}
                   />
@@ -330,7 +342,7 @@ export default function AdminIncidenciasScreen() {
               value={rejectMotiu}
               onChangeText={setRejectMotiu}
               placeholder={t('adminIncidents.rejectPlaceholder')}
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={theme.placeholder}
               multiline
             />
             <View style={styles.modalActions}>
@@ -348,120 +360,142 @@ export default function AdminIncidenciasScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f5f5f5' },
-  scroll: { flexGrow: 1, alignItems: 'center', padding: 16, paddingVertical: 32 },
-  container: { width: '100%', maxWidth: 640 },
-  title: { fontSize: 22, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 8 },
-  backBtn: { alignSelf: 'center', marginBottom: 6 },
-  backBtnText: { color: '#6b7280', fontWeight: '600' },
-  refreshBtn: { alignSelf: 'center', marginBottom: 16 },
-  refreshBtnText: { color: '#111827', fontWeight: '600', fontSize: 14 },
-  errorText: { color: '#dc2626', textAlign: 'center', marginTop: 16 },
-  muted: { color: '#6b7280', textAlign: 'center', marginVertical: 12 },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: '#e5e7eb',
-  },
-  sectionDot: { width: 10, height: 10, borderRadius: 5 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', flex: 1 },
-  sectionBadge: {
-    backgroundColor: '#fef3c7',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  sectionBadgeText: { fontSize: 12, fontWeight: '700', color: '#92400e' },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: { flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
-  typeBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  typeBadgeText: { fontSize: 12, fontWeight: '700' },
-  statusBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  statusBadgeText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  stationName: { fontSize: 15, fontWeight: '600', color: '#111827', marginBottom: 2 },
-  meta: { fontSize: 12, color: '#6b7280', marginBottom: 6 },
-  comment: { fontSize: 13, color: '#374151', marginBottom: 10 },
-  detailBtn: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  detailBtnText: { color: '#111827', fontWeight: '600', fontSize: 13 },
-  actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  btnValidate: {
-    flex: 1,
-    minWidth: 90,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#111827',
-    alignItems: 'center',
-  },
-  btnValidateText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  btnReject: {
-    flex: 1,
-    minWidth: 90,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#fee2e2',
-    alignItems: 'center',
-  },
-  btnRejectText: { color: '#b91c1c', fontWeight: '700', fontSize: 13 },
-  btnResolve: {
-    flex: 1,
-    minWidth: 90,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#dcfce7',
-    alignItems: 'center',
-  },
-  btnResolveText: { color: '#166534', fontWeight: '700', fontSize: 13 },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(17,24,39,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  detailCard: { width: '100%', maxWidth: 440, maxHeight: '88%', backgroundColor: '#fff', borderRadius: 16, padding: 20 },
-  detailScroll: { maxHeight: 420, marginBottom: 12 },
-  modalCard: { width: '100%', maxWidth: 400, backgroundColor: '#fff', borderRadius: 16, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 },
-  row: { marginBottom: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  rowLabel: { fontSize: 11, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: 2 },
-  rowValue: { fontSize: 14, color: '#111827' },
-  imageContainer: { marginBottom: 10 },
-  image: { width: '100%', height: 180, borderRadius: 8, marginTop: 6 },
-  closeBtn: { paddingVertical: 12, borderRadius: 10, backgroundColor: '#111827', alignItems: 'center' },
-  closeBtnText: { color: '#fff', fontWeight: '700' },
-  input: {
-    minHeight: 80,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 12,
-    color: '#111827',
-    textAlignVertical: 'top',
-  },
-  modalActions: { flexDirection: 'row', gap: 10 },
-  cancelBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: '#e5e7eb', alignItems: 'center' },
-  cancelBtnText: { color: '#111827', fontWeight: '700' },
-});
+function createAdminIncidenciasStyles(theme: ScreenTheme) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: theme.panelScreenBg },
+    scroll: { flexGrow: 1, alignItems: 'center', padding: 16, paddingVertical: 32 },
+    container: { width: '100%', maxWidth: 640 },
+    title: { fontSize: 22, fontWeight: '700', color: theme.title, textAlign: 'center', marginBottom: 8 },
+    backBtn: { alignSelf: 'center', marginBottom: 6 },
+    backBtnText: { color: theme.mutedText, fontWeight: '600' },
+    refreshBtn: { alignSelf: 'center', marginBottom: 16 },
+    refreshBtnText: { color: theme.title, fontWeight: '600', fontSize: 14 },
+    errorText: { color: theme.error, textAlign: 'center', marginTop: 16 },
+    muted: { color: theme.mutedText, textAlign: 'center', marginVertical: 12 },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+      paddingBottom: 8,
+      borderBottomWidth: 2,
+      borderBottomColor: theme.border,
+    },
+    sectionDot: { width: 10, height: 10, borderRadius: 5 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.title, flex: 1 },
+    sectionBadge: {
+      backgroundColor: theme.isDark ? '#422006' : '#fef3c7',
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    sectionBadgeText: { fontSize: 12, fontWeight: '700', color: theme.isDark ? '#fcd34d' : '#92400e' },
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 14,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: theme.isDark ? 0.2 : 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    cardHeader: { flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
+    typeBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+    typeBadgeText: { fontSize: 12, fontWeight: '700' },
+    statusBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+    statusBadgeText: { fontSize: 12, fontWeight: '700', color: theme.textOnAccent },
+    stationName: { fontSize: 15, fontWeight: '600', color: theme.title, marginBottom: 2 },
+    meta: { fontSize: 12, color: theme.mutedText, marginBottom: 6 },
+    comment: { fontSize: 13, color: theme.body, marginBottom: 10 },
+    detailBtn: {
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 8,
+      paddingVertical: 8,
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    detailBtnText: { color: theme.title, fontWeight: '600', fontSize: 13 },
+    actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    btnValidate: {
+      flex: 1,
+      minWidth: 90,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: theme.primaryBtnBg,
+      alignItems: 'center',
+    },
+    btnValidateText: { color: theme.primaryBtnText, fontWeight: '700', fontSize: 13 },
+    btnReject: {
+      flex: 1,
+      minWidth: 90,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: theme.dangerBtnBg,
+      alignItems: 'center',
+    },
+    btnRejectText: { color: theme.dangerBtnText, fontWeight: '700', fontSize: 13 },
+    btnResolve: {
+      flex: 1,
+      minWidth: 90,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: theme.isDark ? '#14532d' : '#dcfce7',
+      alignItems: 'center',
+    },
+    btnResolveText: { color: theme.sem.mapOk, fontWeight: '700', fontSize: 13 },
+    overlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    detailCard: {
+      width: '100%',
+      maxWidth: 440,
+      maxHeight: '88%',
+      backgroundColor: theme.modalSurface,
+      borderRadius: 16,
+      padding: 20,
+    },
+    detailScroll: { maxHeight: 420, marginBottom: 12 },
+    modalCard: { width: '100%', maxWidth: 400, backgroundColor: theme.modalSurface, borderRadius: 16, padding: 20 },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: theme.title, marginBottom: 12 },
+    row: { marginBottom: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
+    rowLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.mutedText,
+      textTransform: 'uppercase',
+      marginBottom: 2,
+    },
+    rowValue: { fontSize: 14, color: theme.title },
+    imageContainer: { marginBottom: 10 },
+    image: { width: '100%', height: 180, borderRadius: 8, marginTop: 6 },
+    closeBtn: { paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primaryBtnBg, alignItems: 'center' },
+    closeBtnText: { color: theme.primaryBtnText, fontWeight: '700' },
+    input: {
+      minHeight: 80,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 12,
+      color: theme.inputText,
+      backgroundColor: theme.inputBg,
+      textAlignVertical: 'top',
+    },
+    modalActions: { flexDirection: 'row', gap: 10 },
+    cancelBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: theme.secondaryBtnBg,
+      alignItems: 'center',
+    },
+    cancelBtnText: { color: theme.secondaryBtnText, fontWeight: '700' },
+  });
+}

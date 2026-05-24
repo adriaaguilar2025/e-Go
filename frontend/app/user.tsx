@@ -3,9 +3,9 @@ import { Alert, Image, View, Text, StyleSheet, TextInput, TouchableOpacity, Acti
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { appFetch } from '@/services/appFetch';
 import { getApiUrl } from '@/constants/api';
-import { getSemanticColors, type SemanticColors } from '@/constants/accessibilityColors';
 import { useAuth } from '@/contexts/AuthContext';
-import { useColorblindPreference } from '@/contexts/ColorblindPreferenceContext';
+import type { ScreenTheme } from '@/constants/screenTheme';
+import { useScreenTheme } from '@/hooks/use-screen-theme';
 
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -98,9 +98,8 @@ export default function PerfilScreen() {
   const idUser = Number.isInteger(parsedUserId) && parsedUserId > 0 ? parsedUserId : user?.id ?? 1;
 
   const router = useRouter();
-  const { colorblindFriendly } = useColorblindPreference();
-  const sem = useMemo(() => getSemanticColors(colorblindFriendly), [colorblindFriendly]);
-  const styles = useMemo(() => createUserStyles(sem), [sem]);
+  const theme = useScreenTheme();
+  const styles = useMemo(() => createUserStyles(theme), [theme.isDark, theme.sem]);
 
   // Referència a la part de la pantalla que volem "fotografiar"
   const viewShotRef = useRef<ViewShot>(null);
@@ -568,7 +567,7 @@ export default function PerfilScreen() {
                   )}
                   {perfil?.admin && (
                     <View style={styles.badge}>
-                      <MaterialIcons name="shield" size={16} color={sem.mapCustomLocation} />
+                      <MaterialIcons name="shield" size={16} color={theme.sem.mapCustomLocation} />
                       <Text style={styles.badgeLabel}>{t('userProfile.badgeAdmin')}</Text>
                     </View>
                   )}
@@ -579,7 +578,7 @@ export default function PerfilScreen() {
 
             {isLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={sem.accent} />
+                <ActivityIndicator size="large" color={theme.sem.accent} />
                 <Text style={styles.loadingText}>{t('userProfile.loading')}</Text>
               </View>
             ) : perfil ? (
@@ -652,7 +651,7 @@ export default function PerfilScreen() {
   );
 }
 
-const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
+const createUserStyles = (theme: ScreenTheme) => StyleSheet.create({
   contentContainer: {
     flex: 1,
   },
@@ -662,7 +661,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   image: { width: 90, height: 90, marginBottom: 12 },
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.containerBg,
   },
   centered: {
     justifyContent: 'center',
@@ -670,7 +669,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#64748b',
+    color: theme.mutedText,
     fontSize: 16,
   },
   header: {
@@ -679,14 +678,14 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: theme.border,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1f2937',
+    color: theme.title,
   },
   profileContainer: {
     padding: 20,
@@ -694,7 +693,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.surface,
     borderRadius: 18,
     padding: 18,
     marginBottom: 18,
@@ -708,7 +707,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 24,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -723,11 +722,11 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   profileName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0f172a',
+    color: theme.title,
   },
   profileEmail: {
     fontSize: 14,
-    color: '#475569',
+    color: theme.secondaryText,
     marginTop: 4,
   },
   profileSubtitle: {
@@ -744,23 +743,23 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.containerBg,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginRight: 8,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   badgeLabel: {
     marginLeft: 6,
     fontSize: 12,
-    color: '#475569',
+    color: theme.secondaryText,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.containerBg,
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 14,
@@ -773,11 +772,11 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     marginTop: 12,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     alignItems: 'center',
   },
   editButtonText: {
-    color: '#0f172a',
+    color: theme.title,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -785,23 +784,23 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     marginTop: 16,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: sem.accent,
+    backgroundColor: theme.sem.accent,
     alignItems: 'center',
   },
   cancelButton: {
     marginTop: 10,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#0f172a',
+    color: theme.title,
     fontWeight: '700',
     fontSize: 14,
   },
   saveButtonDisabled: {
-    backgroundColor: sem.chipActiveBg,
+    backgroundColor: theme.sem.chipActiveBg,
   },
   saveButtonText: {
     color: '#ffffff',
@@ -830,12 +829,12 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   points: {
     fontSize: 20,
     fontWeight: '800',
-    color: sem.accent,
+    color: theme.sem.accent,
     textAlign: 'center',
   },
   ptsLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.mutedText,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -985,7 +984,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   },
   requestsSection: {
     marginTop: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.surface,
     borderRadius: 18,
     padding: 16,
     shadowColor: '#000',
@@ -997,7 +996,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   requestsTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: theme.title,
     marginBottom: 12,
   },
   requestsList: {
@@ -1009,7 +1008,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.containerBg,
     borderRadius: 10,
     borderLeftWidth: 3,
     borderLeftColor: '#2563eb',
@@ -1017,7 +1016,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
   requestUsername: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
+    color: theme.title,
     flex: 1,
   },
   requestDate: {
@@ -1056,7 +1055,7 @@ const createUserStyles = (sem: SemanticColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: sem.accent,
+    backgroundColor: theme.sem.accent,
     paddingVertical: 14,
     borderRadius: 14,
     marginBottom: 16, // Ajusta l'espai com necessitis

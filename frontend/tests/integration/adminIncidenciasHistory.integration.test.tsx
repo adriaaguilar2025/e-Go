@@ -452,44 +452,44 @@ describe('AdminIncidenciasHistoryScreen', () => {
     });
   });
 
-  test('date picker button opens iOS picker (non-web platform)', async () => {
+  test('from and to date inputs accept YYYY-MM-DD and apply sends them to API', async () => {
     (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
-    const { findByText, getAllByText } = render(<AdminIncidenciasHistoryScreen />);
+    const { findByText, getByPlaceholderText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
-    // Press the "Toca para elegir" button (from date)
-    const tapBtns = getAllByText('Toca para elegir');
-    fireEvent.press(tapBtns[0]);
+    fireEvent.changeText(getByPlaceholderText('2026-01-01'), '2024-06-01');
+    fireEvent.changeText(getByPlaceholderText('2026-12-31'), '2024-06-30');
+    fireEvent.press(getByText('Aplicar filtros'));
     await waitFor(() => {
-      expect(listHistoryIncidencias).toHaveBeenCalledTimes(1);
+      const lastCall = (listHistoryIncidencias as jest.Mock<any>).mock.calls[1] as any[];
+      expect(lastCall[0]).toMatchObject({ from: '2024-06-01', to: '2024-06-30' });
     });
   });
 
-  test('iOS date picker confirm button sets the from date', async () => {
+  test('editing from date after last-week shortcut updates applied filter', async () => {
     (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
-    const { findByText, getAllByText, queryByText } = render(<AdminIncidenciasHistoryScreen />);
+    const { findByText, getByPlaceholderText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
-    // Press "Última semana" to set a date string, then open picker
-    fireEvent.press(getAllByText('Toca para elegir')[0]);
-    // Find and press "Listo" if the iOS picker opened
+    fireEvent.press(getByText('Última semana'));
+    const fromInput = getByPlaceholderText('2026-01-01');
+    fireEvent.changeText(fromInput, '2024-01-15');
+    expect(fromInput.props.value).toBe('2024-01-15');
+    fireEvent.press(getByText('Aplicar filtros'));
     await waitFor(() => {
-      const listoEl = queryByText('Listo');
-      if (listoEl) {
-        fireEvent.press(listoEl);
-      }
+      const lastCall = (listHistoryIncidencias as jest.Mock<any>).mock.calls[1] as any[];
+      expect(lastCall[0].from).toBe('2024-01-15');
     });
   });
 
-  test('iOS date picker cancel button closes the picker', async () => {
+  test('clear filters empties date text inputs after shortcut', async () => {
     (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
-    const { findByText, getAllByText, queryByText } = render(<AdminIncidenciasHistoryScreen />);
+    const { findByText, getByPlaceholderText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
-    fireEvent.press(getAllByText('Toca para elegir')[0]);
-    await waitFor(() => {
-      const cancelEl = queryByText('Cancelar');
-      if (cancelEl) {
-        fireEvent.press(cancelEl);
-      }
-    });
+    fireEvent.press(getByText('Última semana'));
+    const fromInput = getByPlaceholderText('2026-01-01');
+    expect(fromInput.props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    fireEvent.press(getByText('Limpiar'));
+    expect(fromInput.props.value).toBe('');
+    expect(getByPlaceholderText('2026-12-31').props.value).toBe('');
   });
 
   test('detail modal shows rejection reason when motiu_rebuig is set', async () => {
@@ -568,19 +568,13 @@ describe('AdminIncidenciasHistoryScreen', () => {
     });
   });
 
-  test('date picker opens with from date set from last-week shortcut', async () => {
+  test('last week shortcut fills from and to date inputs', async () => {
     (listHistoryIncidencias as jest.Mock<any>).mockResolvedValue([]);
-    const { findByText, getByText, getAllByText } = render(<AdminIncidenciasHistoryScreen />);
+    const { findByText, getByPlaceholderText, getByText } = render(<AdminIncidenciasHistoryScreen />);
     await findByText(/No se encontraron/);
-    // Set a real from date via shortcut
     fireEvent.press(getByText('Última semana'));
-    // Both from and to date buttons will show a YYYY-MM-DD pattern; press the first one
-    await waitFor(() => {
-      const dateBtns = getAllByText(/^\d{4}-\d{2}-\d{2}$/);
-      expect(dateBtns.length).toBeGreaterThan(0);
-      fireEvent.press(dateBtns[0]);
-    });
-    // parseYmd should have been called with the valid date string (no assertion needed; just exercise the path)
+    expect(getByPlaceholderText('2026-01-01').props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(getByPlaceholderText('2026-12-31').props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(listHistoryIncidencias).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,8 +15,10 @@ import {
 import {
   adminPanelScrollBase,
   adminPanelSectionHeaderBase,
-  adminPanelSharedSheet,
+  createAdminPanelSharedStyles,
 } from '@/constants/adminPanelLayoutStyles';
+import type { ScreenTheme } from '@/constants/screenTheme';
+import { useScreenTheme } from '@/hooks/use-screen-theme';
 import { fetchAdminSession } from '@/lib/adminSession';
 import {
   AdminStationSummary,
@@ -30,6 +32,8 @@ const SEARCH_DEBOUNCE_MS = 400;
 export default function AdminStationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const theme = useScreenTheme();
+  const styles = useMemo(() => createAdminStationsStyles(theme), [theme.isDark, theme.sem]);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -115,7 +119,7 @@ export default function AdminStationsScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>{t('adminStations.title')}</Text>
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#111827" />
+            <ActivityIndicator size="large" color={theme.primaryBtnBg} />
             <Text style={styles.muted}>{t('adminStations.loading')}</Text>
           </View>
         </View>
@@ -159,7 +163,7 @@ export default function AdminStationsScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder={t('adminStations.searchPlaceholder')}
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={theme.placeholder}
             value={searchQuery}
             onChangeText={handleSearchChange}
             autoCapitalize="none"
@@ -173,7 +177,7 @@ export default function AdminStationsScreen() {
 
         {loading && stations.length === 0 ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#111827" />
+            <ActivityIndicator size="large" color={theme.primaryBtnBg} />
           </View>
         ) : stations.length === 0 ? (
           <Text style={styles.muted}>
@@ -267,155 +271,156 @@ export default function AdminStationsScreen() {
   );
 }
 
-const styles = Object.assign(
-  {},
-  adminPanelSharedSheet,
-  StyleSheet.create({
-    scroll: adminPanelScrollBase,
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  backButton: {
-    marginBottom: 20,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
-  },
-  centered: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 16,
-  },
-  muted: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  sectionHeader: {
-    ...adminPanelSectionHeaderBase,
-    marginTop: 8,
-  },
-  searchBlock: {
-    marginBottom: 14,
-  },
-  searchLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#f9fafb',
-  },
-  stationRow: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
-  },
-  stationInfo: {
-    flex: 1,
-  },
-  stationName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  stationLocation: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  stationMeta: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-  statusOperative: {
-    fontSize: 12,
-    color: '#16a34a',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  statusNonOperative: {
-    fontSize: 12,
-    color: '#dc2626',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  disableButton: {
-    backgroundColor: '#dc2626',
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    maxWidth: 110,
-  },
-  enableButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    maxWidth: 110,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  loadMoreButton: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#e5e7eb',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  loadMoreButtonText: {
-    color: '#374151',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  confirmDisable: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 10,
-    backgroundColor: '#dc2626',
-    alignItems: 'center',
-  },
-  confirmEnable: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 10,
-    backgroundColor: '#16a34a',
-    alignItems: 'center',
-  },
-  confirmActionText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  }),
-) as any;
+const createAdminStationsStyles = (theme: ScreenTheme) =>
+  Object.assign(
+    {},
+    createAdminPanelSharedStyles(theme),
+    StyleSheet.create({
+      scroll: adminPanelScrollBase,
+      title: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: theme.title,
+        textAlign: 'center',
+        marginBottom: 10,
+      },
+      backButton: {
+        marginBottom: 20,
+        paddingVertical: 10,
+        alignItems: 'center',
+      },
+      backText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.link,
+      },
+      centered: {
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 16,
+      },
+      muted: {
+        fontSize: 14,
+        color: theme.mutedText,
+        textAlign: 'center',
+        marginTop: 8,
+      },
+      sectionHeader: {
+        ...adminPanelSectionHeaderBase,
+        marginTop: 8,
+      },
+      searchBlock: {
+        marginBottom: 14,
+      },
+      searchLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: theme.secondaryText,
+        marginBottom: 6,
+      },
+      searchInput: {
+        borderWidth: 1,
+        borderColor: theme.inputBorder,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 15,
+        color: theme.inputText,
+        backgroundColor: theme.inputBg,
+      },
+      stationRow: {
+        borderWidth: 1,
+        borderColor: theme.border,
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 10,
+      },
+      stationInfo: {
+        flex: 1,
+      },
+      stationName: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: theme.title,
+      },
+      stationLocation: {
+        fontSize: 13,
+        color: theme.mutedText,
+        marginTop: 2,
+      },
+      stationMeta: {
+        fontSize: 12,
+        color: theme.placeholder,
+        marginTop: 2,
+      },
+      statusOperative: {
+        fontSize: 12,
+        color: theme.sem.mapOk,
+        marginTop: 4,
+        fontWeight: '600',
+      },
+      statusNonOperative: {
+        fontSize: 12,
+        color: theme.sem.error,
+        marginTop: 4,
+        fontWeight: '600',
+      },
+      disableButton: {
+        backgroundColor: theme.sem.error,
+        paddingVertical: 9,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+        maxWidth: 110,
+      },
+      enableButton: {
+        backgroundColor: theme.sem.mapOk,
+        paddingVertical: 9,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+        maxWidth: 110,
+      },
+      actionButtonText: {
+        color: theme.textOnAccent,
+        fontSize: 12,
+        fontWeight: '700',
+        textAlign: 'center',
+      },
+      loadMoreButton: {
+        paddingVertical: 12,
+        borderRadius: 10,
+        backgroundColor: theme.secondaryBtnBg,
+        alignItems: 'center',
+        marginTop: 4,
+      },
+      loadMoreButtonText: {
+        color: theme.secondaryBtnText,
+        fontWeight: '700',
+        fontSize: 14,
+      },
+      confirmDisable: {
+        flex: 1,
+        paddingVertical: 11,
+        borderRadius: 10,
+        backgroundColor: theme.sem.error,
+        alignItems: 'center',
+      },
+      confirmEnable: {
+        flex: 1,
+        paddingVertical: 11,
+        borderRadius: 10,
+        backgroundColor: theme.sem.mapOk,
+        alignItems: 'center',
+      },
+      confirmActionText: {
+        color: theme.textOnAccent,
+        fontSize: 14,
+        fontWeight: '600',
+      },
+    }),
+  ) as any;

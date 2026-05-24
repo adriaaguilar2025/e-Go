@@ -1,0 +1,221 @@
+import { StyleSheet } from 'react-native';
+
+import type { ScreenTheme } from '@/constants/screenTheme';
+
+/** Shared layout/styles for filters and garage — same header, backdrop, inputs, chips. */
+export function createFilterFormScreenStyles(theme: ScreenTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.containerBg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.surfaceElevated,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerCentered: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.surfaceElevated,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backButton: {
+      padding: 4,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.title,
+    },
+    contentContainer: {
+      flex: 1,
+    },
+    content: {
+      padding: 24,
+      paddingBottom: 40,
+    },
+    description: {
+      fontSize: 15,
+      color: theme.mutedText,
+      marginBottom: 32,
+      lineHeight: 22,
+    },
+    inputGroup: {
+      marginBottom: 24,
+      alignSelf: 'stretch',
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.secondaryText,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: theme.inputBg,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 16,
+      color: theme.inputText,
+      width: '100%',
+    },
+    inputFocused: {
+      borderColor: theme.sem.accent,
+      borderWidth: 2,
+    },
+    footer: {
+      flexDirection: 'row',
+      padding: 24,
+      paddingBottom: 40,
+      backgroundColor: theme.footerBg,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      gap: 12,
+    },
+    applyBtn: {
+      flex: 2,
+      paddingVertical: 16,
+      borderRadius: 12,
+      backgroundColor: theme.sem.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    applyBtnText: {
+      color: theme.textOnAccent,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    chipContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 8,
+    },
+    chip: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: theme.chipBg,
+      borderWidth: 1,
+      borderColor: theme.chipBorder,
+    },
+    chipActive: {
+      backgroundColor: theme.sem.chipActiveBg,
+      borderColor: theme.sem.accent,
+    },
+    chipText: {
+      fontSize: 14,
+      color: theme.chipText,
+      fontWeight: '500',
+    },
+    chipTextActive: {
+      color: theme.sem.accent,
+      fontWeight: '700',
+    },
+    typeBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 12,
+      alignItems: 'center',
+      backgroundColor: theme.chipBg,
+    },
+    typeBtnActive: {
+      borderColor: theme.sem.accent,
+      backgroundColor: theme.sem.chipActiveBg,
+    },
+    typeBtnText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.chipText,
+    },
+    typeBtnTextActive: {
+      color: theme.sem.accent,
+    },
+    switchGroup: {
+      marginBottom: 24,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.chipBg,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    switchDescription: {
+      flex: 1,
+      fontSize: 16,
+      color: theme.body,
+      marginLeft: 8,
+    },
+    clearBtn: {
+      flex: 1,
+      paddingVertical: 16,
+      borderRadius: 12,
+      backgroundColor: theme.chipBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    clearBtnText: {
+      color: theme.mutedText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalPopup: {
+      backgroundColor: theme.modalSurface,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      elevation: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+    },
+    modalContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      gap: 12,
+    },
+    modalText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.title,
+      flexShrink: 1,
+      lineHeight: 24,
+    },
+    modalCloseButton: {
+      marginLeft: 16,
+      padding: 4,
+      backgroundColor: theme.modalCloseBg,
+      borderRadius: 20,
+    },
+  });
+}
