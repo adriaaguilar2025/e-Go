@@ -599,6 +599,7 @@ export default {
   },
   egg: {
     score: 'Punti',
+    highScore: 'Punteggio più alto',
     tap: 'Toccare per cambiare di corsia',
     avoid: 'Evitare gli ostacoli!',
     start: 'INIZIA',

@@ -595,6 +595,7 @@ export default {
   },
   egg: {
     score: 'Score',
+    highScore: 'High score',
     tap: 'Tap to switch lanes',
     avoid: 'Avoid the obstacles!',
     start: 'START',

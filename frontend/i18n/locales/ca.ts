@@ -596,6 +596,7 @@ export default {
   },
   egg: {
     score: 'Puntuació',
+    highScore: 'Rècord',
     tap: 'Toca per canviar de carril',
     avoid: 'Evita els obstacles!',
     start: 'INICIA',

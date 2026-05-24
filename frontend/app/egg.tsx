@@ -34,11 +34,12 @@ interface VoltixGameProps {
   };
 }
 
-export default function egg({ visible, onClose, theme }: VoltixGameProps) {
+export default function Egg({ visible, onClose, theme }: VoltixGameProps) {
   const { t } = useTranslation();
   const [playerLane, setPlayerLane] = useState(0);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
 
@@ -53,6 +54,7 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
 
   const resetGame = () => {
     setObstacles([]);
+    if(score > highScore) setHighScore(score);
     setScore(0);
     setGameOver(false);
     setGameStarted(true);
@@ -63,6 +65,20 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
       lastFrameTime: Date.now(),
       elapsedTime: 0,
     };
+  };
+
+  // Col·lisió
+  const checkCollision = (obstacles: Obstacle[], playerLane: number, playerY: number): boolean => {
+    for (const obs of obstacles) {
+      if (
+        obs.y + OBSTACLE_SIZE > playerY &&
+        obs.y < playerY + CAR_SIZE &&
+        obs.lane === playerLane
+      ) {
+        return true;
+      }
+    }
+    return false;
   };
 
   const startGameLoop = () => {
@@ -78,7 +94,7 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
       gameStateRef.current.lastFrameTime = now;
       gameStateRef.current.elapsedTime += deltaTime;
 
-      // Incrementar score basado en tiempo real (1 punto cada ~33ms = 30 FPS)
+      // Incrementar puntuació depenent del temps que ha passat (1 punt cada ~33ms = 30 FPS)
       const pointsToAdd = Math.floor(gameStateRef.current.elapsedTime / 33);
       if (pointsToAdd > 0) {
         gameStateRef.current.elapsedTime -= pointsToAdd * 33;
@@ -87,18 +103,18 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
       }
 
       setObstacles(prev => {
-        const baseSpeed = 8 + (gameStateRef.current.score / 150); // Aumenta velocidad gradualmente
+        const baseSpeed = 8 + (gameStateRef.current.score / 150); // Aumenta velocitat gradualment
         const moved = prev.map(obs => ({ ...obs, y: obs.y + baseSpeed }));
         const filtered = moved.filter(obs => obs.y < height + OBSTACLE_SIZE);
 
-        // Añadir obstáculo cada 25 puntos
+        // Obstacle mínim cada 20 punts
         if (gameStateRef.current.score - gameStateRef.current.lastObstacleScore >= 20 && Math.random() < 0.05) {
           gameStateRef.current.lastObstacleScore = gameStateRef.current.score;
           const newLane = Math.random() < 0.5 ? 0 : 1;
           filtered.push({
             id: obstacleIdRef.current++,
             lane: newLane,
-            y: -150, // Aparecen detrás del header
+            y: -150, // Per radere del header de la finestra
           });
         }
 
@@ -123,28 +139,20 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
     };
   }, [visible, gameStarted, gameOver]);
 
-  // Collision detection
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
     const playerY = (0.8 * height) - 100 - CAR_SIZE;
 
-    for (const obs of obstacles) {
-      if (
-        obs.y + OBSTACLE_SIZE > playerY &&
-        obs.y < playerY + CAR_SIZE &&
-        obs.lane === playerLane
-      ) {
-        setGameOver(true);
-        if (gameLoopRef.current) {
-          clearInterval(gameLoopRef.current);
-        }
-        break;
+    if (checkCollision(obstacles, playerLane, playerY)) {
+      setGameOver(true);
+      if (gameLoopRef.current) {
+        clearInterval(gameLoopRef.current);
       }
     }
   }, [obstacles, playerLane, gameStarted, gameOver]);
 
-  const handlePress = () => {
+  const handlePress = () => { //Al premer la finestra
     if (gameOver) {
       resetGame();
     } else if (!gameStarted) {
@@ -163,6 +171,13 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
     onClose();
   };
 
+  // Exportar funcions per a testing
+  (Egg as any).resetGame = resetGame;
+  (Egg as any).startGameLoop = startGameLoop;
+  (Egg as any).handlePress = handlePress;
+  (Egg as any).handleClose = handleClose;
+  (Egg as any).checkCollision = checkCollision;
+
   return (
     <Modal
       visible={visible}
@@ -175,14 +190,16 @@ export default function egg({ visible, onClose, theme }: VoltixGameProps) {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.score, { color: theme.title }]}>{t('egg.score')}: {score}</Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Text style={[styles.highScore, { color: theme.title }]}>{t('egg.highScore')}: {highScore}</Text>
+            <TouchableOpacity testID="close-button" onPress={handleClose} style={styles.closeButton}>
               <MaterialIcons name="close" size={24} color={theme.title} />
             </TouchableOpacity>
           </View>
 
           {/* Game Area */}
-          <TouchableOpacity 
-            style={styles.gameArea} 
+          <TouchableOpacity
+            testID="game-area"
+            style={styles.gameArea}
             onPress={handlePress}
             activeOpacity={1}
           >
@@ -283,6 +300,10 @@ const styles = StyleSheet.create({
   score: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  highScore: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   closeButton: {
     padding: 8,
