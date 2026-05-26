@@ -33,7 +33,7 @@ describe('TopBar (búsqueda mapa / estaciones)', () => {
   // En modo estaciones, el placeholder debe invitar a buscar puntos de recarga.
   test('modo estaciones: placeholder de puntos de recarga', () => {
     const { getByPlaceholderText } = render(<TopBar {...baseProps} />);
-    expect(getByPlaceholderText('Buscar puntos de carga')).toBeTruthy();
+    expect(getByPlaceholderText('Buscar carga')).toBeTruthy();
   });
 
   // En modo direcciones, el placeholder cambia al vocabulario de calles.
@@ -102,7 +102,7 @@ describe('TopBar (búsqueda mapa / estaciones)', () => {
     const { getByPlaceholderText } = render(
       <TopBar {...baseProps} setSearchQuery={setSearchQuery} />
     );
-    fireEvent.changeText(getByPlaceholderText('Buscar puntos de carga'), 'barcelona');
+    fireEvent.changeText(getByPlaceholderText('Buscar carga'), 'barcelona');
     expect(setSearchQuery).toHaveBeenCalledWith('barcelona');
   });
 
