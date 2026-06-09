@@ -15,6 +15,27 @@
 
 ---
 
+---
+
+## 📲 Descargar la app e-Go
+
+Landing page oficial del proyecto e-Go donde se detalla el funcionamiento de la aplicación móvil y se proporciona el enlace de descarga directa de la APK para dispositivos Android.
+
+<div align="center">
+  <br />
+  <a href="https://www.paupedrejon.com/es/proyectos/ego" target="_blank">
+    <img src="https://img.shields.io/badge/Visitar_Landing_Page-00875A?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Landing Page" />
+  </a>
+  <a href="../../releases/latest" target="_blank">
+    <img src="https://img.shields.io/badge/Descargar_APK_(Android)-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Descargar APK" />
+  </a>
+  <br />
+</div>
+
+> ℹ️ **Nota para la instalación de la APK:** Al no estar en Google Play Store, la primera vez que abras el archivo `.apk` tu dispositivo Android te pedirá activar el permiso de *"Instalar aplicaciones de fuentes desconocidas"*. Es completamente seguro.
+
+---
+
 ## ✨ Características y Funcionalidades Principales
 
 * 🗺️ **Mapa Interactivo en Tiempo Real:** Visualización y filtrado de más de 2.300 puntos de recarga activos en Cataluña, integrados directamente con el dataset de *Dades Obertes* (ICAEN).
