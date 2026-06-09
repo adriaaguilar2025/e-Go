@@ -1,3 +1,9 @@
+
+## 🌐 Idioma / Language
+* Español (Versión actual)
+* [English (English version)](README.en.md)
+---
+
 <div align="center">
   <h1>e-Go: Movilidad Eléctrica Inteligente</h1>
   <p><em>Aplicación móvil nativa para la optimización y gestión de la movilidad eléctrica en Cataluña.</em></p>
@@ -11,9 +17,7 @@
   <img src="https://img.shields.io/badge/Coverage_>80%25-4MIN1G?style=flat-square&logo=sonarcloud&logoColor=white" alt="SonarCloud Coverage" />
 </div>
 
-**e-Go** es una plataforma integral diseñada para la gestión de movilidad urbana sostenible y el reporte de incidencias. Permite a los conductores de vehículos eléctricos planificar sus rutas de forma inteligente segun su vehículo y autonomía, localizar puntos de recarga en tiempo real y participar en una comunidad activa mediante dinámicas de gamificación.
-
----
+**e-Go** es una app diseñada para la gestión de movilidad urbana sostenible y el reporte de incidencias. Permite a los conductores de vehículos eléctricos planificar sus rutas de forma inteligente segun su vehículo y autonomía, localizar puntos de recarga en tiempo real y participar en una comunidad activa mediante dinámicas de gamificación.
 
 ---
 
