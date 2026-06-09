@@ -1,12 +1,17 @@
-# ⚡ e-Go: Mobilitat Elèctrica Intel·ligent i Incidències
+<div align="center">
+  <h1>e-Go: Movilidad Eléctrica Inteligente</h1>
+  <p><em>Aplicación móvil nativa para la optimización y gestión de la movilidad eléctrica en Cataluña.</em></p>
 
-![e-Go Banner](https://img.shields.io/badge/e--Go-Sostenibilidad-brightgreen)
-![React Native](https://img.shields.io/badge/React_Native-Expo-blue)
-![Node.js](https://img.shields.io/badge/Node.js-Express-success)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
-![Coverage](https://img.shields.io/badge/Coverage->80%25-brightgreen)
+  <img src="https://img.shields.io/badge/React_Native-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React Native" />
+  <img src="https://img.shields.io/badge/Expo-000020?style=flat-square&logo=expo&logoColor=white" alt="Expo" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-aws&logoColor=white" alt="AWS" />
+  <img src="https://img.shields.io/badge/Coverage_>80%25-4MIN1G?style=flat-square&logo=sonarcloud&logoColor=white" alt="SonarCloud Coverage" />
+</div>
 
-**e-Go** es una plataforma integral diseñada para la gestión de movilidad urbana sostenible y el reporte de incidencias. Permite a los conductores de vehículos eléctricos planificar sus rutas de forma inteligente, localizar puntos de recarga en tiempo real y participar en una comunidad activa mediante dinámicas de gamificación.
+**e-Go** es una plataforma integral diseñada para la gestión de movilidad urbana sostenible y el reporte de incidencias. Permite a los conductores de vehículos eléctricos planificar sus rutas de forma inteligente segun su vehículo y autonomía, localizar puntos de recarga en tiempo real y participar en una comunidad activa mediante dinámicas de gamificación.
 
 ---
 
@@ -135,3 +140,16 @@ cd backend
 $env:RUN_DB_INTEGRATION="true"
 npm run test:integration
 ```
+---
+
+## 👥 Equipo de Desarrollo
+
+**e-Go Project** — Creado con 💚 por todo nuestro equipo:
+
+* ⚡ **Adrià Aguilar**
+* ⚡ **Denis Roca**
+* ⚡ **Jordi Pérez**
+* ⚡ **Pau Pedrejón**
+* ⚡ **Paula Torreblanca**
+* ⚡ **Sergi Malaguilla**
+* ⚡ **Xavier Juanico**
